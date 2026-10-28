@@ -21,6 +21,8 @@ _HARMONY_ANALYSIS = re.compile(r"<\|channel\|>analysis<\|message\|>.*?<\|end\|>"
 _HARMONY_ANALYSIS_OPEN = "<|channel|>analysis<|message|>"
 _HARMONY_FINAL_HEADER = re.compile(r"(?:<\|start\|>assistant)?<\|channel\|>final<\|message\|>")
 _HARMONY_END = re.compile(r"<\|(?:return|end)\|>")
+_GEMMA_THOUGHT = re.compile(r"<\|channel>.*?<channel\|>", re.DOTALL)  # Gemma 4: <|channel>thought ... <channel|>
+_GEMMA_THOUGHT_OPEN = "<|channel>"
 _FENCE = re.compile(r"```[A-Za-z0-9_-]*")
 
 
@@ -53,6 +55,9 @@ def _strip_reasoning(text: str) -> str:
     text = _HARMONY_ANALYSIS.sub(" ", text)
     if _HARMONY_ANALYSIS_OPEN in text:
         text = text.split(_HARMONY_ANALYSIS_OPEN, 1)[0]
+    text = _GEMMA_THOUGHT.sub(" ", text)
+    if _GEMMA_THOUGHT_OPEN in text:
+        text = text.split(_GEMMA_THOUGHT_OPEN, 1)[0]
     text = _HARMONY_FINAL_HEADER.sub(" ", text)
     text = _HARMONY_END.sub(" ", text)
     return _FENCE.sub(" ", text)
@@ -219,3 +224,89 @@ def run_judge(prompts: list[dict], generate: GenerateFn, out_dir: Path, resume: 
                 done[item["id"]] = row
     _write_atomic(labels_path, [done[i] for i in ids if i in done])
     return counts
+
+
+# meta.json keys a resumed run must share with the run it resumes
+RESUME_KEYS = ["model", "revision", "thinking", "prompts_sha256", "quantization"]
+
+
+def _resume_conflicts(old: dict, new: dict) -> list[str]:
+    return [f"{key} {old.get(key)!r} (meta.json) != {new[key]!r}" for key in RESUME_KEYS if key in new
+            and old.get(key) != new[key]]
+
+
+def run_judge_cmd(args) -> int:
+    """`bench judge`: judge a prompts file with a local MLX model into `--out` (meta.json first, then labels.jsonl
+    and log.jsonl); `--resume` goes on with a run that has the same model, revision, thinking and prompts."""
+    import datetime
+    import hashlib
+    import statistics
+    import sys
+
+    from s1d1_bench import mlx_backend  # imported here: importing judge_runner never imports mlx
+    from s1d1_bench.jsonl import read_jsonl
+    from s1d1_bench.judge_file import LICENCE, write_meta
+
+    def fail(message: str) -> int:
+        print(f"bench judge: {message}", file=sys.stderr)
+        return 1
+
+    out = Path(args.out)
+    meta_path = out / "meta.json"
+    existing = [p.name for p in (meta_path, out / "labels.jsonl", out / "log.jsonl") if p.exists()]
+    if existing and not args.resume:
+        return fail(f"{out}: {', '.join(existing)} already exist; judge files are immutable. "
+                    "Use a new --out, or --resume to go on with that run.")
+    digest = hashlib.sha256(Path(args.prompts).read_bytes()).hexdigest()
+    prompts = read_jsonl(args.prompts)
+    old = json.loads(meta_path.read_text(encoding="utf-8")) if args.resume and meta_path.is_file() else None
+    if old is not None:  # what can be checked before loading the model
+        conflicts = _resume_conflicts(old, {"model": args.model, "thinking": args.thinking, "prompts_sha256": digest})
+        if conflicts:
+            return fail(f"{meta_path}: cannot resume a run with other settings: {'; '.join(conflicts)}")
+
+    started = time.perf_counter()
+    generate, backend = mlx_backend.make_mlx_generate(args.model, args.thinking, max_tokens=args.max_tokens)
+    print(f"model loaded in {time.perf_counter() - started:.1f} s")
+    meta = {
+        "judge": args.judge or out.name,
+        "model": backend["model"],
+        "provider": "local",
+        "revision": backend["revision"],
+        "date": datetime.date.today().isoformat(),
+        "temperature": backend["temperature"],
+        "thinking": backend["thinking"],
+        "instructions": "v7-single",
+        "prompts_sha256": digest,
+        "author": args.author,
+        "replayable": True,
+        "licence": LICENCE,
+        "notes": args.notes,
+        "quantization": backend["quantization"],
+        "mlx_lm_version": backend["mlx_lm_version"],
+    }
+    if old is not None:
+        conflicts = _resume_conflicts(old, meta)
+        if conflicts:
+            return fail(f"{meta_path}: cannot resume a run with other settings: {'; '.join(conflicts)}")
+    else:  # written before the first generation, so that a resumed run keeps it
+        out.mkdir(parents=True, exist_ok=True)
+        write_meta(meta_path, **meta)
+
+    rates: list[float] = []
+
+    def timed(messages: list[dict]) -> GenerateResult:
+        res = generate(messages)
+        if res.wall_s > 0:
+            rates.append(res.completion_tokens / res.wall_s)
+        return res
+
+    try:
+        counts = run_judge(prompts, timed, out, resume=args.resume)
+    except (FileExistsError, ValueError) as exc:
+        return fail(str(exc))
+    print(", ".join(f"{status} {n}" for status, n in sorted(counts.items())) or "nothing left to judge")
+    if rates:
+        median = statistics.median(rates)
+        print(f"median {median:.1f} tokens/s (completion tokens / wall time, {len(rates)} generations)")
+    return 0

@@ -107,6 +107,15 @@ def test_parse_label_unclosed_harmony_analysis_is_thinking():
     assert parse_label(f"<|channel|>analysis<|message|>hmm {GOOD}") is None
 
 
+def test_parse_label_strips_a_gemma4_thought_channel():
+    other = '{"complexity": "high", "task": "math", "needs_tools": true}'
+    assert parse_label(f"<|channel>thought\nmaybe {other}?\n<channel|>{GOOD}<turn|>") == GOOD_LABEL
+
+
+def test_parse_label_unclosed_gemma4_thought_channel_is_thinking():
+    assert parse_label(f"<|channel>thought\nstill thinking {GOOD}") is None
+
+
 def test_parse_label_skips_undecodable_braces():
     assert parse_label(f"set {{x}} then {GOOD}") == GOOD_LABEL
 
@@ -361,3 +370,185 @@ def test_prompt_tag_lookalikes_stay_data_and_the_label_keeps_the_sent_id(tmp_pat
     run_judge([{"id": "real", "prompt": text}], generate, tmp_path)
     assert generate.messages[0][1]["content"].startswith("<prompt>\n" + text + "\n</prompt>\n\n")
     assert [r["id"] for r in read_jsonl(tmp_path / "labels.jsonl")] == ["real"]
+
+
+# --- bench judge (run_judge_cmd), with the mlx backend replaced by a fake
+
+BACKEND_META = {
+    "model": "org/model-8bit",
+    "revision": "0123456789abcdef0123456789abcdef01234567",
+    "quantization": "8bit-gs64",
+    "mlx_lm_version": "0.32.2",
+    "temperature": 0,
+    "thinking": "off",
+}
+
+
+def prompts_dir_with(tmp_path, prompts, name="set"):
+    """A prompts directory as `bench export` writes it: <name>.jsonl and <name>.sha256."""
+    import hashlib
+
+    from s1d1_bench.jsonl import write_jsonl
+
+    d = tmp_path / "prompts"
+    d.mkdir()
+    write_jsonl(d / f"{name}.jsonl", prompts)
+    digest = hashlib.sha256((d / f"{name}.jsonl").read_bytes()).hexdigest()
+    (d / f"{name}.sha256").write_text(digest + "\n", encoding="ascii")
+    return d, digest
+
+
+def fake_backend(monkeypatch, answers, meta=None):
+    """Replace make_mlx_generate; return the fake GenerateFn (its .calls, .messages) and the recorded arguments."""
+    from s1d1_bench import mlx_backend
+
+    generate = fake_generate(answers)
+    seen = {}
+
+    def make(model_id, thinking, max_tokens=1024):
+        seen.update(model_id=model_id, thinking=thinking, max_tokens=max_tokens)
+        return generate, dict(meta or BACKEND_META, model=model_id, thinking=thinking)
+
+    monkeypatch.setattr(mlx_backend, "make_mlx_generate", make)
+    return generate, seen
+
+
+def judge_cmd(*argv):
+    from s1d1_bench.cli import build_parser
+
+    args = build_parser().parse_args(["judge", *map(str, argv)])
+    return args.handler(args)
+
+
+def test_bench_judge_writes_a_meta_that_validate_accepts(tmp_path, monkeypatch):
+    import datetime
+
+    from s1d1_bench.judge_file import validate_judge_dir
+
+    prompts, digest = prompts_dir_with(tmp_path, PROMPTS_3)
+    generate, seen = fake_backend(monkeypatch, [GOOD] * 3)
+    out = tmp_path / "judges" / "qwen-test"
+    code = judge_cmd("--model", "org/model-8bit", "--prompts", prompts / "set.jsonl", "--out", out,
+                     "--author", "steve", "--thinking", "cap:512", "--max-tokens", 900)
+    assert code == 0
+    assert seen == {"model_id": "org/model-8bit", "thinking": "cap:512", "max_tokens": 900}
+    meta = json.loads((out / "meta.json").read_text())
+    assert meta == {
+        "judge": "qwen-test",
+        "model": "org/model-8bit",
+        "provider": "local",
+        "revision": BACKEND_META["revision"],
+        "date": datetime.date.today().isoformat(),
+        "temperature": 0,
+        "thinking": "cap:512",
+        "instructions": "v7-single",
+        "prompts_sha256": digest,
+        "author": "steve",
+        "replayable": True,
+        "licence": "CC-BY-4.0",
+        "notes": "",
+        "quantization": "8bit-gs64",
+        "mlx_lm_version": "0.32.2",
+    }
+    assert validate_judge_dir(out, prompts) == []
+
+
+def test_bench_judge_name_and_notes(tmp_path, monkeypatch):
+    prompts, _ = prompts_dir_with(tmp_path, PROMPTS_3)
+    fake_backend(monkeypatch, [GOOD] * 3)
+    out = tmp_path / "j"
+    judge_cmd("--model", "org/m", "--prompts", prompts / "set.jsonl", "--out", out, "--author", "a",
+              "--thinking", "off", "--judge", "my-judge", "--notes", "first run")
+    meta = json.loads((out / "meta.json").read_text())
+    assert meta["judge"] == "my-judge" and meta["notes"] == "first run" and meta["thinking"] == "off"
+
+
+def test_bench_judge_writes_meta_before_generating(tmp_path, monkeypatch):
+    prompts, _ = prompts_dir_with(tmp_path, PROMPTS_3[:1])
+    out = tmp_path / "j"
+    seen_meta = []
+
+    def answer(messages):
+        seen_meta.append((out / "meta.json").is_file())
+        return result(GOOD)
+
+    from s1d1_bench import mlx_backend
+
+    monkeypatch.setattr(mlx_backend, "make_mlx_generate", lambda m, t, max_tokens=1024: (answer, dict(BACKEND_META)))
+    judge_cmd("--model", "org/m", "--prompts", prompts / "set.jsonl", "--out", out, "--author", "a",
+              "--thinking", "off")
+    assert seen_meta == [True]
+
+
+def test_bench_judge_prints_counts_and_median_tokens_per_second(tmp_path, monkeypatch, capsys):
+    prompts, _ = prompts_dir_with(tmp_path, PROMPTS_3)
+    fake_backend(monkeypatch, [GOOD, BAD, BAD, result(GOOD, completion_tokens=30, wall_s=1.0)])
+    judge_cmd("--model", "org/m", "--prompts", prompts / "set.jsonl", "--out", tmp_path / "j", "--author", "a",
+              "--thinking", "off")
+    out = capsys.readouterr().out
+    assert "ok 2" in out and "json_error 1" in out
+    assert "median 10.0 tokens/s" in out  # per generation: 10, 10, 10, 30
+
+
+def test_bench_judge_refuses_an_existing_folder_without_resume(tmp_path, monkeypatch, capsys):
+    prompts, _ = prompts_dir_with(tmp_path, PROMPTS_3)
+    generate, _ = fake_backend(monkeypatch, [GOOD] * 3)
+    out = tmp_path / "j"
+    out.mkdir()
+    (out / "meta.json").write_text("{}")
+    code = judge_cmd("--model", "org/m", "--prompts", prompts / "set.jsonl", "--out", out, "--author", "a",
+                     "--thinking", "off")
+    assert code != 0 and generate.calls == 0
+    assert (out / "meta.json").read_text() == "{}"
+    assert "--resume" in capsys.readouterr().err
+
+
+def _first_run_then_resume(tmp_path, monkeypatch, *resume_argv, meta=None):
+    prompts, _ = prompts_dir_with(tmp_path, PROMPTS_3)
+    out = tmp_path / "j"
+    fake_backend(monkeypatch, [GOOD, BAD, BAD, BAD, BAD])  # p1 ok, p2 and p3 json_error
+    base = ["--prompts", prompts / "set.jsonl", "--out", out, "--author", "a"]
+    judge_cmd("--model", "org/m", *base, "--thinking", "off")
+    meta_before = (out / "meta.json").read_text()
+    generate, _ = fake_backend(monkeypatch, [GOOD, GOOD], meta=meta)
+    code = judge_cmd(*base, *resume_argv, "--resume")
+    return out, meta_before, generate, code
+
+
+def test_bench_judge_resume_with_the_same_settings_keeps_the_meta(tmp_path, monkeypatch):
+    out, meta_before, generate, code = _first_run_then_resume(
+        tmp_path, monkeypatch, "--model", "org/m", "--thinking", "off"
+    )
+    assert code == 0 and generate.calls == 2
+    assert (out / "meta.json").read_text() == meta_before
+    assert [row["id"] for row in read_jsonl(out / "labels.jsonl")] == ["p1", "p2", "p3"]
+
+
+@pytest.mark.parametrize(
+    ("argv", "meta"),
+    [
+        (["--model", "org/other", "--thinking", "off"], None),
+        (["--model", "org/m", "--thinking", "cap:512"], None),
+        (["--model", "org/m", "--thinking", "off"], {**BACKEND_META, "revision": "f" * 40}),
+    ],
+)
+def test_bench_judge_resume_refuses_other_settings(tmp_path, monkeypatch, argv, meta, capsys):
+    out, meta_before, generate, code = _first_run_then_resume(tmp_path, monkeypatch, *argv, meta=meta)
+    assert code != 0 and generate.calls == 0
+    assert (out / "meta.json").read_text() == meta_before
+    assert "meta.json" in capsys.readouterr().err
+
+
+def test_bench_judge_resume_refuses_another_prompts_file(tmp_path, monkeypatch, capsys):
+    prompts, _ = prompts_dir_with(tmp_path, PROMPTS_3)
+    out = tmp_path / "j"
+    fake_backend(monkeypatch, [GOOD, BAD, BAD, BAD, BAD])
+    judge_cmd("--model", "org/m", "--prompts", prompts / "set.jsonl", "--out", out, "--author", "a",
+              "--thinking", "off")
+    other = tmp_path / "other.jsonl"
+    other.write_text((prompts / "set.jsonl").read_text() + "\n")  # same prompts, other bytes
+    generate, _ = fake_backend(monkeypatch, [GOOD, GOOD])
+    code = judge_cmd("--model", "org/m", "--prompts", other, "--out", out, "--author", "a", "--thinking", "off",
+                     "--resume")
+    assert code != 0 and generate.calls == 0
+    assert "prompts_sha256" in capsys.readouterr().err
