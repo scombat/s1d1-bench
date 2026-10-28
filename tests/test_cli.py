@@ -1,0 +1,34 @@
+import hashlib
+
+import pytest
+
+from s1d1_bench.cli import main
+from s1d1_bench.rubric import LEVELS, TASKS, load_rubric
+
+# sha256 of ~/work/s1d1-model-router/docs/judge-rubric-v7.txt, the source of the packaged copy
+RUBRIC_SHA256 = "fd9f87bd0b390d94c675ddc2807affd9d1323dae0e752b830fe0e5bbb2d5ff79"
+
+
+def test_cli_lists_subcommands(capsys):
+    with pytest.raises(SystemExit):
+        main(["--help"])
+    out = capsys.readouterr().out
+    for name in ("pool", "export", "judge", "validate", "agree"):
+        assert name in out
+
+
+def test_rubric_is_byte_identical_and_lists_19_tasks():
+    text = load_rubric()
+    assert hashlib.sha256(text.encode()).hexdigest() == RUBRIC_SHA256
+    assert len(TASKS) == 19 and "information_seeking" in TASKS and "coding_debugging" in TASKS
+
+
+def test_tasks_are_unique_and_in_file_order():
+    assert len(set(TASKS)) == len(TASKS)
+    assert TASKS[0] == "information_seeking" and TASKS[-1] == "other"
+    positions = [load_rubric().index(f"\n- {name}: ") for name in TASKS]
+    assert positions == sorted(positions)
+
+
+def test_levels():
+    assert LEVELS == ["trivial", "low", "medium", "high", "expert"]
