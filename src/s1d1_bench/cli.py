@@ -61,8 +61,13 @@ def _export_arguments(sub: argparse.ArgumentParser) -> None:
     sub.add_argument("--root", type=Path, default=Path("."), help=argparse.SUPPRESS)  # for tests and smoke runs
 
 
+def _validate_arguments(sub: argparse.ArgumentParser) -> None:
+    sub.add_argument("judge_dir", type=Path, help="judge directory, judges/<name>")
+    sub.add_argument("--prompts", type=Path, default=Path("data/prompts"), help="directory of the prompts files")
+
+
 # subcommand -> function adding its arguments to its parser
-_ARGUMENTS = {"pool": _pool_arguments, "export": _export_arguments}
+_ARGUMENTS = {"pool": _pool_arguments, "export": _export_arguments, "validate": _validate_arguments}
 
 
 def build_parser() -> argparse.ArgumentParser:
