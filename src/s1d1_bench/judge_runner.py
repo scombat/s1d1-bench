@@ -121,6 +121,25 @@ def _read_done(path: Path) -> dict[str, dict]:
     return done
 
 
+def _repair_log(path: Path) -> None:
+    """Drop a cut-short last line of the log (one written without its newline that does not parse), so the next
+    record is not glued onto it. A complete last line missing only its newline gets the newline."""
+    if not path.is_file():
+        return
+    text = path.read_text(encoding="utf-8")
+    if text == "" or text.endswith("\n"):
+        return
+    head, _, tail = text.rpartition("\n")
+    try:
+        json.loads(tail)
+        fixed = text + "\n"
+    except ValueError:
+        fixed = head + "\n" if head else ""
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(fixed, encoding="utf-8", newline="\n")
+    os.replace(tmp, path)
+
+
 def _judge_one(prompt: str, generate: GenerateFn) -> tuple[str, dict | None, dict]:
     """(status, label or None, log fields) for one prompt: at most two generations, none after an exception."""
     label = None
@@ -173,6 +192,11 @@ def run_judge(prompts: list[dict], generate: GenerateFn, out_dir: Path, resume: 
             )
     out_dir.mkdir(parents=True, exist_ok=True)
     done = _read_done(labels_path) if resume else {}
+    foreign = [i for i in done if i not in set(ids)]
+    if foreign:  # the wrong prompts file: refuse before touching anything, never drop labels silently
+        raise ValueError(f"{labels_path}: labelled id(s) not in the prompts: {', '.join(map(repr, foreign))}")
+    if resume:
+        _repair_log(log_path)
     if done or labels_path.exists():
         _write_atomic(labels_path, list(done.values()))  # drops a cut-short last line, restores the newline
     counts: dict[str, int] = {}
@@ -185,13 +209,13 @@ def run_judge(prompts: list[dict], generate: GenerateFn, out_dir: Path, resume: 
                 continue
             status, label, fields = _judge_one(item["prompt"], generate)
             counts[status] = counts.get(status, 0) + 1
+            log_row = {"id": item["id"], "status": status, **fields}
+            log_f.write(json.dumps(log_row, ensure_ascii=False) + "\n")  # log first: a crash before the label
+            log_f.flush()  # line only costs a regeneration on resume
             if label is not None:
                 row = {"id": item["id"], **label}
                 labels_f.write(json.dumps(row, ensure_ascii=False) + "\n")
                 labels_f.flush()
                 done[item["id"]] = row
-            log_row = {"id": item["id"], "status": status, **fields}
-            log_f.write(json.dumps(log_row, ensure_ascii=False) + "\n")
-            log_f.flush()
     _write_atomic(labels_path, [done[i] for i in ids if i in done])
     return counts
