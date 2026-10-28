@@ -381,6 +381,7 @@ BACKEND_META = {
     "mlx_lm_version": "0.32.2",
     "temperature": 0,
     "thinking": "off",
+    "behaviour": "fake: no reasoning.",
 }
 
 
@@ -446,9 +447,10 @@ def test_bench_judge_writes_a_meta_that_validate_accepts(tmp_path, monkeypatch):
         "author": "steve",
         "replayable": True,
         "licence": "CC-BY-4.0",
-        "notes": "",
+        "notes": "fake: no reasoning.",
         "quantization": "8bit-gs64",
         "mlx_lm_version": "0.32.2",
+        "max_tokens": 900,
     }
     assert validate_judge_dir(out, prompts) == []
 
@@ -460,7 +462,8 @@ def test_bench_judge_name_and_notes(tmp_path, monkeypatch):
     judge_cmd("--model", "org/m", "--prompts", prompts / "set.jsonl", "--out", out, "--author", "a",
               "--thinking", "off", "--judge", "my-judge", "--notes", "first run")
     meta = json.loads((out / "meta.json").read_text())
-    assert meta["judge"] == "my-judge" and meta["notes"] == "first run" and meta["thinking"] == "off"
+    assert meta["judge"] == "my-judge" and meta["thinking"] == "off"
+    assert meta["notes"] == "fake: no reasoning. first run"  # what the backend does first, then the user's notes
 
 
 def test_bench_judge_writes_meta_before_generating(tmp_path, monkeypatch):
@@ -530,6 +533,8 @@ def test_bench_judge_resume_with_the_same_settings_keeps_the_meta(tmp_path, monk
         (["--model", "org/other", "--thinking", "off"], None),
         (["--model", "org/m", "--thinking", "cap:512"], None),
         (["--model", "org/m", "--thinking", "off"], {**BACKEND_META, "revision": "f" * 40}),
+        (["--model", "org/m", "--thinking", "off"], {**BACKEND_META, "mlx_lm_version": "0.33.0"}),
+        (["--model", "org/m", "--thinking", "off", "--max-tokens", "512"], None),
     ],
 )
 def test_bench_judge_resume_refuses_other_settings(tmp_path, monkeypatch, argv, meta, capsys):
@@ -552,3 +557,58 @@ def test_bench_judge_resume_refuses_another_prompts_file(tmp_path, monkeypatch, 
                      "--resume")
     assert code != 0 and generate.calls == 0
     assert "prompts_sha256" in capsys.readouterr().err
+
+
+def test_bench_judge_unknown_revision_is_not_replayable_and_says_why(tmp_path, monkeypatch):
+    prompts, _ = prompts_dir_with(tmp_path, PROMPTS_3)
+    fake_backend(monkeypatch, [GOOD] * 3, meta={**BACKEND_META, "revision": "unknown"})
+    out = tmp_path / "j"
+    judge_cmd("--model", "org/m", "--prompts", prompts / "set.jsonl", "--out", out, "--author", "a",
+              "--thinking", "off", "--notes", "mine")
+    meta = json.loads((out / "meta.json").read_text())
+    assert meta["replayable"] is False and meta["revision"] == "unknown"
+    assert meta["notes"].startswith("fake: no reasoning.") and "revision unknown" in meta["notes"]
+    assert meta["notes"].endswith("mine")
+
+
+@pytest.mark.parametrize("notes", ["see /Users/steve/mlx-models/x", "from ~/mlx-models/x", "in {home}/x", "{tmp}"])
+def test_bench_judge_refuses_a_local_path_in_meta(tmp_path, monkeypatch, capsys, notes):
+    from pathlib import Path
+
+    prompts, _ = prompts_dir_with(tmp_path, PROMPTS_3)
+    generate, _ = fake_backend(monkeypatch, [GOOD] * 3)
+    out = tmp_path / "j"
+    notes = notes.format(home=Path.home(), tmp=tmp_path / "x")
+    code = judge_cmd("--model", "org/m", "--prompts", prompts / "set.jsonl", "--out", out, "--author", "a",
+                     "--thinking", "off", "--notes", notes)
+    assert code == 1 and generate.calls == 0 and not out.exists()
+    assert "local path" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("exc", [FileNotFoundError("org/m: not found at the models dir"), ValueError("bad family")])
+def test_bench_judge_backend_errors_are_one_line_not_a_traceback(tmp_path, monkeypatch, capsys, exc):
+    from s1d1_bench import mlx_backend
+
+    def make(model_id, thinking, max_tokens=1024):
+        raise exc
+
+    monkeypatch.setattr(mlx_backend, "make_mlx_generate", make)
+    prompts, _ = prompts_dir_with(tmp_path, PROMPTS_3)
+    code = judge_cmd("--model", "org/m", "--prompts", prompts / "set.jsonl", "--out", tmp_path / "j",
+                     "--author", "a", "--thinking", "off")
+    assert code == 1 and capsys.readouterr().err.startswith("bench judge: ")
+    assert not (tmp_path / "j").exists()
+
+
+def test_bench_judge_resume_of_a_folder_without_max_tokens_is_refused(tmp_path, monkeypatch, capsys):
+    prompts, _ = prompts_dir_with(tmp_path, PROMPTS_3)
+    out = tmp_path / "j"
+    fake_backend(monkeypatch, [GOOD, BAD, BAD, BAD, BAD])
+    base = ["--model", "org/m", "--prompts", prompts / "set.jsonl", "--out", out, "--author", "a", "--thinking", "off"]
+    judge_cmd(*base)
+    meta = json.loads((out / "meta.json").read_text())
+    del meta["max_tokens"]
+    (out / "meta.json").write_text(json.dumps(meta))
+    generate, _ = fake_backend(monkeypatch, [GOOD, GOOD])
+    assert judge_cmd(*base, "--resume") == 1 and generate.calls == 0
+    assert "max_tokens" in capsys.readouterr().err

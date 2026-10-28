@@ -64,6 +64,14 @@ and close slightly differently.
 
 A cap is applicable to all three. An unknown `model_type` is refused.
 
+**What meta.json records.** `model` is always the Hub repo id: `--model` takes that id, or a directory of
+`~/mlx-models/` named `org--name` (recorded as `org/name`); any other directory is refused, and `bench judge` refuses
+a meta.json that would hold a local path. `replayable` is `true` only when the revision is a known Hub commit
+(otherwise `false`, and `notes` says why). `notes` starts with one or two sentences on what the `thinking` setting
+does for the family (the table above, plus the pinned date for gpt-oss), followed by the `--notes` text.
+`max_tokens` is recorded too. A `--resume` is refused unless model, revision, thinking, prompts, quantization,
+mlx-lm version and max tokens all match the meta.json of the run it resumes.
+
 ## Gemma 4 31B-it — runs
 
 - Repo `mlx-community/gemma-4-31b-it-8bit` @ `f5f3dc92ab4af76724c36c21eb6bedadb3a851be`, converted from
@@ -74,8 +82,9 @@ A cap is applicable to all three. An unknown `model_type` is refused.
 - Reasoning: the template puts `<|think|>` at the top of the system turn when `enable_thinking=True`; the model then
   writes `<|channel>thought\n…<channel|>` before the answer. With `enable_thinking=False` the template itself ends the
   prompt with an empty `<|channel>thought\n<channel|>`, and the model answers with the JSON alone.
-- Uncapped thinking on the 10 prompts (exploration): median 287 tokens, max 739 ("Please repeat the string…"); so 512
-  does bind sometimes (in the cap:512 run, two prompts generated more than 512 tokens in all, max 533).
+- Uncapped thinking on the 10 prompts (exploration): median 287 completion tokens (reasoning + ~20-token answer), max
+  739 ("Please repeat the string…"); so 512 does bind sometimes (in the cap:512 run, two prompts generated more than
+  512 completion tokens, max 533).
 - Example outputs:
   - off: `{"complexity": "trivial", "task": "information_seeking", "needs_tools": false}`
   - cap:512: `<|channel>thought\n*   Prompt: "How many syllables are in the word smarter?"\n    *   Complexity: … *   Needs Tools: \`false\`.<channel|>{"complexity": "low", "task": "information_seeking", "needs_tools": false}`
@@ -91,8 +100,10 @@ A cap is applicable to all three. An unknown `model_type` is refused.
   `<think>\n\n</think>\n\n`; with `enable_thinking=True` it ends with `<think>\n` (so the generated text has only the
   closing tag, which `parse_label` already handled). **The template's default reasoning effort is `xhigh`** (it adds an
   instruction to think carefully at the top of the system message); `bench judge` passes `reasoning_effort="low"`
-  for a cap, as docs/05 did for Qwen (`low256`). With low effort the uncapped thinking was 137–285 tokens: 512 never
-  binds on these 10 prompts.
+  for a cap, as docs/05 did for Qwen (`low256`). With `low`, the template prepends its own sentence to the system
+  turn ("Reasoning effort is set to low. Keep your thinking brief…") before the rubric; the message handed to the
+  template is still the rubric byte for byte. With low effort the uncapped runs were 137–285 completion tokens
+  (reasoning + ~20-token answer): 512 never binds on these 10 prompts.
 - Example outputs:
   - off: `{"complexity": "trivial", "task": "other", "needs_tools": false}`
   - cap:512: `The prompt asks to repeat a specific string "?????-?????-" back to the user. This is a trivial task … simple mechanical task of repeating a string.\n</think>\n\n{"complexity":"trivial","task":"other","needs_tools":false}`
@@ -110,8 +121,8 @@ A cap is applicable to all three. An unknown `model_type` is refused.
   medium), no off switch. `bench judge` makes "off" by prefilling an empty analysis channel and opening the final one
   after the generation prompt (`<|channel|>analysis<|message|><|end|><|start|>assistant<|channel|>final<|message|>`),
   with `reasoning_effort="low"`; the model then writes the JSON alone (10/10). Whether that counts as "thinking off"
-  for the bench is the user's call. For a cap, `reasoning_effort="low"`: uncapped analysis on the 10 prompts was
-  54–197 tokens at low (90–521 at medium), so 512 does not bind at low.
+  for the bench is the user's call. For a cap, `reasoning_effort="low"`: uncapped runs on the 10 prompts were
+  54–197 completion tokens (analysis + ~20-token answer) at low (90–521 at medium), so 512 does not bind at low.
 - **The template prints today's date** in the system message (`Current date: …`), which would make a run depend on
   the day it was made. `bench judge` pins it to 2026-10-28 (`strftime_now` passed to the template). The template
   also adds its own system message (`You are ChatGPT, a large language model trained by OpenAI.`, knowledge cutoff,

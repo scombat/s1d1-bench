@@ -22,7 +22,7 @@ META_KEYS = [
     "licence",
     "notes",
 ]
-OPTIONAL_META_KEYS = ["quantization", "mlx_lm_version"]  # added by `bench judge`, allowed but never required
+OPTIONAL_META_KEYS = ["quantization", "mlx_lm_version", "max_tokens"]  # by `bench judge`, never required
 PROVIDERS = ["local", "chat", "api", "human"]
 INSTRUCTIONS = ["v7-single", "v7-batch"]
 LICENCE = "CC-BY-4.0"
@@ -73,6 +73,8 @@ def _check_meta(meta: dict, prompts_dir: Path, errors: list[str]) -> Path | None
         errors.append(f"meta.json: instructions {meta['instructions']!r} not in {INSTRUCTIONS}")
     if "replayable" in meta and type(meta["replayable"]) is not bool:
         errors.append(f"meta.json: replayable must be true or false (a JSON boolean), got {meta['replayable']!r}")
+    if "max_tokens" in meta and not (type(meta["max_tokens"]) is int and meta["max_tokens"] > 0):
+        errors.append(f"meta.json: max_tokens must be a positive integer, got {meta['max_tokens']!r}")
     if "licence" in meta and meta["licence"] != LICENCE:
         errors.append(
             f"meta.json: licence {meta['licence']!r} must be {LICENCE!r}: judge files are published under it, "

@@ -202,8 +202,14 @@ def test_temperature_and_thinking_accept_anything(valid_judge_dir, prompts_dir):
 
 
 def test_runner_keys_are_allowed(valid_judge_dir, prompts_dir):
-    edit_meta(valid_judge_dir, quantization="4bit", mlx_lm_version="0.28.0")
+    edit_meta(valid_judge_dir, quantization="4bit", mlx_lm_version="0.28.0", max_tokens=1024)
     assert validate_judge_dir(valid_judge_dir, prompts_dir) == []
+
+
+@pytest.mark.parametrize("bad", [0, -1, "1024", True, 1.5, None])
+def test_max_tokens_must_be_a_positive_integer(valid_judge_dir, prompts_dir, bad):
+    edit_meta(valid_judge_dir, max_tokens=bad)
+    assert any("max_tokens" in e for e in validate_judge_dir(valid_judge_dir, prompts_dir))
 
 
 def test_missing_files_give_clear_errors(tmp_path, prompts_dir):

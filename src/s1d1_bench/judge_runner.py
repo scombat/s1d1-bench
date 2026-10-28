@@ -227,12 +227,20 @@ def run_judge(prompts: list[dict], generate: GenerateFn, out_dir: Path, resume: 
 
 
 # meta.json keys a resumed run must share with the run it resumes
-RESUME_KEYS = ["model", "revision", "thinking", "prompts_sha256", "quantization"]
+RESUME_KEYS = ["model", "revision", "thinking", "prompts_sha256", "quantization", "mlx_lm_version", "max_tokens"]
+_COMMIT = re.compile(r"[0-9a-f]{40}")
+# an absolute local path (or one under the home directory) inside a meta.json value
+_LOCAL_PATH = re.compile(r"(?<![\w.])(?:~/|/(?:Users|home|private|tmp|var|Volumes|mnt|opt)/)")
 
 
 def _resume_conflicts(old: dict, new: dict) -> list[str]:
     return [f"{key} {old.get(key)!r} (meta.json) != {new[key]!r}" for key in RESUME_KEYS if key in new
             and old.get(key) != new[key]]
+
+
+def _local_path_keys(meta: dict) -> list[str]:
+    home = str(Path.home())
+    return [k for k, v in meta.items() if isinstance(v, str) and (home in v or _LOCAL_PATH.search(v))]
 
 
 def run_judge_cmd(args) -> int:
@@ -261,13 +269,23 @@ def run_judge_cmd(args) -> int:
     prompts = read_jsonl(args.prompts)
     old = json.loads(meta_path.read_text(encoding="utf-8")) if args.resume and meta_path.is_file() else None
     if old is not None:  # what can be checked before loading the model
-        conflicts = _resume_conflicts(old, {"model": args.model, "thinking": args.thinking, "prompts_sha256": digest})
+        early = {"thinking": args.thinking, "prompts_sha256": digest, "max_tokens": args.max_tokens}
+        conflicts = _resume_conflicts(old, early)
         if conflicts:
             return fail(f"{meta_path}: cannot resume a run with other settings: {'; '.join(conflicts)}")
 
     started = time.perf_counter()
-    generate, backend = mlx_backend.make_mlx_generate(args.model, args.thinking, max_tokens=args.max_tokens)
+    try:
+        generate, backend = mlx_backend.make_mlx_generate(args.model, args.thinking, max_tokens=args.max_tokens)
+    except (FileNotFoundError, ValueError, ModuleNotFoundError) as exc:
+        return fail(str(exc))
     print(f"model loaded in {time.perf_counter() - started:.1f} s")
+    replayable = bool(_COMMIT.fullmatch(backend["revision"]))
+    notes = [backend["behaviour"]]
+    if not replayable:
+        notes.append(f"replayable false: revision {backend['revision']} (no Hub commit recorded for the weights).")
+    if args.notes:
+        notes.append(args.notes)
     meta = {
         "judge": args.judge or out.name,
         "model": backend["model"],
@@ -279,12 +297,16 @@ def run_judge_cmd(args) -> int:
         "instructions": "v7-single",
         "prompts_sha256": digest,
         "author": args.author,
-        "replayable": True,
+        "replayable": replayable,
         "licence": LICENCE,
-        "notes": args.notes,
+        "notes": " ".join(notes),
         "quantization": backend["quantization"],
         "mlx_lm_version": backend["mlx_lm_version"],
+        "max_tokens": args.max_tokens,
     }
+    leaks = _local_path_keys(meta)
+    if leaks:
+        return fail(f"meta.json would hold a local path in {', '.join(leaks)}: meta.json is published, remove it")
     if old is not None:
         conflicts = _resume_conflicts(old, meta)
         if conflicts:

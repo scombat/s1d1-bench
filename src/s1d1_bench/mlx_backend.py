@@ -38,9 +38,19 @@ class Family:
     inject: str  # appended to the generated text when the cap is reached, before generating the answer
     cap_applicable: bool
     fixed_date: str | None = None  # the template prints today's date: pinned, or a run would not replay
+    off_behaviour: str = ""  # what "off" does, for meta.json notes
+    cap_behaviour: str = ""  # what "cap:{n}" does, for meta.json notes
 
     def template_kwargs(self, thinking: str) -> dict:
         return dict(self.off_kwargs if parse_thinking(thinking) is None else self.cap_kwargs)
+
+    def behaviour(self, thinking: str) -> str:
+        """One or two factual sentences on what `thinking` does for this family (written first in meta notes)."""
+        cap = parse_thinking(thinking)
+        text = self.off_behaviour if cap is None else self.cap_behaviour.format(n=cap)
+        if self.fixed_date is not None:
+            text += f" The date the chat template prints is pinned to {self.fixed_date}."
+        return f"{self.name}: {text}"
 
 
 FAMILIES: dict[str, Family] = {
@@ -54,6 +64,9 @@ FAMILIES: dict[str, Family] = {
         close_marker="<channel|>",
         inject="<channel|>",
         cap_applicable=True,
+        off_behaviour="enable_thinking=False (the chat template prefills an empty thought channel): no reasoning.",
+        cap_behaviour="enable_thinking=True; bench judge cuts the thought channel at {n} tokens (closes it and "
+        "generates the answer after it), only if the reasoning would go past {n} tokens.",
     ),
     "qwen3": Family(
         name="qwen3",
@@ -65,6 +78,10 @@ FAMILIES: dict[str, Family] = {
         close_marker="</think>",
         inject="\n</think>\n\n",
         cap_applicable=True,
+        off_behaviour="enable_thinking=False (the chat template prefills an empty think block): no reasoning.",
+        cap_behaviour="enable_thinking=True with reasoning_effort=low (the chat template prepends a low-effort "
+        "sentence to the system turn); bench judge cuts the think block at {n} tokens (closes it and generates the "
+        "answer after it), only if the reasoning would go past {n} tokens.",
     ),
     "gpt_oss": Family(
         name="gpt_oss",
@@ -78,6 +95,10 @@ FAMILIES: dict[str, Family] = {
         inject="<|end|><|start|>assistant<|channel|>final<|message|>",
         cap_applicable=True,
         fixed_date="2026-10-28",
+        off_behaviour="reasoning_effort=low; empty analysis channel prefilled and final channel opened (the "
+        "template has no off switch): no reasoning.",
+        cap_behaviour="reasoning_effort=low; bench judge cuts the analysis channel at {n} tokens (closes it, opens "
+        "the final channel and generates the answer), only if the analysis would go past {n} tokens.",
     ),
 }
 
@@ -114,12 +135,24 @@ def detect_family(config: dict) -> str:
     )
 
 
-def resolve_model_dir(model_id: str, root: Path | None = None) -> Path:
-    """The local directory of a model: `model_id` itself if it is a directory, else the Hub repo id under the models
-    root (`org/name` -> `<root>/org--name`). Never downloads: a missing model raises with the command to run."""
-    if Path(model_id).expanduser().is_dir():
-        return Path(model_id).expanduser()
+def resolve_model(model_id: str, root: Path | None = None) -> tuple[Path, str]:
+    """(local directory, Hub repo id recorded in meta.json) of a model given as a Hub repo id (`org/name` ->
+    `<root>/org--name`) or as such a directory of the models root. A directory anywhere else is refused (meta.json
+    must never hold a local path, nor a model nobody can fetch). Never downloads: a missing model raises
+    FileNotFoundError with the command to run."""
     root = MODELS_ROOT if root is None else Path(root)
+    given = Path(model_id).expanduser()
+    if given.is_dir():
+        where = given.resolve()
+        if where.parent != root.resolve():
+            raise ValueError(
+                f"{model_id}: a --model directory must be one of the models directory ~/mlx-models/ (here {root}), "
+                "named org--name after its Hub repo; give the Hub repo id instead (see judges/MODELS.md)"
+            )
+        org, sep, name = where.name.partition("--")
+        if not (sep and org and name):
+            raise ValueError(f"{model_id}: a model directory must be named org--name after its Hub repo org/name")
+        return given, f"{org}/{name}"
     if model_id.count("/") != 1 or model_id.startswith((".", "/", "~")):
         raise FileNotFoundError(f"{model_id}: neither a directory nor a Hub repo id (org/name)")
     target = root / model_id.replace("/", "--")
@@ -128,7 +161,7 @@ def resolve_model_dir(model_id: str, root: Path | None = None) -> Path:
             f"{model_id}: not found at {target}. Download it first (public Hub, no token; see judges/MODELS.md):\n"
             f"  HF_HUB_DISABLE_IMPLICIT_TOKEN=1 hf download {model_id} --local-dir {target}"
         )
-    return target
+    return target, model_id
 
 
 def read_revision(model_dir: Path | str) -> str:
@@ -227,33 +260,44 @@ def _mlx_stream(model, tokenizer, sampler) -> StreamFn:
     return stream
 
 
+def describe_model(model_id: str, thinking: str) -> tuple[Path, Family, dict]:
+    """Everything known about a model before loading it: its directory, its family and the meta.json fields it
+    fills (`model` is the Hub repo id, never a path; `behaviour` says what `thinking` does). Raises ValueError for a
+    bad `thinking`, an unknown family or a cap the family cannot apply, FileNotFoundError for a missing model."""
+    cap = parse_thinking(thinking)
+    model_dir, hub_id = resolve_model(model_id)
+    config = json.loads((model_dir / "config.json").read_text(encoding="utf-8"))
+    family = FAMILIES[detect_family(config)]
+    if cap is not None and not family.cap_applicable:
+        raise ValueError(f"{model_id}: no reasoning cap for the {family.name} family (see judges/MODELS.md)")
+    meta = {
+        "model": hub_id,
+        "revision": read_revision(model_dir),
+        "quantization": quantization_label(config),
+        "temperature": 0,
+        "thinking": thinking,
+        "behaviour": family.behaviour(thinking),
+    }
+    return model_dir, family, meta
+
+
 def make_mlx_generate(model_id: str, thinking: str, max_tokens: int = 1024) -> tuple[GenerateFn, dict]:
-    """Load a local MLX model (see `resolve_model_dir`) and return a GenerateFn and the part of meta.json it fills.
+    """Load a local MLX model (see `resolve_model`) and return a GenerateFn and the meta.json fields it fills
+    (`describe_model`, plus `mlx_lm_version`).
 
     The GenerateFn renders the chat template (system message = the rubric) with the family's kwargs for `thinking`,
     generates greedily and returns the whole assistant turn, reasoning included, special tokens kept, so that
     `parse_label` strips the reasoning itself.
     """
+    model_dir, family, meta = describe_model(model_id, thinking)
     cap = parse_thinking(thinking)
-    model_dir = resolve_model_dir(model_id)
-    config = json.loads((model_dir / "config.json").read_text(encoding="utf-8"))
-    family = FAMILIES[detect_family(config)]
-    if cap is not None and not family.cap_applicable:
-        raise ValueError(f"{model_id}: no reasoning cap for the {family.name} family (see judges/MODELS.md)")
     try:
         from mlx_lm import load
         from mlx_lm.sample_utils import make_sampler
     except ModuleNotFoundError as exc:
         raise ModuleNotFoundError("bench judge needs mlx-lm: `uv run --group judge bench judge ...`") from exc
 
-    meta = {
-        "model": model_id,
-        "revision": read_revision(model_dir),
-        "quantization": quantization_label(config),
-        "mlx_lm_version": importlib.metadata.version("mlx-lm"),
-        "temperature": 0,
-        "thinking": thinking,
-    }
+    meta["mlx_lm_version"] = importlib.metadata.version("mlx-lm")
     model, tokenizer = load(str(model_dir))
     stream = _mlx_stream(model, tokenizer, make_sampler(temp=0.0))
     kwargs = family.template_kwargs(thinking)

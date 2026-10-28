@@ -10,13 +10,14 @@ from s1d1_bench.judge_runner import build_messages, parse_label
 from s1d1_bench.mlx_backend import (
     FAMILIES,
     Family,
+    describe_model,
     detect_family,
     generate_capped,
     make_mlx_generate,
     parse_thinking,
     quantization_label,
     read_revision,
-    resolve_model_dir,
+    resolve_model,
 )
 
 SHA = "773a7da77e569019bb0fd17a554b263738d669a3"
@@ -214,7 +215,7 @@ def test_multi_token_markers():
 
 def test_missing_model_dir_tells_the_download_command(tmp_path):
     with pytest.raises(FileNotFoundError) as info:
-        resolve_model_dir("mlx-community/some-model-8bit", root=tmp_path)
+        resolve_model("mlx-community/some-model-8bit", root=tmp_path)
     message = str(info.value)
     target = tmp_path / "mlx-community--some-model-8bit"
     assert f"hf download mlx-community/some-model-8bit --local-dir {target}" in message
@@ -223,13 +224,27 @@ def test_missing_model_dir_tells_the_download_command(tmp_path):
 
 def test_hub_id_resolves_under_the_models_root(tmp_path):
     (tmp_path / "org--name").mkdir()
-    assert resolve_model_dir("org/name", root=tmp_path) == tmp_path / "org--name"
+    assert resolve_model("org/name", root=tmp_path) == (tmp_path / "org--name", "org/name")
 
 
-def test_a_local_directory_is_accepted_as_is(tmp_path):
+def test_a_directory_under_the_models_root_is_recorded_as_its_hub_id(tmp_path):
+    (tmp_path / "org--name").mkdir()
+    assert resolve_model(str(tmp_path / "org--name"), root=tmp_path) == (tmp_path / "org--name", "org/name")
+    assert resolve_model(str(tmp_path / "org--name") + "/", root=tmp_path)[1] == "org/name"
+
+
+def test_a_directory_elsewhere_is_refused(tmp_path):
     local = tmp_path / "converted"
     local.mkdir()
-    assert resolve_model_dir(str(local), root=tmp_path / "elsewhere") == local
+    with pytest.raises(ValueError, match="mlx-models"):
+        resolve_model(str(local), root=tmp_path / "models")
+
+
+@pytest.mark.parametrize("name", ["no-separator", "org--name/sub"])
+def test_a_directory_under_the_root_without_an_org_name_layout_is_refused(tmp_path, name):
+    (tmp_path / name).mkdir(parents=True)
+    with pytest.raises(ValueError, match="org--name"):
+        resolve_model(str(tmp_path / name), root=tmp_path)
 
 
 def test_revision_from_the_hub_download_metadata(tmp_path):
@@ -274,6 +289,43 @@ def _model_dir(tmp_path, config):
     return d
 
 
+def test_describe_model_never_records_a_local_path(tmp_path, monkeypatch):
+    d = _model_dir(tmp_path, {"model_type": "gpt_oss", "quantization": {"group_size": 64, "bits": 8}})
+    (d / "REVISION").write_text(SHA + "\n")
+    monkeypatch.setattr(mlx_backend, "MODELS_ROOT", tmp_path)
+    for model_id in ("org/m", str(d)):
+        model_dir, family, meta = describe_model(model_id, "cap:512")
+        assert model_dir == d and family.name == "gpt_oss"
+        assert meta == {
+            "model": "org/m",
+            "revision": SHA,
+            "quantization": "8bit-gs64",
+            "temperature": 0,
+            "thinking": "cap:512",
+            "behaviour": FAMILIES["gpt_oss"].behaviour("cap:512"),
+        }
+        assert str(tmp_path) not in json.dumps(meta)
+
+
+@pytest.mark.parametrize("family", sorted(FAMILIES))
+@pytest.mark.parametrize("thinking", ["off", "cap:512"])
+def test_every_family_says_what_its_thinking_setting_does(family, thinking):
+    text = FAMILIES[family].behaviour(thinking)
+    assert text.startswith(family + ": ") and text.endswith(".")
+    assert "/" not in text.replace("</", "").replace("<|", "").replace("|>", "")  # no path, markers allowed
+    if thinking == "cap:512":
+        assert "512" in text
+
+
+def test_behaviour_states_the_effort_and_the_prefill():
+    assert "reasoning_effort=low" in FAMILIES["qwen3"].behaviour("cap:512")
+    assert "system turn" in FAMILIES["qwen3"].behaviour("cap:512")
+    off = FAMILIES["gpt_oss"].behaviour("off")
+    assert "reasoning_effort=low" in off and "empty analysis channel prefilled" in off and "2026-10-28" in off
+    assert "enable_thinking=False" in FAMILIES["gemma4"].behaviour("off")
+    assert FAMILIES["gpt_oss"].behaviour("cap:64") != FAMILIES["gpt_oss"].behaviour("cap:512")
+
+
 def test_cap_refused_for_a_family_without_one(tmp_path, monkeypatch):
     no_cap = Family("nocap", ("nocap_type",), {}, {}, "", "<r>", "</r>", "</r>", False)
     monkeypatch.setitem(FAMILIES, "nocap", no_cap)
@@ -288,6 +340,13 @@ def test_bad_thinking_refused_before_loading(tmp_path, monkeypatch):
     monkeypatch.setattr(mlx_backend, "MODELS_ROOT", tmp_path)
     with pytest.raises(ValueError):
         make_mlx_generate("org/m", thinking="on")
+
+
+def test_local_directory_outside_the_models_root_refused_before_loading(tmp_path, monkeypatch):
+    d = _model_dir(tmp_path, {"model_type": "qwen3"})
+    monkeypatch.setattr(mlx_backend, "MODELS_ROOT", tmp_path / "models")
+    with pytest.raises(ValueError, match="mlx-models"):
+        make_mlx_generate(str(d), thinking="off")
 
 
 def test_unknown_family_refused_before_loading(tmp_path, monkeypatch):
