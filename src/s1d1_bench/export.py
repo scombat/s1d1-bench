@@ -32,6 +32,21 @@ META_SCHEMA = pa.schema(
 )
 
 
+def check_envelope_safe(prompts: list[dict]) -> None:
+    """Refuse prompts with a line that could pass for an envelope line of a lot file (`</prompt>`, or one starting
+    with `<prompt`): the prompt text is never escaped or altered, so such a set cannot be exported."""
+    bad = [
+        p["id"]
+        for p in prompts
+        if any(
+            (line := raw.strip().lower()) == "</prompt>" or line.startswith("<prompt")
+            for raw in p["prompt"].splitlines()
+        )
+    ]
+    if bad:
+        raise ValueError(f"prompts with a line that could forge a lot envelope (ids: {', '.join(bad)})")
+
+
 def build_export(
     selected: list[dict], handwritten: list[dict], langs: list[str], seed: int
 ) -> tuple[list[dict], pa.Table]:
@@ -87,6 +102,7 @@ def build_export(
     random.Random(seed).shuffle(rows)
 
     prompts = [{"id": meta["id"], "prompt": text} for meta, text in rows]
+    check_envelope_safe(prompts)
     table = pa.Table.from_pylist([meta for meta, _ in rows], schema=META_SCHEMA)
     return prompts, table
 
@@ -94,6 +110,7 @@ def build_export(
 def write_lots(prompts: list[dict], out_dir: Path | str, size: int = LOT_SIZE) -> list[Path]:
     """Lots of `size` prompts, `01.md`, `02.md`, ...: the batch instructions, a blank line, then each prompt between
     an opening line `<prompt id="ID">` and a closing line `</prompt>`. The prompt text is written as is."""
+    check_envelope_safe(prompts)
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     head = make_consigne("batch").rstrip("\n") + "\n\n"
@@ -139,7 +156,10 @@ def run_export(args) -> int:
     write_jsonl(jsonl, prompts)
     pq.write_table(meta, out / f"{args.name}.meta.parquet", compression="zstd")
     (out / f"{args.name}.sha256").write_text(hashlib.sha256(jsonl.read_bytes()).hexdigest() + "\n", encoding="ascii")
-    lots = write_lots(prompts, out / f"{args.name}.lots")
+    lots_dir = out / f"{args.name}.lots"
+    for stale in lots_dir.glob("*.md"):  # a smaller re-export must not keep the lots of a bigger one
+        stale.unlink()
+    lots = write_lots(prompts, lots_dir)
     write_consigne(at("consigne"))
     print(f"{args.name}: {len(prompts)} prompts, {len(lots)} lot(s)", file=sys.stderr)
     return 0
