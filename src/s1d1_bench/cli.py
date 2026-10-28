@@ -20,7 +20,7 @@ _HELP = {
     "export": "export the prompts to judge",
     "judge": "run a local judge over the prompts",
     "validate": "check a judge directory",
-    "agree": "measure the agreement of a classifier with the judges",
+    "agree": "measure how often judges agree, pair by pair",
 }
 
 
@@ -80,12 +80,17 @@ def _validate_arguments(sub: argparse.ArgumentParser) -> None:
     sub.add_argument("--prompts", type=Path, default=Path("data/prompts"), help="directory of the prompts files")
 
 
+def _agree_arguments(sub: argparse.ArgumentParser) -> None:
+    sub.add_argument("judge_dirs", nargs="*", type=Path, help="judge directories (at least two), e.g. judges/trial-*")
+
+
 # subcommand -> function adding its arguments to its parser
 _ARGUMENTS = {
     "pool": _pool_arguments,
     "export": _export_arguments,
     "judge": _judge_arguments,
     "validate": _validate_arguments,
+    "agree": _agree_arguments,
 }
 
 
