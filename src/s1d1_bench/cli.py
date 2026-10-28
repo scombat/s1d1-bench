@@ -3,6 +3,7 @@
 import argparse
 import sys
 from importlib import import_module
+from pathlib import Path
 
 # subcommand -> (module of s1d1_bench, function taking the parsed arguments), imported lazily so that `--help`
 # and the other subcommands never pay for (or break on) the heavy dependencies of a module
@@ -38,11 +39,28 @@ def _handler(module: str, function: str):
     return run
 
 
+def _pool_arguments(sub: argparse.ArgumentParser) -> None:
+    sub.add_argument("--out", type=Path, default=Path("data/pool/pool.parquet"), help="pool file (parquet)")
+    sub.add_argument(
+        "--exclusions", type=Path, default=Path("data/exclusions/s1d1-seen-keys.txt"), help="prompt keys to leave out"
+    )
+    sub.add_argument(
+        "--candidates", type=Path, default=Path("data/pool/candidates-eng.jsonl"), help="English candidates (jsonl)"
+    )
+    sub.add_argument("--per-source", type=int, default=300, help="English candidates drawn from each source")
+    sub.add_argument("--seed", type=int, default=0, help="seed of the candidate draw")
+
+
+# subcommand -> function adding its arguments to its parser
+_ARGUMENTS = {"pool": _pool_arguments}
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="bench", description="s1d1 open bench kit")
     subparsers = parser.add_subparsers(dest="command", required=True, metavar="{" + ",".join(COMMANDS) + "}")
     for name, (module, function) in COMMANDS.items():
         sub = subparsers.add_parser(name, help=_HELP[name], description=_HELP[name])
+        _ARGUMENTS.get(name, lambda _sub: None)(sub)
         sub.set_defaults(handler=_handler(module, function))
     return parser
 
