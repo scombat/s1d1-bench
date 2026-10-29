@@ -29,7 +29,7 @@ Installation : `uv sync --group pool --group dev` (sur Apple silicon, pour faire
 ## Reproduire l'essai
 
 L'essai fait juger 50 prompts par trois modèles locaux, chacun avec le raisonnement coupé (`off`) et plafonné à 512
-jetons (`cap:512`), soit six dossiers `judges/trial-*`. Les résultats et les durées sont dans
+jetons (`cap:512`), soit six exécutions ; cinq dossiers `judges/trial-*` sont gardés (gpt-oss `off` n'a pas pu étiqueter un prompt et a été retiré). Les résultats et les durées sont dans
 [judges/TRIAL.md](judges/TRIAL.md) : c'est un essai de l'outillage sur 50 prompts, pas un résultat du banc. Les trois
 modèles, leurs révisions et la façon dont `bench judge` coupe ou plafonne leur raisonnement sont dans
 [judges/MODELS.md](judges/MODELS.md) ; le format des dossiers de juges est dans [judges/README.md](judges/README.md).
@@ -98,13 +98,11 @@ Toutes les commandes se lancent depuis la racine du dépôt. Les étapes 4 et 5 
    à faire pour `mlx-community/gemma-4-31b-it-8bit`, `mlx-community/Qwen3.8-27B-8bit` et
    `mlx-community/gpt-oss-20b-MXFP4-Q8`.
 
-5. **Les six juges**, l'un après l'autre (provider `local`, MLX, Apple silicon seulement). Pour chaque famille,
+5. **Les juges**, l'un après l'autre (provider `local`, MLX, Apple silicon seulement). Pour chaque famille,
    `--thinking off` puis `--thinking cap:512` ; `--author` reçoit votre nom :
 
    ```
    export HF_HUB_DISABLE_IMPLICIT_TOKEN=1
-   uv run --group judge bench judge --model mlx-community/gpt-oss-20b-MXFP4-Q8 --prompts data/prompts/trial-50.jsonl \
-       --out judges/trial-gptoss-off --author <nom> --thinking off --max-tokens 1024
    uv run --group judge bench judge --model mlx-community/gpt-oss-20b-MXFP4-Q8 --prompts data/prompts/trial-50.jsonl \
        --out judges/trial-gptoss-cap512 --author <nom> --thinking cap:512 --max-tokens 1024
    uv run --group judge bench judge --model mlx-community/Qwen3.8-27B-8bit --prompts data/prompts/trial-50.jsonl \

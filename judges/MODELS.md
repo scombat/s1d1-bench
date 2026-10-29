@@ -38,8 +38,9 @@ off and ≈ 2.3 h at cap:512; gpt-oss ≈ 8 min off and ≈ 12 min at cap:512.
 
 Trial on 50 prompts ([TRIAL.md](TRIAL.md)): one unreadable answer in 300 judge calls, for gpt-oss-20b with thinking
 off (1 of 50, 2 %, under the 10 % bar). The model answered `"task":"design"` twice, which is not one of the 19 task
-names, and greedy decoding gives the same answer on a resume. The judge was not replaced and no label was filled in:
-`judges/trial-gptoss-off` has 49 labels and `bench validate` reports the missing id. The user decides what to do with it.
+names, and greedy decoding gives the same answer on a resume. No label was filled in, and the incomplete folder
+`judges/trial-gptoss-off` was removed from the repository by the user's decision; the other five trial folders are
+complete.
 
 "Peak memory" is `mx.get_peak_memory()` in the exploration script (MLX) and `peak memory footprint` from
 `/usr/bin/time -l` around `bench judge` (whole process).
