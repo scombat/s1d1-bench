@@ -25,7 +25,8 @@ with `bench export --pool data/pool/pool.parquet --select data/prompts/trial-50.
 All figures come from the last line of each id in `log.jsonl` (each folder has exactly 50 lines, no resume was
 needed). Tokens/s is `completion_tokens / wall_s` per prompt, median over the 50 prompts (the figure `bench judge`
 prints). `wall_s` covers prompt processing and decoding, not model loading. The prompt is 1 858 to 3 296 tokens (the
-rubric is about 1 800 of them). Estimate for 400 prompts = mean `wall_s` x 400.
+rubric is about 1 800 of them). Estimate for 400 prompts = mean `wall_s` x 400. The trial mix is about half
+Arena-Hard prompts (23 of 50), which are long, so the estimate for the real 400-prompt set may differ.
 
 | folder | ok | json_error | truncated | error | median tokens/s | median s/prompt | mean s/prompt | total wall (sum) | 400 prompts (est.) | median / max completion tokens | prompts above 512 completion tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -56,7 +57,7 @@ Counts per complexity level (`null` never occurred) and the number of prompts la
 | trial-gemma4-off | 0 | 4 | 28 | 17 | 1 | 0 | 1 |
 | trial-gemma4-cap512 | 0 | 2 | 30 | 15 | 3 | 0 | 1 |
 
-No judge used `expert` and `needs_tools` is false for 47 to 50 of the 50 prompts in every folder (the ten `expert`
+No judge used `expert` and `needs_tools` is false for 48 to 50 of the 50 prompts in every folder (the ten `expert`
 handwritten prompts are not in this set). So `needs_tools` agreement (96 to 100 %) and the within-one-tier rate
 (98 to 100 %) say little here: almost all labels sit on `low` and `medium`.
 
