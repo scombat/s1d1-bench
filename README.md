@@ -146,6 +146,30 @@ uv run bench draw --presort judges/presort-qwen3-off --meta data/prompts/presort
 (les retraits et leur raison) sont publiés : le tirage se rejoue. La case `expert` est faite des dix prompts de
 `data/handwritten/expert-v1.jsonl`, pas du vivier.
 
+## La traduction
+
+Les 90 prompts de base anglais (`data/prompts/base-v1-eng`, export de `base-v1.select.txt` et des dix prompts écrits à la
+main) sont traduits en français, russe et chinois simplifié par le modèle du pré-tri, Qwen3.8 27B 8 bits sans réflexion,
+à température 0 (docs/33). `bench translate` traduit un fichier de prompts dans une langue, un prompt par génération :
+la consigne (`consigne/translate-v1-<lang>.md`) est le message système, le prompt est donné entre balises `<prompt>`
+comme une donnée.
+
+```
+uv run --group judge bench translate --model mlx-community/Qwen3.8-27B-8bit --prompts data/prompts/base-v1-eng.jsonl \
+    --lang fra --consigne consigne/translate-v1-fra.md --out data/translations/base-v1 --author <nom> --thinking off
+```
+
+Sortie dans `--out` : `<lang>.jsonl` (les traductions), `<lang>.meta.json` (modèle, révision, consigne et son SHA-256,
+SHA-256 du fichier anglais, réglages), `<lang>.log.jsonl` (un état par prompt : `ok`, `empty`, `envelope`, `truncated`,
+`error`). Comme pour un juge, les fichiers ne sont jamais réécrits ; `--resume` reprend une série interrompue avec les
+mêmes réglages. Une traduction qui contient une ligne `</prompt>` ou qui commence par `<prompt` est une erreur consignée,
+jamais une traduction ; seule exception, une réponse entièrement enveloppée dans une paire `<prompt>…</prompt>` (le
+modèle recopie les balises) est dépouillée de cette paire et le journal le dit (`unwrapped`).
+
+Vitesse mesurée (dix prompts, M-série 128 Go, MLX) : médiane de 14,4 jetons par seconde en décodage, 244 s au total pour
+dix prompts chargement compris ; une série de 90 prompts prend environ 20 à 25 minutes par langue, le russe et le chinois
+étant à mesurer.
+
 ## Dépendances
 
 | Dépendance | Groupe | Raison |
