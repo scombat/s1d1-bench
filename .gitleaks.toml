@@ -1,0 +1,13 @@
+title = "s1d1-bench gitleaks configuration"
+
+[extend]
+# keep every default rule; nothing is disabled
+useDefault = true
+
+[[allowlists]]
+description = "Prompts of public datasets (Dolly, OASST2, m-ArenaHard) are stored verbatim: a prompt may itself contain a UUID, a token-like string or an API-key-shaped example. Only these data paths are skipped; code, docs, CI and judge files are still scanned"
+paths = [
+  '''^data/pool/candidates-eng\.jsonl$''',
+  '''^data/prompts/[^/]+\.jsonl$''',
+  '''^data/prompts/[^/]+\.lots/''',
+]

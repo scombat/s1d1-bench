@@ -1,0 +1,3 @@
+{"id": "bad9ea434b83cd45-eng", "complexity": "trivial", "task": "information_seeking", "needs_tools": false}
+{"id": "90918cd27c321d46-eng", "complexity": "low", "task": "coding_debugging", "needs_tools": false}
+{"id": "7c15d4644fe82884-eng", "complexity": "high", "task": "planning", "needs_tools": true}

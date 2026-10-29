@@ -1,0 +1,18 @@
+{
+  "judge": "trial-gptoss-cap512",
+  "model": "mlx-community/gpt-oss-20b-MXFP4-Q8",
+  "provider": "local",
+  "revision": "773a7da77e569019bb0fd17a554b263738d669a3",
+  "date": "2026-10-29",
+  "temperature": 0,
+  "thinking": "cap:512",
+  "instructions": "v7-single",
+  "prompts_sha256": "ce182edb6197a3df32c7ed9e49f329762b0a24743f149cff09f70da4542abb94",
+  "author": "scombat",
+  "replayable": true,
+  "licence": "CC-BY-4.0",
+  "notes": "gpt_oss: reasoning_effort=low; bench judge cuts the analysis channel at 512 tokens (closes it, opens the final channel and generates the answer), only if the analysis would go past 512 tokens. The date the chat template prints is pinned to 2026-10-28.",
+  "quantization": "mxfp4-gs32+8bit-gs64",
+  "mlx_lm_version": "0.32.2",
+  "max_tokens": 1024
+}

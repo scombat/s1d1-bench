@@ -1,0 +1,15 @@
+{
+  "judge": "example-chat",
+  "model": "example-chat-model",
+  "provider": "chat",
+  "revision": "unknown",
+  "date": "2026-10-28",
+  "temperature": "unknown",
+  "thinking": "unknown",
+  "instructions": "v7-batch",
+  "prompts_sha256": "20f14a711b63218af4f63b4b61bf433f5fbe724586ecc3d2efc8e85970cb92e8",
+  "author": "example",
+  "replayable": false,
+  "licence": "CC-BY-4.0",
+  "notes": "Format example on three fictitious prompts (data/prompts/example.jsonl); the labels were written by hand, no model produced them."
+}

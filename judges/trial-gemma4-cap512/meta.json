@@ -1,0 +1,18 @@
+{
+  "judge": "trial-gemma4-cap512",
+  "model": "mlx-community/gemma-4-31b-it-8bit",
+  "provider": "local",
+  "revision": "f5f3dc92ab4af76724c36c21eb6bedadb3a851be",
+  "date": "2026-10-29",
+  "temperature": 0,
+  "thinking": "cap:512",
+  "instructions": "v7-single",
+  "prompts_sha256": "ce182edb6197a3df32c7ed9e49f329762b0a24743f149cff09f70da4542abb94",
+  "author": "scombat",
+  "replayable": true,
+  "licence": "CC-BY-4.0",
+  "notes": "gemma4: enable_thinking=True; bench judge cuts the thought channel at 512 tokens (closes it and generates the answer after it), only if the reasoning would go past 512 tokens.",
+  "quantization": "8bit-gs64",
+  "mlx_lm_version": "0.32.2",
+  "max_tokens": 1024
+}
