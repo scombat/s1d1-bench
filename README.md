@@ -42,7 +42,7 @@ Toutes les commandes se lancent depuis la racine du dépôt. Les étapes 4 et 5 
    recherche ; `--out` est le chemin de la liste dans ce dépôt-ci (écrit ici en relatif, à adapter) :
 
    ```
-   uv run python -I pipeline/13_seen_keys.py --inputs 'dataset/interim/*.parquet' 'dataset/final/*.parquet' \
+   uv run python -I pipeline/13_seen_keys.py --inputs 'dataset/final/*.parquet' \
        --out data/exclusions/s1d1-seen-keys.txt
    ```
 
@@ -58,7 +58,7 @@ Toutes les commandes se lancent depuis la racine du dépôt. Les étapes 4 et 5 
 
    Sortie : `data/pool/pool.parquet`, `data/pool/pool.stats.json`, `data/pool/candidates-eng.jsonl`.
 
-3. **Les 50 prompts de l'essai.** Le tirage (graine 0 ; tous les candidats OASST2, puis 24 Dolly et 23 Arena-Hard)
+3. **Les 50 prompts de l'essai.** Le tirage (graine 0 ; 17 Dolly, 17 OASST2 puis 16 Arena-Hard)
    écrit la liste de clés `data/prompts/trial-50.select.txt`, puis `bench export` fabrique le fichier de prompts :
 
    ```
@@ -74,11 +74,11 @@ Toutes les commandes se lancent depuis la racine du dépôt. Les étapes 4 et 5 
        key = json.loads(line)["id"]
        by_source.setdefault(source_of[key], []).append(key)
    rng = random.Random(0)
-   quota = {"oasst2": None, "dolly": 24, "arena_hard": 23}  # None: all of them
+   quota = {"dolly": 17, "oasst2": 17, "arena_hard": 16}
    keys = []
    for source, n in quota.items():
        candidates = sorted(by_source[source])
-       keys += candidates if n is None else rng.sample(candidates, n)
+       keys += rng.sample(candidates, n)
    assert len(keys) == len(set(keys)) == 50
    open("data/prompts/trial-50.select.txt", "w", encoding="utf-8").write("\n".join(keys) + "\n")
    PY

@@ -7,7 +7,7 @@
   "temperature": 0,
   "thinking": "cap:512",
   "instructions": "v7-single",
-  "prompts_sha256": "56d7b8083d59ccf63f520b5203cab119b9d7558794d4b742b2993302834a2bdd",
+  "prompts_sha256": "ce182edb6197a3df32c7ed9e49f329762b0a24743f149cff09f70da4542abb94",
   "author": "scombat",
   "replayable": true,
   "licence": "CC-BY-4.0",
