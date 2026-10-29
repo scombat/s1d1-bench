@@ -1,0 +1,11 @@
+{
+  "lang": "rus",
+  "repo": "CohereLabs/m-ArenaHard",
+  "config": "ru",
+  "split": "test",
+  "revision": "ab393a96cd0b134a1acfa96e080af31e5e73a393",
+  "licence": "apache-2.0",
+  "translator": "Google Translate, per the m-ArenaHard dataset card",
+  "source_prompts_meta": "base-v1-eng",
+  "date": "2026-10-29"
+}
