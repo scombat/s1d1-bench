@@ -17,7 +17,7 @@ jobs:
       - run: uv sync --locked --group pool --group dev
       - run: uv run ruff check .
       - run: uv run pytest -m "not slow"
-      # every committed judge directory must stay valid; a no-op while judges/ is empty
+      # every committed judge directory (every folder of judges/) must stay valid
       - name: Validate the committed judges
         run: |
           shopt -s nullglob

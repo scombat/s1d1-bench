@@ -1,3 +1,7 @@
 .venv
 __pycache__
 data/pool/cache/
+.superpowers/
+.DS_Store
+.env
+dist/
