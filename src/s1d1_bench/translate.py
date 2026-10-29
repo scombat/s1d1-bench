@@ -12,7 +12,7 @@ from s1d1_bench.runfile import read_done, repair_log, strip_reasoning, write_ato
 
 LANGUAGES = {"fra": "French", "rus": "Russian", "zho": "Simplified Chinese"}
 INSTRUCTION = "Translate the prompt between the <prompt> tags into {language}. Return the translation only."
-RETRY_SUFFIX = "\nOutput the translation only, nothing else."
+RETRY_SUFFIX = "\nOutput the translation only, without the prompt tags, nothing else."
 RAW_MAX_CHARS = 2000
 SOURCE_SUFFIX = "-eng"
 DEFAULT_CONSIGNE = "consigne/translate-v1-{lang}.md"  # relative to the working directory, as the CLI defaults
@@ -35,23 +35,34 @@ def build_messages(consigne: str, prompt: str, lang: str, retry: bool = False) -
     return [{"role": "system", "content": consigne}, {"role": "user", "content": user}]
 
 
+def _parse(text: str) -> tuple[str, str | None, bool]:
+    """`parse_translation`, plus whether one outer <prompt> pair was unwrapped."""
+    text = strip_reasoning(text).strip()
+    lines = text.splitlines()
+    unwrapped = len(lines) >= 2 and lines[0].strip().lower() == "<prompt>" and lines[-1].strip().lower() == "</prompt>"
+    if unwrapped:  # the model put the translation back between the tags: one pair is taken off, only one
+        text = "\n".join(lines[1:-1]).strip()
+    if not text:
+        return "empty", None, unwrapped
+    if any((line := raw.strip().lower()) == "</prompt>" or line.startswith("<prompt") for raw in text.splitlines()):
+        return "envelope", None, unwrapped
+    return "ok", text, unwrapped
+
+
 def parse_translation(text: str) -> tuple[str, str | None]:
     """("ok", translation) once the reasoning is dropped (code fences stay); ("empty", None) if nothing is left;
     ("envelope", None) if a line could pass for an envelope line (`</prompt>`, or one starting with `<prompt`), the
-    rule of `export.check_envelope_safe`: such a text is never written."""
-    text = strip_reasoning(text).strip()
-    if not text:
-        return "empty", None
-    if any((line := raw.strip().lower()) == "</prompt>" or line.startswith("<prompt") for raw in text.splitlines()):
-        return "envelope", None
-    return "ok", text
+    rule of `export.check_envelope_safe`: such a text is never written. One outer pair wrapping the whole answer (a
+    first line `<prompt>`, a last line `</prompt>`) is taken off first, and what it wrapped is judged the same way."""
+    status, translation, _ = _parse(text)
+    return status, translation
 
 
 def _translate_one(consigne: str, prompt: str, lang: str, generate: GenerateFn) -> tuple[str, str | None, dict]:
     """(status, translation or None, log fields) for one prompt: a second generation only after an empty or an
     envelope answer, none after a cut one (`finish_reason == "length"`) or an exception."""
     totals = {"retries": 0, "wall_s": 0.0, "prompt_tokens": 0, "completion_tokens": 0}
-    status, translation, raw = "empty", None, ""
+    status, translation, raw, unwrapped = "empty", None, "", False
     for retry in (False, True):
         started = time.perf_counter()
         try:
@@ -68,11 +79,13 @@ def _translate_one(consigne: str, prompt: str, lang: str, generate: GenerateFn) 
         if res.finish_reason == "length":  # a cut translation reads as a whole one: never kept, never retried
             status, translation = "truncated", None
             break
-        status, translation = parse_translation(res.text)
+        status, translation, unwrapped = _parse(res.text)
         if status == "ok":
             break
     totals["wall_s"] = round(totals["wall_s"], 3)
-    return status, translation, totals if status == "ok" else {**totals, "raw": raw[:RAW_MAX_CHARS]}
+    if status == "ok":  # "unwrapped" only when true: the line written is not the answer as the model gave it
+        return status, translation, {**totals, "unwrapped": True} if unwrapped else totals
+    return status, translation, {**totals, "raw": raw[:RAW_MAX_CHARS]}
 
 
 def check_sources(prompts: list) -> None:

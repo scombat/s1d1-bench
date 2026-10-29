@@ -12,4 +12,4 @@ A careless or informal original gives a careless or informal translation; a typo
 
 Use simplified characters only.
 
-Output the translation only: nothing before it, nothing after it.
+Output the translation only: nothing before it, nothing after it, and do not reproduce the prompt tags around it.

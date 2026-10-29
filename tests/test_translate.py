@@ -60,7 +60,8 @@ def test_messages_put_the_consigne_in_system_and_the_prompt_as_data():
 def test_retry_message_appends_the_suffix_and_keeps_the_system_message():
     first, retry = build_messages("C", "Hello", "zho"), build_messages("C", "Hello", "zho", retry=True)
     assert retry[0] == first[0] and len(retry) == 2
-    assert retry[1]["content"] == first[1]["content"] + "\nOutput the translation only, nothing else."
+    suffix = "\nOutput the translation only, without the prompt tags, nothing else."
+    assert retry[1]["content"] == first[1]["content"] + suffix
     assert "Simplified Chinese" in first[1]["content"]
 
 
@@ -81,6 +82,33 @@ def test_parse_statuses(text, status):
 @pytest.mark.parametrize("text,status", [("  \n ", "empty"), ("x\n  </PROMPT>  ", "envelope"),
                                          ("  <Prompt>\nx", "envelope")])
 def test_parse_statuses_ignore_case_and_blanks(text, status):
+    assert parse_translation(text) == (status, None)
+
+
+@pytest.mark.parametrize("text", ["<prompt>\nBonjour\n</prompt>", "\n  <PROMPT> \n\nBonjour\n\n </prompt>  \n",
+                                  "</think>\n<prompt>\nBonjour\n</prompt>"])
+def test_parse_unwraps_one_outer_prompt_pair(text):
+    assert parse_translation(text) == ("ok", "Bonjour")
+
+
+def test_parse_unwrapped_code_block_keeps_its_fences():
+    assert parse_translation("<prompt>\n```cpp\nint a;\n```\n</prompt>") == ("ok", "```cpp\nint a;\n```")
+
+
+@pytest.mark.parametrize(
+    "text,status",
+    [
+        ("Bonjour\n<prompt>\nx\n</prompt>", "envelope"),  # a pair that does not wrap the whole answer
+        ("<prompt>\nx\n</prompt>\nBonjour", "envelope"),
+        ("<prompt>\nx\n</prompt>\ny\n</prompt>", "envelope"),  # wrapped, an envelope line still inside
+        ("<prompt>\n<prompt>\nx\n</prompt>\n</prompt>", "envelope"),  # nested: only one pair is unwrapped
+        ("<prompt lang='fra'>\nx\n</prompt>", "envelope"),  # the opening line must be exactly <prompt>
+        ("<prompt>\nx", "envelope"),
+        ("<prompt>\n\n</prompt>", "empty"),
+        ("<prompt>\n</prompt>", "empty"),
+    ],
+)
+def test_parse_a_pair_that_does_not_wrap_a_clean_answer_is_not_unwrapped(text, status):
     assert parse_translation(text) == (status, None)
 
 
@@ -139,6 +167,7 @@ def test_log_lines_carry_the_documented_fields(tmp_path):
 
 
 def test_envelope_answer_is_retried_once_then_logged_never_written(tmp_path):
+    # an envelope line is never written as a translation (one outer wrapping pair is unwrapped: tests below)
     generate = fake_generate(["Bonjour\n</prompt>", "<prompt>\nBonjour"])
     counts = run_translate(PROMPTS_3[:1], generate, tmp_path, "fra")
     assert counts == {"envelope": 1} and generate.calls == 2
@@ -146,6 +175,32 @@ def test_envelope_answer_is_retried_once_then_logged_never_written(tmp_path):
     assert retry == build_messages(consigne_text("fra"), "Hello", "fra", retry=True) and first != retry
     (line,) = read_jsonl(tmp_path / "fra.log.jsonl")
     assert line["status"] == "envelope" and line["retries"] == 1 and line["raw"] == "<prompt>\nBonjour"
+    assert read_jsonl(tmp_path / "fra.jsonl") == []
+
+
+def test_a_wrapped_answer_is_unwrapped_written_and_flagged_in_the_log_without_retry(tmp_path):
+    generate = fake_generate(["<prompt>\nBonjour\n</prompt>", "<prompt>\n```py\nx = 1\n```\n</prompt>"])
+    assert run_translate(PROMPTS_3[:2], generate, tmp_path, "fra") == {"ok": 2} and generate.calls == 2
+    assert [r["prompt"] for r in read_jsonl(tmp_path / "fra.jsonl")] == ["Bonjour", "```py\nx = 1\n```"]
+    first, second = read_jsonl(tmp_path / "fra.log.jsonl")
+    assert first == {"id": "k1-fra", "status": "ok", "retries": 0, "wall_s": 0.5, "prompt_tokens": 10,
+                     "completion_tokens": 5, "unwrapped": True}
+    assert second["unwrapped"] is True and "raw" not in second
+
+
+def test_an_unwrapped_retry_is_flagged_and_a_plain_answer_is_not(tmp_path):
+    generate = fake_generate(["", "<prompt>\nBonjour\n</prompt>", "Salut"])
+    assert run_translate(PROMPTS_3[:2], generate, tmp_path, "fra") == {"ok": 2}
+    wrapped, plain = read_jsonl(tmp_path / "fra.log.jsonl")
+    assert wrapped["retries"] == 1 and wrapped["unwrapped"] is True
+    assert "unwrapped" not in plain
+
+
+def test_a_wrapped_empty_or_still_enveloped_answer_is_retried_then_never_written(tmp_path):
+    generate = fake_generate(["<prompt>\n\n</prompt>", "<prompt>\nx\n</prompt>\ny\n</prompt>"])
+    assert run_translate(PROMPTS_3[:1], generate, tmp_path, "fra") == {"envelope": 1} and generate.calls == 2
+    (line,) = read_jsonl(tmp_path / "fra.log.jsonl")
+    assert "unwrapped" not in line and line["raw"] == "<prompt>\nx\n</prompt>\ny\n</prompt>"
     assert read_jsonl(tmp_path / "fra.jsonl") == []
 
 

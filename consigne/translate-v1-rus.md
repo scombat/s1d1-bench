@@ -10,4 +10,4 @@ Keep the layout: line breaks, lists and blocks stay as they are.
 
 A careless or informal original gives a careless or informal translation; a typo in the original is not reproduced.
 
-Output the translation only: nothing before it, nothing after it.
+Output the translation only: nothing before it, nothing after it, and do not reproduce the prompt tags around it.
