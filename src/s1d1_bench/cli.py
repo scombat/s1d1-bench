@@ -62,6 +62,13 @@ def _export_arguments(sub: argparse.ArgumentParser) -> None:
     sub.add_argument("--select", type=Path, required=True, help="selected prompt keys, one per line")
     sub.add_argument("--handwritten", type=Path, default=None, help="handwritten prompts (jsonl)")
     sub.add_argument("--langs", default="eng", help="comma-separated language codes (default: eng)")
+    sub.add_argument(
+        "--translations",
+        type=Path,
+        action="append",
+        default=None,
+        help="folder of <lang>.jsonl translations and their corrections; repeat it for each wave (needed beyond eng)",
+    )
     sub.add_argument("--name", required=True, help="name of the set: files are data/prompts/<name>.*")
     sub.add_argument("--seed", type=int, default=0, help="seed of the shuffle")
     sub.add_argument("--root", type=Path, default=Path("."), help=argparse.SUPPRESS)  # for tests and smoke runs
