@@ -1,40 +1,40 @@
 {
-  "date": "2026-10-28",
+  "date": "2026-10-29",
   "max_chars": 8192,
   "exclusions": {
     "file": "s1d1-seen-keys.txt",
-    "keys": 2049748
+    "keys": 112947
   },
   "sampling": {
     "lang": "eng",
     "per_source": 300,
     "seed": 0,
-    "candidates": 603
+    "candidates": 900
   },
   "stats": {
     "dolly": {
       "read": 15011,
       "empty": 0,
       "too_long": 42,
-      "excluded": 187,
-      "duplicate": 151,
-      "kept": 14631
+      "excluded": 10,
+      "duplicate": 185,
+      "kept": 14774
     },
     "oasst2": {
       "read": 13852,
       "empty": 0,
       "too_long": 2,
-      "excluded": 13841,
-      "duplicate": 0,
-      "kept": 9
+      "excluded": 7019,
+      "duplicate": 98,
+      "kept": 6733
     },
     "arena_hard": {
       "read": 500,
       "empty": 0,
       "too_long": 2,
-      "excluded": 93,
+      "excluded": 1,
       "duplicate": 0,
-      "kept": 405
+      "kept": 497
     }
   },
   "datasets": {
