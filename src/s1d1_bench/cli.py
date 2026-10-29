@@ -13,6 +13,7 @@ COMMANDS: dict[str, tuple[str, str]] = {
     "judge": ("judge_runner", "run_judge_cmd"),
     "validate": ("judge_file", "run_validate"),
     "agree": ("agree", "run_agree"),
+    "draw": ("draw", "run_draw"),
 }
 
 _HELP = {
@@ -21,6 +22,7 @@ _HELP = {
     "judge": "run a local judge over the prompts",
     "validate": "check a judge directory",
     "agree": "measure how often judges agree, pair by pair",
+    "draw": "draw the base prompts, stratified on a pre-sort judge file",
 }
 
 
@@ -84,6 +86,17 @@ def _agree_arguments(sub: argparse.ArgumentParser) -> None:
     sub.add_argument("judge_dirs", nargs="*", type=Path, help="judge directories (at least two), e.g. judges/trial-*")
 
 
+def _draw_arguments(sub: argparse.ArgumentParser) -> None:
+    sub.add_argument("--presort", type=Path, required=True, help="pre-sort judge directory, judges/<name>")
+    sub.add_argument("--meta", type=Path, required=True, help="meta.parquet of the pre-sorted set (id -> base_key)")
+    sub.add_argument("--out", type=Path, required=True, help="selected base keys, one per line (+ a .draw.json record)")
+    sub.add_argument("--veto", type=Path, default=None, help="vetoed ids, '<id><TAB><reason>' per line")
+    sub.add_argument("--seed", type=int, default=0, help="seed of the per-stratum shuffle")
+    sub.add_argument("--per-stratum", type=int, default=20, help="ids drawn per stratum (trivial, low, medium, high)")
+    sub.add_argument("--tools-min", type=int, default=20, help="needs_tools true ids wanted in all")
+    sub.add_argument("--task-min", type=int, default=4, help="ids wanted per task of the rubric")
+
+
 # subcommand -> function adding its arguments to its parser
 _ARGUMENTS = {
     "pool": _pool_arguments,
@@ -91,6 +104,7 @@ _ARGUMENTS = {
     "judge": _judge_arguments,
     "validate": _validate_arguments,
     "agree": _agree_arguments,
+    "draw": _draw_arguments,
 }
 
 
