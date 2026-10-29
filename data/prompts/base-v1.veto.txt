@@ -1,4 +1,4 @@
-# base-v1 veto, proposed by the assistant 2026-10-29, to be confirmed by the user (docs/32 § 3.1, two rules only)
+# base-v1 veto, proposed by the assistant and CONFIRMED by the user on 2026-10-29 (docs/32 § 3.1, two rules only)
 # rule 1 = same template as another prompt of the same stratum ; rule 2 = translation would change the task
 342c57a266a61b79-eng	rule 1: oasst2 "pretend you are X" template, same as c8fa588ef977c084-eng (trivial)
 583b0287f16cae9e-eng	rule 2: instruction in Swedish ("formulera om") on an English text, mixed-language prompt
