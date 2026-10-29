@@ -16,6 +16,7 @@ COMMANDS: dict[str, tuple[str, str]] = {
     "draw": ("draw", "run_draw"),
     "translate": ("translate", "run_translate_cmd"),
     "witness": ("witness", "run_witness"),
+    "check": ("check", "run_check"),
 }
 
 _HELP = {
@@ -27,6 +28,7 @@ _HELP = {
     "draw": "draw the base prompts, stratified on a pre-sort judge file",
     "translate": "translate a prompts file into one language",
     "witness": "fetch the m-ArenaHard translations of the Arena-Hard prompts of a set",
+    "check": "flag the translations of a set for a human review (structure, labels, same request, review sheet)",
 }
 
 
@@ -136,6 +138,27 @@ def _witness_arguments(sub: argparse.ArgumentParser) -> None:
     sub.add_argument("--cache", type=Path, default=Path("data/pool/cache"), help="Hub download cache")
 
 
+def _check_arguments(sub: argparse.ArgumentParser) -> None:
+    from s1d1_bench.translate import LANGUAGES  # light, as for `translate`; check itself pulls pyarrow
+
+    sub.add_argument(
+        "kind",
+        choices=["structure", "labels", "request", "review"],
+        help="structure and labels write <lang>.<kind>.jsonl; review gathers them into <lang>.review.md",
+    )
+    sub.add_argument("--set", required=True, help="name of the set: files are <out>/<set>/<lang>.*")
+    sub.add_argument("--lang", required=True, choices=list(LANGUAGES), help="language checked (ISO 639-3)")
+    sub.add_argument("--english", type=Path, required=True, help="English prompts (jsonl of id, prompt; ids end -eng)")
+    sub.add_argument("--translations", type=Path, required=True, help="folder of <lang>.jsonl translations")
+    sub.add_argument("--witness", type=Path, default=None, help="folder of <lang>.jsonl witness translations (review)")
+    sub.add_argument("--labels-english", type=Path, default=None, help="judge folder of the English prompts (labels)")
+    sub.add_argument("--labels", type=Path, default=None, help="judge folder of the translated prompts (labels)")
+    sub.add_argument(
+        "--labels-witness", type=Path, default=None, help="judge folder of the witness translations (labels)"
+    )
+    sub.add_argument("--out", type=Path, default=Path("data/checks"), help="checks directory (default: data/checks)")
+
+
 # subcommand -> function adding its arguments to its parser
 _ARGUMENTS = {
     "pool": _pool_arguments,
@@ -146,6 +169,7 @@ _ARGUMENTS = {
     "draw": _draw_arguments,
     "translate": _translate_arguments,
     "witness": _witness_arguments,
+    "check": _check_arguments,
 }
 
 
