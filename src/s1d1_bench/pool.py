@@ -148,7 +148,7 @@ def _hub_info(source: str):
     return HfApi(token=False).dataset_info(REPOS[source])
 
 
-def _load(source: str, config: str | None, split: str, cache: Path):
+def load_split(source: str, config: str | None, split: str, cache: Path):
     _hub_env()
     from datasets import load_dataset
 
@@ -160,7 +160,7 @@ def _load(source: str, config: str | None, split: str, cache: Path):
 def fetch_rows(source: str, cache: Path) -> list[dict]:
     """Download (public, no token, no remote code) and adapt one source to the pool row format."""
     if source == "dolly":
-        ds = _load(source, None, "train", cache)
+        ds = load_split(source, None, "train", cache)
         return [
             {
                 "source": source,
@@ -175,11 +175,11 @@ def fetch_rows(source: str, cache: Path) -> list[dict]:
     if source == "oasst2":
         rows: list[dict] = []
         for split in OASST_SPLITS:
-            ds = _load(source, None, split, cache).select_columns(OASST_COLUMNS)
+            ds = load_split(source, None, split, cache).select_columns(OASST_COLUMNS)
             rows += oasst2_rows(list(ds))
         return rows
     if source == "arena_hard":
-        ds = _load(source, ARENA_CONFIG, ARENA_SPLIT, cache)
+        ds = load_split(source, ARENA_CONFIG, ARENA_SPLIT, cache)
         return [
             {
                 "source": source,

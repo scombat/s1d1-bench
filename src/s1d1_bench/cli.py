@@ -15,6 +15,7 @@ COMMANDS: dict[str, tuple[str, str]] = {
     "agree": ("agree", "run_agree"),
     "draw": ("draw", "run_draw"),
     "translate": ("translate", "run_translate_cmd"),
+    "witness": ("witness", "run_witness"),
 }
 
 _HELP = {
@@ -25,6 +26,7 @@ _HELP = {
     "agree": "measure how often judges agree, pair by pair",
     "draw": "draw the base prompts, stratified on a pre-sort judge file",
     "translate": "translate a prompts file into one language",
+    "witness": "fetch the m-ArenaHard translations of the Arena-Hard prompts of a set",
 }
 
 
@@ -120,6 +122,13 @@ def _translate_arguments(sub: argparse.ArgumentParser) -> None:
     sub.add_argument("--notes", default="", help="free text for <lang>.meta.json")
 
 
+def _witness_arguments(sub: argparse.ArgumentParser) -> None:
+    sub.add_argument("--meta", type=Path, required=True, help="meta.parquet of the prompts set (source, source_id)")
+    sub.add_argument("--langs", default="fra,rus,zho", help="comma-separated language codes (default: fra,rus,zho)")
+    sub.add_argument("--out", type=Path, required=True, help="witness directory, data/translations/<set>/witness-arena")
+    sub.add_argument("--cache", type=Path, default=Path("data/pool/cache"), help="Hub download cache")
+
+
 # subcommand -> function adding its arguments to its parser
 _ARGUMENTS = {
     "pool": _pool_arguments,
@@ -129,6 +138,7 @@ _ARGUMENTS = {
     "agree": _agree_arguments,
     "draw": _draw_arguments,
     "translate": _translate_arguments,
+    "witness": _witness_arguments,
 }
 
 
