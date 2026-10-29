@@ -170,6 +170,30 @@ def test_meta_with_missing_key_or_unknown_sha_is_rejected(valid_judge_dir, promp
     assert not any(e.startswith("labels.jsonl") for e in errors)  # ids are not checked without a prompts file
 
 
+def test_a_tampered_prompts_file_is_rejected_even_with_its_sidecar_intact(valid_judge_dir, prompts_dir):
+    with open(prompts_dir / "mini.jsonl", "a", encoding="utf-8") as f:
+        f.write(json.dumps({"id": "d-eng", "prompt": "An extra prompt."}) + "\n")
+    errors = validate_judge_dir(valid_judge_dir, prompts_dir)
+    assert any("mini.sha256" in e and "mini.jsonl" in e for e in errors)
+    assert any("matches no prompts file" in e for e in errors)  # the real digest is no longer the one in meta.json
+
+
+def test_a_sidecar_without_its_prompts_file_is_rejected(valid_judge_dir, prompts_dir):
+    (prompts_dir / "ghost.sha256").write_text("f" * 64 + "\n", encoding="ascii")
+    errors = validate_judge_dir(valid_judge_dir, prompts_dir)
+    assert any("ghost.sha256" in e and "ghost.jsonl" in e for e in errors)
+
+
+def test_a_prompts_file_without_sidecar_is_accepted_by_its_real_digest(valid_judge_dir, prompts_dir):
+    (prompts_dir / "mini.sha256").unlink()
+    assert validate_judge_dir(valid_judge_dir, prompts_dir) == []
+
+
+def test_an_empty_sidecar_is_rejected(valid_judge_dir, prompts_dir):
+    (prompts_dir / "mini.sha256").write_text("\n", encoding="ascii")
+    assert any("mini.sha256" in e for e in validate_judge_dir(valid_judge_dir, prompts_dir))
+
+
 @pytest.mark.parametrize(
     "change,fragment",
     [

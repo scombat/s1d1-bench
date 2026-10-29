@@ -1,5 +1,6 @@
 """The judge directory (`judges/<name>/{meta.json,labels.jsonl}`): format, acceptance rule, `bench validate`."""
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -31,13 +32,19 @@ LABEL_KEYS = ["id", "complexity", "task", "needs_tools"]
 MISSING_SHOWN = 5  # ids named in the "missing" summary
 
 
-def _prompts_files(prompts_dir: Path) -> dict[str, Path]:
-    """Digest (first token of each `*.sha256`) -> the matching `<name>.jsonl`, whether or not that file exists."""
+def _prompts_files(prompts_dir: Path, errors: list[str]) -> dict[str, Path]:
+    """Real SHA-256 of each `*.jsonl` of `prompts_dir` -> that file. A `<name>.sha256` sidecar is only a claim: it is
+    checked against the file itself, and a missing file or a disagreeing digest is appended to `errors`."""
     found: dict[str, Path] = {}
-    for sha_file in sorted(prompts_dir.glob("*.sha256")):
-        tokens = sha_file.read_text(encoding="ascii", errors="replace").split()
-        if tokens:
-            found.setdefault(tokens[0], sha_file.with_suffix(".jsonl"))
+    for jsonl in sorted(prompts_dir.glob("*.jsonl")):
+        found.setdefault(hashlib.sha256(jsonl.read_bytes()).hexdigest(), jsonl)
+    for sidecar in sorted(prompts_dir.glob("*.sha256")):
+        jsonl = sidecar.with_suffix(".jsonl")
+        tokens = sidecar.read_text(encoding="ascii", errors="replace").split()
+        if not jsonl.is_file():
+            errors.append(f"prompts: {sidecar.name} has no {jsonl.name} in {prompts_dir}")
+        elif not tokens or tokens[0] != hashlib.sha256(jsonl.read_bytes()).hexdigest():
+            errors.append(f"prompts: {sidecar.name} does not match the SHA-256 of {jsonl.name}")
     return found
 
 
@@ -82,7 +89,7 @@ def _check_meta(meta: dict, prompts_dir: Path, errors: list[str]) -> Path | None
         )
     if "prompts_sha256" not in meta:
         return None
-    known = _prompts_files(prompts_dir) if prompts_dir.is_dir() else {}
+    known = _prompts_files(prompts_dir, errors) if prompts_dir.is_dir() else {}
     sha = meta["prompts_sha256"]
     if not isinstance(sha, str) or sha not in known:
         errors.append(f"meta.json: prompts_sha256 {sha!r} matches no prompts file in {prompts_dir}")
@@ -155,7 +162,8 @@ def _check_labels(path: Path, expected: list[str] | None, errors: list[str]) -> 
 def validate_judge_dir(judge_dir: Path | str, prompts_dir: Path | str) -> list[str]:
     """The faults of a judge directory against the prompts files of `prompts_dir`; an empty list means accepted.
 
-    Each message starts with the file (`meta.json: ...` or `labels.jsonl:LINE: ...`) and names the field at fault.
+    Each message starts with the file (`meta.json: ...`, `labels.jsonl:LINE: ...` or `prompts: ...`) and names the
+    field at fault.
     """
     judge_dir, prompts_dir = Path(judge_dir), Path(prompts_dir)
     if not judge_dir.is_dir():
@@ -165,10 +173,7 @@ def validate_judge_dir(judge_dir: Path | str, prompts_dir: Path | str) -> list[s
     prompts_file = _check_meta(meta, prompts_dir, errors) if meta is not None else None
     expected = None
     if prompts_file is not None:
-        if prompts_file.is_file():
-            expected = [row["id"] for row in read_jsonl(prompts_file)]
-        else:
-            errors.append(f"meta.json: the prompts file {prompts_file.name} is missing from {prompts_dir}")
+        expected = [row["id"] for row in read_jsonl(prompts_file)]
     _check_labels(judge_dir / "labels.jsonl", expected, errors)
     return errors
 
