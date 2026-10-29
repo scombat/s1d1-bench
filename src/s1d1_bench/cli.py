@@ -157,6 +157,23 @@ def _check_arguments(sub: argparse.ArgumentParser) -> None:
         "--labels-witness", type=Path, default=None, help="judge folder of the witness translations (labels)"
     )
     sub.add_argument("--out", type=Path, default=Path("data/checks"), help="checks directory (default: data/checks)")
+    # request only: the local model that answers "same request?" (optional here, so the other kinds need none)
+    sub.add_argument(
+        "--model", default=None, help="request: Hub repo id (weights in ~/mlx-models/<org>--<name>) or a directory"
+    )
+    sub.add_argument("--author", default=None, help="request: who runs the check")
+    sub.add_argument("--thinking", default=None, help="request: off, or cap:<n> tokens of reasoning")
+    sub.add_argument(
+        "--max-tokens", type=int, default=512, help="request: tokens generated per call, reasoning included (512)"
+    )
+    sub.add_argument(
+        "--consigne",
+        type=Path,
+        default=Path("consigne/check-same-request-v1.md"),
+        help="request: system message (default: consigne/check-same-request-v1.md)",
+    )
+    sub.add_argument("--resume", action="store_true", help="request: go on with an interrupted run")
+    sub.add_argument("--notes", default="", help="request: free text for <lang>.request.meta.json")
 
 
 # subcommand -> function adding its arguments to its parser
