@@ -153,12 +153,14 @@ _COMMIT = re.compile(r"[0-9a-f]{40}")
 _LOCAL_PATH = re.compile(r"(?<![\w.])(?:~/|/(?:Users|home|private|tmp|var|Volumes|mnt|opt)/)")
 
 
-def _resume_conflicts(old: dict, new: dict) -> list[str]:
-    return [f"{key} {old.get(key)!r} (meta.json) != {new[key]!r}" for key in RESUME_KEYS if key in new
+def resume_conflicts(old: dict, new: dict, keys: list[str]) -> list[str]:
+    """The `keys` present in `new` whose value differs from the recorded meta `old`, one message each."""
+    return [f"{key} {old.get(key)!r} (meta.json) != {new[key]!r}" for key in keys if key in new
             and old.get(key) != new[key]]
 
 
-def _local_path_keys(meta: dict) -> list[str]:
+def local_path_keys(meta: dict) -> list[str]:
+    """The keys of `meta` whose string value holds a local path (meta files are published: never one)."""
     home = str(Path.home())
     return [k for k, v in meta.items() if isinstance(v, str) and (home in v or _LOCAL_PATH.search(v))]
 
@@ -208,7 +210,7 @@ def run_judge_cmd(args) -> int:
     old = json.loads(meta_path.read_text(encoding="utf-8")) if args.resume and meta_path.is_file() else None
     if old is not None:  # what can be checked before loading the model
         early = {"thinking": args.thinking, "prompts_sha256": digest, "max_tokens": args.max_tokens}
-        conflicts = _resume_conflicts(old, early)
+        conflicts = resume_conflicts(old, early, RESUME_KEYS)
         if conflicts:
             return fail(f"{meta_path}: cannot resume a run with other settings: {'; '.join(conflicts)}")
 
@@ -242,11 +244,11 @@ def run_judge_cmd(args) -> int:
         "mlx_lm_version": backend["mlx_lm_version"],
         "max_tokens": args.max_tokens,
     }
-    leaks = _local_path_keys(meta)
+    leaks = local_path_keys(meta)
     if leaks:
         return fail(f"meta.json would hold a local path in {', '.join(leaks)}: meta.json is published, remove it")
     if old is not None:
-        conflicts = _resume_conflicts(old, meta)
+        conflicts = resume_conflicts(old, meta, RESUME_KEYS)
         if conflicts:
             return fail(f"{meta_path}: cannot resume a run with other settings: {'; '.join(conflicts)}")
     else:  # written before the first generation, so that a resumed run keeps it

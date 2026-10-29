@@ -14,6 +14,7 @@ COMMANDS: dict[str, tuple[str, str]] = {
     "validate": ("judge_file", "run_validate"),
     "agree": ("agree", "run_agree"),
     "draw": ("draw", "run_draw"),
+    "translate": ("translate", "run_translate_cmd"),
 }
 
 _HELP = {
@@ -23,6 +24,7 @@ _HELP = {
     "validate": "check a judge directory",
     "agree": "measure how often judges agree, pair by pair",
     "draw": "draw the base prompts, stratified on a pre-sort judge file",
+    "translate": "translate a prompts file into one language",
 }
 
 
@@ -97,6 +99,27 @@ def _draw_arguments(sub: argparse.ArgumentParser) -> None:
     sub.add_argument("--task-min", type=int, default=4, help="ids wanted per task of the rubric")
 
 
+def _translate_arguments(sub: argparse.ArgumentParser) -> None:
+    from s1d1_bench.translate import LANGUAGES  # light: translate imports mlx only when it runs
+
+    sub.add_argument(
+        "--model", required=True, help="Hub repo id (weights in ~/mlx-models/<org>--<name>) or a directory"
+    )
+    sub.add_argument("--prompts", type=Path, required=True, help="English prompts (jsonl of id, prompt; ids end -eng)")
+    sub.add_argument("--lang", required=True, choices=list(LANGUAGES), help="target language (ISO 639-3)")
+    sub.add_argument(
+        "--consigne", type=Path, default=None, help="system message (default: consigne/translate-v1-<lang>.md)"
+    )
+    sub.add_argument("--out", type=Path, required=True, help="translations directory, data/translations/<set>")
+    sub.add_argument("--author", required=True, help="who contributes the translations")
+    sub.add_argument("--thinking", required=True, help="off, or cap:<n> tokens of reasoning (see judges/MODELS.md)")
+    sub.add_argument(
+        "--max-tokens", type=int, default=4096, help="tokens generated per call, reasoning included (default: 4096)"
+    )
+    sub.add_argument("--resume", action="store_true", help="go on with an interrupted run in --out")
+    sub.add_argument("--notes", default="", help="free text for <lang>.meta.json")
+
+
 # subcommand -> function adding its arguments to its parser
 _ARGUMENTS = {
     "pool": _pool_arguments,
@@ -105,6 +128,7 @@ _ARGUMENTS = {
     "validate": _validate_arguments,
     "agree": _agree_arguments,
     "draw": _draw_arguments,
+    "translate": _translate_arguments,
 }
 
 
