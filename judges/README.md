@@ -23,8 +23,8 @@ Un objet JSON avec ces 13 clés, toutes obligatoires :
 | `licence` | exactement `CC-BY-4.0` : un fichier sous une autre licence ne peut pas être fusionné |
 | `notes` | texte libre (pour une correction humaine : ce qui a été corrigé) |
 
-Seules deux clés de plus sont tolérées, écrites par `bench judge` : `quantization` et `mlx_lm_version`. Toute autre
-clé est refusée.
+Seules trois clés de plus sont tolérées, écrites par `bench judge` : `quantization`, `mlx_lm_version` et `max_tokens`
+(un entier strictement positif). Toute autre clé est refusée.
 
 ## `labels.jsonl`
 

@@ -23,8 +23,8 @@ notation v7 (palier de complexité, score, tâche, `needs_tools`).
 - `bench validate` : vérifie qu'un dossier de juge est complet et cohérent avec les prompts.
 - `bench agree` : calcule l'accord deux à deux entre des dossiers de juges (tableau en markdown).
 
-Installation : `uv sync --group pool --group dev` (ajouter `--group judge` sur Apple silicon pour faire tourner un
-juge), puis `uv run bench --help`.
+Installation : `uv sync --group pool --group dev` (sur Apple silicon, pour faire tourner un juge :
+`uv sync --group pool --group judge --group dev`), puis `uv run bench --help`.
 
 ## Reproduire l'essai
 
@@ -35,7 +35,7 @@ modèles, leurs révisions et la façon dont `bench judge` coupe ou plafonne leu
 [judges/MODELS.md](judges/MODELS.md) ; le format des dossiers de juges est dans [judges/README.md](judges/README.md).
 
 Toutes les commandes se lancent depuis la racine du dépôt. Les étapes 4 et 5 demandent un Mac Apple silicon et
-`uv sync --group judge` (ou `uv run --group judge`), un seul modèle tourne à la fois.
+`uv sync --group pool --group judge --group dev` (ou `uv run --group judge`), un seul modèle tourne à la fois.
 
 1. **Liste d'exclusion** (`data/exclusions/s1d1-seen-keys.txt`). Elle est produite par le dépôt de recherche privé
    s1d1-model-router, sur sa branche `seen-keys` (`pipeline/13_seen_keys.py`). La commande se lance dans ce dépôt de
@@ -91,7 +91,7 @@ Toutes les commandes se lancent depuis la racine du dépôt. Les étapes 4 et 5 
    s'il en manque un ; les identifiants et les révisions à utiliser sont dans [judges/MODELS.md](judges/MODELS.md) :
 
    ```
-   HF_HUB_DISABLE_IMPLICIT_TOKEN=1 hf download <org>/<nom> --revision <révision> \
+   HF_HUB_DISABLE_IMPLICIT_TOKEN=1 uv run --group pool hf download <org>/<nom> --revision <révision> \
        --local-dir ~/mlx-models/<org>--<nom>
    ```
 
@@ -140,5 +140,9 @@ Toutes les commandes se lancent depuis la racine du dépôt. Les étapes 4 et 5 
 ## Licences
 
 - Code : [Apache-2.0](LICENSE).
-- Données (`data/`) et fichiers de juges (`judges/`) : [CC-BY-4.0](data/LICENSE), le fichier `data/LICENSE` couvre les
-  deux dossiers.
+- Prompts d'autres jeux publics : les prompts de `data/pool/*`, de `data/prompts/trial-50.*` et des lots sont repris
+  tels quels de Dolly (CC-BY-SA-3.0), d'OASST2 et de m-ArenaHard (Apache-2.0) ; chacun garde sa licence, donnée ligne
+  par ligne dans la colonne `licence` de `pool.parquet` et de `<jeu>.meta.parquet`. Le détail est dans
+  [data/README.md](data/README.md).
+- [CC-BY-4.0](data/LICENSE) (`data/LICENSE`) : les prompts écrits à la main, les fichiers de juges (`judges/`), la liste
+  d'exclusion et les statistiques.

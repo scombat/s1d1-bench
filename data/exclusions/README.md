@@ -12,5 +12,5 @@ Command, run from the s1d1-model-router repo (branch `seen-keys`, `pipeline/13_s
 
 ```
 uv run python -I pipeline/13_seen_keys.py --inputs 'dataset/interim/*.parquet' 'dataset/final/*.parquet' \
-    --out /Users/steve/work/s1d1-bench/data/exclusions/s1d1-seen-keys.txt
+    --out data/exclusions/s1d1-seen-keys.txt
 ```
