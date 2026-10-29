@@ -22,6 +22,7 @@ notation v7 (palier de complexité, score, tâche, `needs_tools`).
 - `bench judge` : fait juger les prompts par un modèle local (MLX) avec la grille v7.
 - `bench validate` : vérifie qu'un dossier de juge est complet et cohérent avec les prompts.
 - `bench agree` : calcule l'accord deux à deux entre des dossiers de juges (tableau en markdown).
+- `bench draw` : tire les prompts de base par strates (tirage aléatoire à graine fixe sur un dossier de pré-tri).
 
 Installation : `uv sync --group pool --group dev` (sur Apple silicon, pour faire tourner un juge :
 `uv sync --group pool --group judge --group dev`), puis `uv run bench --help`.
@@ -123,6 +124,27 @@ Toutes les commandes se lancent depuis la racine du dépôt. Les étapes 4 et 5 
    for d in judges/*/; do uv run bench validate "$d"; done
    uv run bench agree judges/trial-*
    ```
+
+## Le tirage des prompts de base
+
+Le jeu de base n'est pas choisi à la main (docs/32 § 3.1, amendé le 2026-10-29). Les 900 candidats anglais
+(`data/prompts/presort-900`, export des `candidates-eng.jsonl`) sont étiquetés par un juge de pré-tri qui n'est pas
+Gemma 4 (`judges/presort-qwen3-off`, Qwen3.8 27B sans réflexion ; c'est un dossier de juge ordinaire, pas un juge du
+banc). `bench draw` tire ensuite 20 prompts par strate `trivial`, `low`, `medium`, `high` : mélange à graine fixe de
+chaque strate, puis les `needs_tools` vrais en tourniquet jusqu'à 20, puis chaque tâche de la rubrique jusqu'à 4
+(depuis la strate qui a le plus de place), puis remplissage. Un veto (`<id><TAB><raison>` par ligne, deux règles seulement :
+même gabarit dans la même strate, ou traduction qui changerait la tâche) retire un id de son ordre, le suivant de la
+strate prend sa place et les autres tirages ne bougent pas. Ce que les candidats ne permettent pas (un minimum de
+`needs_tools` ou de tâche) est signalé, pas corrigé en silence.
+
+```
+uv run bench draw --presort judges/presort-qwen3-off --meta data/prompts/presort-900.meta.parquet \
+    --out data/prompts/base-v1.select.txt --seed 0 --veto data/prompts/base-v1.veto.txt
+```
+
+`base-v1.select.txt` (les clés tirées), `base-v1.draw.json` (règle, graine, strates, manques) et `base-v1.veto.txt`
+(les retraits et leur raison) sont publiés : le tirage se rejoue. La case `expert` est faite des dix prompts de
+`data/handwritten/expert-v1.jsonl`, pas du vivier.
 
 ## Dépendances
 
