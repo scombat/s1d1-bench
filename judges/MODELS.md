@@ -36,6 +36,11 @@ even though they decode at 13–17 tokens/s: about 9–10 s of their 10–11 s p
 Projection for 400 prompts, from the mean wall time per prompt: Gemma ≈ 1.3 h off and ≈ 3.8 h at cap:512; Qwen ≈ 1.1 h
 off and ≈ 2.3 h at cap:512; gpt-oss ≈ 8 min off and ≈ 12 min at cap:512.
 
+Trial on 50 prompts ([TRIAL.md](TRIAL.md)): one unreadable answer in 300 judge calls, for gpt-oss-20b with thinking
+off (1 of 50, 2 %, under the 10 % bar). The model answered `"task":"design"` twice, which is not one of the 19 task
+names, and greedy decoding gives the same answer on a resume. The judge was not replaced and no label was filled in:
+`judges/trial-gptoss-off` has 49 labels and `bench validate` reports the missing id. The user decides what to do with it.
+
 "Peak memory" is `mx.get_peak_memory()` in the exploration script (MLX) and `peak memory footprint` from
 `/usr/bin/time -l` around `bench judge` (whole process).
 
