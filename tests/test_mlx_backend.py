@@ -218,7 +218,7 @@ def test_missing_model_dir_tells_the_download_command(tmp_path):
         resolve_model("mlx-community/some-model-8bit", root=tmp_path)
     message = str(info.value)
     target = tmp_path / "mlx-community--some-model-8bit"
-    assert f"hf download mlx-community/some-model-8bit --local-dir {target}" in message
+    assert f"uv run --group pool hf download mlx-community/some-model-8bit --local-dir {target}" in message
     assert "MODELS.md" in message
 
 

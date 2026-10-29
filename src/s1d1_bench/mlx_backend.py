@@ -159,7 +159,7 @@ def resolve_model(model_id: str, root: Path | None = None) -> tuple[Path, str]:
     if not target.is_dir():
         raise FileNotFoundError(
             f"{model_id}: not found at {target}. Download it first (public Hub, no token; see judges/MODELS.md):\n"
-            f"  HF_HUB_DISABLE_IMPLICIT_TOKEN=1 hf download {model_id} --local-dir {target}"
+            f"  HF_HUB_DISABLE_IMPLICIT_TOKEN=1 uv run --group pool hf download {model_id} --local-dir {target}"
         )
     return target, model_id
 

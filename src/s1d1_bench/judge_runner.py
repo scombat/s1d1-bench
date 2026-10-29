@@ -243,6 +243,21 @@ def _local_path_keys(meta: dict) -> list[str]:
     return [k for k, v in meta.items() if isinstance(v, str) and (home in v or _LOCAL_PATH.search(v))]
 
 
+def _prompt_fault(prompts: list) -> str | None:
+    """Why `prompts` cannot be judged (a row without a string `id` or `prompt`, a duplicate id), else None."""
+    seen: set[str] = set()
+    for number, row in enumerate(prompts, start=1):
+        if not isinstance(row, dict):
+            return f"prompt {number}: not a JSON object"
+        for key in ("id", "prompt"):
+            if not isinstance(row.get(key), str):
+                return f"prompt {number}: '{key}' must be a string, got {row.get(key)!r}"
+        if row["id"] in seen:
+            return f"duplicate prompt id {row['id']!r} (prompt {number})"
+        seen.add(row["id"])
+    return None
+
+
 def run_judge_cmd(args) -> int:
     """`bench judge`: judge a prompts file with a local MLX model into `--out` (meta.json first, then labels.jsonl
     and log.jsonl); `--resume` goes on with a run that has the same model, revision, thinking and prompts."""
@@ -267,6 +282,9 @@ def run_judge_cmd(args) -> int:
                     "Use a new --out, or --resume to go on with that run.")
     digest = hashlib.sha256(Path(args.prompts).read_bytes()).hexdigest()
     prompts = read_jsonl(args.prompts)
+    problem = _prompt_fault(prompts)
+    if problem:  # before the model loads and before anything is written
+        return fail(f"{args.prompts}: {problem}")
     old = json.loads(meta_path.read_text(encoding="utf-8")) if args.resume and meta_path.is_file() else None
     if old is not None:  # what can be checked before loading the model
         early = {"thinking": args.thinking, "prompts_sha256": digest, "max_tokens": args.max_tokens}

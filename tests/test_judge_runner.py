@@ -483,6 +483,29 @@ def test_bench_judge_writes_meta_before_generating(tmp_path, monkeypatch):
     assert seen_meta == [True]
 
 
+@pytest.mark.parametrize(
+    "rows,fragment",
+    [
+        ([{"prompt": "no id"}], "id"),
+        ([{"id": "a"}], "prompt"),
+        ([{"id": 1, "prompt": "numeric id"}], "id"),
+        ([{"id": "a", "prompt": 3}], "prompt"),
+        (["not an object"], "object"),
+        ([{"id": "a", "prompt": "x"}, {"id": "a", "prompt": "y"}], "duplicate"),
+    ],
+)
+def test_bench_judge_refuses_bad_prompts_before_creating_anything(tmp_path, monkeypatch, capsys, rows, fragment):
+    prompts, _ = prompts_dir_with(tmp_path, rows)
+    generate, _ = fake_backend(monkeypatch, [GOOD] * 3)
+    out = tmp_path / "j"
+    code = judge_cmd("--model", "org/m", "--prompts", prompts / "set.jsonl", "--out", out, "--author", "a",
+                     "--thinking", "off")
+    err = capsys.readouterr().err
+    assert code == 1 and generate.calls == 0
+    assert err.startswith("bench judge:") and fragment in err and "Traceback" not in err
+    assert not out.exists()
+
+
 def test_bench_judge_prints_counts_and_median_tokens_per_second(tmp_path, monkeypatch, capsys):
     prompts, _ = prompts_dir_with(tmp_path, PROMPTS_3)
     fake_backend(monkeypatch, [GOOD, BAD, BAD, result(GOOD, completion_tokens=30, wall_s=1.0)])
