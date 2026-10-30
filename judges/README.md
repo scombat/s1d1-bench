@@ -47,6 +47,9 @@ Aucun contrôle de qualité du contenu : un juge médiocre se voit dans son acco
 Un fichier accepté ne change plus. Une correction est un nouveau dossier `judges/<nom>-corrige-<auteur>/`, avec
 `provider: human` et des `notes` qui disent ce qui a été corrigé. Les deux apparaissent dans le rapport.
 
+Les dossiers `check-*` sont des juges du banc sur un sous-ensemble du jeu (les 90 prompts de base, dans une langue) ;
+les dossiers `witness-*` (traductions témoins) et `presort-*` (pré-tri) n'en sont pas.
+
 ## Vérifier un dossier
 
 ```

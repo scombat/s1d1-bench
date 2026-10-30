@@ -23,6 +23,9 @@ notation v7 (palier de complexité, score, tâche, `needs_tools`).
 - `bench validate` : vérifie qu'un dossier de juge est complet et cohérent avec les prompts.
 - `bench agree` : calcule l'accord deux à deux entre des dossiers de juges (tableau en markdown).
 - `bench draw` : tire les prompts de base par strates (tirage aléatoire à graine fixe sur un dossier de pré-tri).
+- `bench translate` : traduit un fichier de prompts dans une langue (fra, rus, zho) avec un modèle local (MLX).
+- `bench witness` : récupère les traductions m-ArenaHard (Google) des prompts Arena-Hard d'un jeu, comme témoins.
+- `bench check` : signale les traductions à relire (`structure`, `labels`, `request`) et écrit la feuille de relecture (`review`).
 
 Installation : `uv sync --group pool --group dev` (sur Apple silicon, pour faire tourner un juge :
 `uv sync --group pool --group judge --group dev`), puis `uv run bench --help`.
@@ -166,9 +169,70 @@ mêmes réglages. Une traduction qui contient une ligne `</prompt>` ou qui comme
 jamais une traduction ; seule exception, une réponse entièrement enveloppée dans une paire `<prompt>…</prompt>` (le
 modèle recopie les balises) est dépouillée de cette paire et le journal le dit (`unwrapped`).
 
-Vitesse mesurée (dix prompts, M-série 128 Go, MLX) : médiane de 14,4 jetons par seconde en décodage, 244 s au total pour
-dix prompts chargement compris ; une série de 90 prompts prend environ 20 à 25 minutes par langue, le russe et le chinois
-étant à mesurer.
+Vitesse mesurée (M-série 128 Go, MLX, série de 90 prompts, chargement compris) : 825 s en français, 825 s en russe,
+657 s en chinois, soit une médiane de 9 à 11 jetons par seconde en décodage.
+
+### Les vérifications
+
+Une traduction n'est pas livrée sans relecture. `bench check` ne corrige rien : il signale des lignes pour qu'un humain
+les lise, et écrit tout dans `data/checks/<jeu>/` (`<lang>.structure.jsonl`, `<lang>.labels.jsonl`,
+`<lang>.request.jsonl`, puis `<lang>.review.md`, la feuille où chaque id signalé a un `avis :` et une `décision :`).
+
+- `structure` : blocs de code, URL, nombres, guillemets droits, nombre de lignes, longueur (rapport traduction/anglais
+  borné par langue), balise `<prompt>`. Règle de lecture : les signalements `quotes` sont presque tous des guillemets
+  typographiques (« », 「」) à la place de guillemets droits, une limite de la règle et non une erreur ; les `numbers`
+  sont des « 3:30 » devenus « 15h30 », des ordinaux écrits en toutes lettres ou des séparateurs de milliers ; les
+  `length` sont de très courts prompts.
+- `labels` : le juge Qwen3 (celui du pré-tri) étiquette l'anglais et la traduction (`judges/check-qwen3-off-<lang>`) ;
+  une `task` ou un `needs_tools` qui change est signalé. Pour les 28 prompts Arena-Hard, la traduction Google
+  (m-ArenaHard) sert de témoin (`bench witness`, `judges/witness-qwen3-off-<lang>`) : si le témoin reçoit du juge la
+  même étiquette que notre traduction, le signalement est levé. Le bruit du juge domine ce contrôle : presque toutes
+  les différences d'étiquette sont du bruit, sauf trois mistraductions que Gemma 4 a aussi repérées.
+- `request` : Gemma 4 31B (un autre modèle que le traducteur) lit l'anglais et la traduction et répond en JSON
+  `{"same_request": bool, "reason": str}` (`consigne/check-same-request-v1.md`). Un `false` est un signal, pas un verdict.
+
+```
+uv run --group judge bench check request --set base-v1 --lang fra --english data/prompts/base-v1-eng.jsonl \
+    --translations data/translations/base-v1 --model mlx-community/gemma-4-31b-it-8bit --author <nom> --thinking off
+uv run bench check structure --set base-v1 --lang fra --english data/prompts/base-v1-eng.jsonl \
+    --translations data/translations/base-v1
+uv run bench check labels --set base-v1 --lang fra --english data/prompts/base-v1-eng.jsonl \
+    --translations data/translations/base-v1 --labels-english judges/check-qwen3-off-eng \
+    --labels judges/check-qwen3-off-fra --labels-witness judges/witness-qwen3-off-fra \
+    --witness data/translations/base-v1/witness-arena
+uv run bench check review ...   # mêmes options que labels
+```
+
+Le témoin Google est brut : entités HTML (`&#39;`) et espaces en bord de ligne y restent, nous ne le nettoyons pas.
+
+Une correction humaine est une superposition : `data/translations/base-v1/<lang>.corrections.jsonl` (une ligne
+`{"id", "prompt", "reason", "author"}` par id corrigé). `bench export` l'applique et marque `corrected` dans
+`meta.parquet`; les fichiers du modèle (`<lang>.jsonl`) ne sont jamais réécrits. Un veto (traduction qui changerait la
+tâche, deux signaux réunis) retirerait l'id du tirage et ses remplaçants iraient dans une vague `-r1` (`--translations`
+se répète, une fois par vague) ; la relecture de `base-v1` n'en a décidé aucun.
+
+La relecture de `base-v1` (les trois langues lues contre l'anglais) a retenu 22 corrections : français 9, russe 6,
+chinois 7. 11 changent le sens (les fautes de frappe anglaises « captiols » et « store » prises au pied de la lettre
+dans les trois langues ; « banks' » perdu en français et en chinois ; « stochastic » ajouté en russe ; « aloud » ajouté
+et « keep score » mal rendu en français), 7 sont des termes techniques faux (key schedule, responsable du traitement,
+assignment en français ; shellcode en russe ; litmus test, proto-indo-européen et titre de revue traduit en chinois),
+4 sont des noms ou des accords abîmés (Tanooki, un accord de grammaire, « Шлой », Bourbon rendu par Bourgogne). Aucun
+veto. Ce que cela ne prouve pas : le contrôle de sens est un contrôle de lecture sur 90 prompts par langue, fait par un
+seul relecteur (Claude Fable 5.1), pas par des locuteurs natifs ; ni la qualité stylistique ni le registre ne sont mesurés.
+
+### Le jeu apparié
+
+`data/prompts/base-v1.jsonl` réunit les 90 prompts dans les quatre langues (360 lignes, 9 lots, ids `<clé>-<lang>`),
+avec les corrections appliquées :
+
+```
+uv run bench export --select data/prompts/base-v1.select.txt --handwritten data/handwritten/expert-v1.jsonl \
+    --translations data/translations/base-v1 --langs eng,fra,rus,zho --name base-v1
+```
+
+Les fichiers `base-v1-<lang>.jsonl` sont ceux que les juges de vérification ont vus, avant corrections ; ils restent tels
+quels (leur SHA-256 est celui que `bench validate` demande aux dossiers `check-*`). `meta.parquet` porte `translator`
+(`modèle@révision`, vide en anglais) et `corrected`.
 
 ## Dépendances
 
@@ -188,5 +252,6 @@ dix prompts chargement compris ; une série de 90 prompts prend environ 20 à 25
   tels quels de Dolly (CC-BY-SA-3.0), d'OASST2 et de m-ArenaHard (Apache-2.0) ; chacun garde sa licence, donnée ligne
   par ligne dans la colonne `licence` de `pool.parquet` et de `<jeu>.meta.parquet`. Le détail est dans
   [data/README.md](data/README.md).
-- [CC-BY-4.0](data/LICENSE) (`data/LICENSE`) : les prompts écrits à la main, les fichiers de juges (`judges/`), la liste
-  d'exclusion et les statistiques.
+- [CC-BY-4.0](data/LICENSE) (`data/LICENSE`) : les prompts écrits à la main et leurs traductions, les fichiers de juges
+  (`judges/`), les vérifications (`data/checks/`), la liste d'exclusion et les statistiques. Les traductions des prompts
+  d'un jeu public sont des œuvres dérivées et gardent la licence de la ligne (colonne `licence` de `meta.parquet`).
