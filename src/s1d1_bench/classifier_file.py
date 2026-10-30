@@ -4,7 +4,7 @@ import shutil
 from pathlib import Path
 
 from s1d1_bench.jsonl import read_jsonl, write_jsonl
-from s1d1_bench.judge_file import LABEL_KEYS, OPTIONAL_LABEL_KEYS, SYSTEM, write_meta
+from s1d1_bench.judge_file import ABSTAINED, LABEL_KEYS, OPTIONAL_LABEL_KEYS, SYSTEM, write_meta
 
 SYSTEM_META = {"provider": SYSTEM, "instructions": "none", "thinking": "none"}  # forced, whatever `meta` says
 
@@ -42,9 +42,12 @@ def write_classifier_dir(out_dir: Path | str, rows: list[dict], meta: dict) -> N
 
 
 def read_classifier_labels(path: Path | str) -> dict[str, dict]:
-    """`id` -> complexity, task, needs_tools, score and needs_tools_probability (None when absent)."""
+    """`id` -> complexity, task, needs_tools, score and needs_tools_probability (None when absent). A row with
+    `abstained` is refused: a classifier does not abstain (`bench validate` says so too)."""
     labels: dict[str, dict] = {}
     for row in read_jsonl(path):
+        if ABSTAINED in row:
+            raise ValueError(f"{path}: id {row['id']!r} has {ABSTAINED!r}: a classifier does not abstain")
         if row["id"] in labels:
             raise ValueError(f"{path}: duplicate id {row['id']!r}")
         labels[row["id"]] = {k: row.get(k) for k in LABEL_KEYS + OPTIONAL_LABEL_KEYS if k != "id"}

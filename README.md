@@ -235,6 +235,24 @@ quels (leur SHA-256 est celui que `bench validate` demande aux dossiers `check-*
 un fichier de prompts qu'un dossier de juge épingle par son SHA-256 si le contenu change. `meta.parquet` porte `translator`
 (`modèle@révision`, vide en anglais) et `corrected`.
 
+## Les vérités
+
+`bench run` réunit les dossiers de juges et de classifieurs d'un jeu en une table, une ligne par id ; les vérités ne
+viennent que des juges principaux (`--main`). Le palier vrai est la médiane ordinale (trivial < low < medium < high <
+expert) des votes non nuls, `truth_all` sur les 12 votes des quatre versions d'un prompt de base (3 juges × 4 langues),
+`truth_lang` sur les 3 votes de l'id. Règle R5 (docs/34 § 0.3) : un nombre impair de votes prend celui du milieu ; un
+nombre pair prend la moyenne des rangs des deux votes du milieu, arrondie vers le bas. C'est la médiane basse quand les
+deux votes du milieu sont égaux ou voisins (6/6 sur deux paliers voisins donne le plus bas), mais low et high donnent
+medium. Le palier est nul (`undecidable`) quand les `null` sont strictement majoritaires (7 sur 12 ; 6 sur 12 ne
+l'est pas). `task` et `needs_tools` vont au vote majoritaire, l'égalité tranchée par le premier juge de `--main`.
+
+Les abstentions : un juge qui ne rend pas d'étiquette lisible (refus, JSON illisible, réponse coupée, erreur) a une
+ligne `"abstained"` dans `labels.jsonl` (voir [judges/README.md](judges/README.md)). Pour les vérités, c'est un vote
+nul sur les trois champs : hors médiane, hors majorité et hors `spread`, compté comme un `null` vers `undecidable`.
+`bench run` l'écrit dans la colonne `<juge>.abstained` et la liste dans `run.json` ; un id sans aucune ligne reste
+refusé, jamais rempli. `bench agree` laisse hors de la paire un id où l'un des deux juges s'est abstenu (colonne
+`abstained`).
+
 ## Dépendances
 
 | Dépendance | Groupe | Raison |

@@ -1,9 +1,13 @@
 """`bench run`: the judge and classifier folders of one prompts set merged into one table, one row per id.
 
-The truths are made from the main judges only (`--main`): the lower ordinal median of their tier votes, and the
-majority of their `task` and `needs_tools` votes. `truth_all` takes the votes of the four language versions of a base
-prompt (rule 5 of the rubric: same labels), `truth_lang` the votes on the id alone; each also without the Gemma judges.
-The table and its `<out stem>.run.json` record are derived data, rewritten at every call (docs/34, decision 6).
+The truths are made from the main judges only (`--main`): the ordinal median of their non-null tier votes (rule R5:
+an odd count takes the middle vote; an even count takes the mean of the two middle tier indices rounded down, docs/34
+§0.3, which is the lower median when the two middle votes are equal or adjacent, so 6/6 on adjacent tiers gives the
+lower one, and low/high gives medium; null when the null votes are strictly more than half), and the majority of their
+`task` and `needs_tools` votes. `truth_all` takes the votes of the four language versions of a base prompt (rule 5 of
+the rubric: same labels), `truth_lang` the votes on the id alone; each also without the Gemma judges. An abstention
+(a judge's `abstained` row) is a null vote on every field. The table and its `<out stem>.run.json` record are derived
+data, rewritten at every call (docs/34, decision 6).
 """
 
 import datetime
@@ -21,7 +25,7 @@ import pyarrow.parquet as pq
 
 from s1d1_bench.classifier_file import read_classifier_labels
 from s1d1_bench.jsonl import read_jsonl
-from s1d1_bench.judge_file import OPTIONAL_LABEL_KEYS, SYSTEM, read_labels
+from s1d1_bench.judge_file import ABSTAINED, OPTIONAL_LABEL_KEYS, SYSTEM, abstentions, read_labels
 from s1d1_bench.rubric import LEVELS
 
 META_COLUMNS = ["id", "base_key", "lang", "origin", "source", "corrected"]
@@ -38,7 +42,8 @@ RULES = (
     "order, then the ids of the base key in prompts file order). *_nogemma: the same without the main judges whose "
     "model contains 'gemma'. undecidable: truth_all.complexity is null. spread: max - min tier index over the main "
     "judges' non-null votes on the id. lang_disagreement: truth_lang.complexity and truth_all.complexity both non-"
-    "null and different."
+    "null and different. An abstention (a judge's row with `abstained`: no answer) is a null vote on every field: out "
+    "of every median, majority and spread, counted as a null toward undecidable."
 )
 _TYPES = {"complexity": pa.string(), "task": pa.string(), "needs_tools": pa.bool_()}
 
@@ -54,9 +59,10 @@ def _sorted_votes(levels: list[str | None]) -> list[int] | None:
 
 
 def lower_median(levels: list[str | None]) -> str | None:
-    """The ordinal median of the non-null levels, rounded down: the middle vote of an odd count, the mean of the two
-    middle tier indices rounded down for an even count (docs/34 decision 3: low and high give medium; two adjacent
-    tiers give the lower one). None when the nulls are strictly more than half of the votes."""
+    """Rule R5, the median of every truth: the ordinal median of the non-null levels, rounded down: the middle vote of
+    an odd count, the mean of the two middle tier indices rounded down for an even count (docs/34 §0.3: low and high
+    give medium; two adjacent tiers give the lower one). None when the nulls are strictly more than half of the
+    votes."""
     ranks = _sorted_votes(levels)
     if ranks is None:
         return None
@@ -67,8 +73,9 @@ def lower_median(levels: list[str | None]) -> str | None:
 
 
 def plain_lower_median(levels: list[str | None]) -> str | None:
-    """The lower of the two middle votes for an even count (the middle vote for an odd one), same null rule. Not a
-    truth: `bench run` only counts the base keys where it would change `truth_all`."""
+    """The plain lower median: the lower of the two middle votes for an even count (the middle vote for an odd one),
+    same null rule. Not a truth: used only for the diagnostic line of `bench run`, which counts the base keys where it
+    would change `truth_all`."""
     ranks = _sorted_votes(levels)
     return None if ranks is None else LEVELS[ranks[(len(ranks) - 1) // 2]]
 
@@ -77,7 +84,8 @@ def majority(values: list, order: list[str]):
     """The value with the most votes among the non-null `values`; None when every vote is null.
 
     `order` names the voter of each value (`values[i]` is the vote of `order[i]`) and lists the voters from the
-    highest priority to the lowest: a tie goes to the tied value voted first in that list.
+    highest priority to the lowest: a tie goes to the tied value voted first in that list. The names are not read:
+    `values` must already be in that priority order.
     """
     if len(values) != len(order):
         raise ValueError(f"{len(values)} values for {len(order)} voters")
@@ -88,13 +96,18 @@ def majority(values: list, order: list[str]):
     return next(v for v in values if v is not None and counts[v] == best)
 
 
+def _vote(labels: dict, field: str):
+    """A judge's vote on `field`: None (no vote) for an abstention."""
+    return None if labels.get(ABSTAINED) else labels[field]
+
+
 def _truth(votes: list[tuple[str, dict]], median: Callable[[list[str | None]], str | None]) -> dict:
     """`votes`: (voter, labels) in priority order."""
     voters = [voter for voter, _ in votes]
     return {
-        "complexity": median([labels["complexity"] for _, labels in votes]),
-        "task": majority([labels["task"] for _, labels in votes], voters),
-        "needs_tools": majority([labels["needs_tools"] for _, labels in votes], voters),
+        "complexity": median([_vote(labels, "complexity") for _, labels in votes]),
+        "task": majority([_vote(labels, "task") for _, labels in votes], voters),
+        "needs_tools": majority([_vote(labels, "needs_tools") for _, labels in votes], voters),
     }
 
 
@@ -129,7 +142,7 @@ def truths(
         for suffix, names in judges.items():
             entry[f"truth_all{suffix}"] = by_key[row["base_key"]][suffix]
             entry[f"truth_lang{suffix}"] = _truth([(j, labels_by_judge[j][i]) for j in names], median)
-        levels = [labels_by_judge[j][i]["complexity"] for j in main]
+        levels = [_vote(labels_by_judge[j][i], "complexity") for j in main]
         ranks = [LEVELS.index(level) for level in levels if level is not None]
         lang_level, all_level = entry["truth_lang"]["complexity"], entry["truth_all"]["complexity"]
         entry["undecidable"] = all_level is None
@@ -142,8 +155,9 @@ def truths(
 def load_folder(path: Path | str, prompts_sha: str, ids: list[str]) -> tuple[str, dict, dict[str, dict]]:
     """(name, meta, labels) of a judge or classifier folder made on the prompts file of SHA-256 `prompts_sha`, whose
     ids are `ids` (in file order). Refused (ValueError naming the folder) when its `prompts_sha256` is another one,
-    when an id has no label (never filled in) or a label has an unknown id. A classifier folder (provider "system")
-    also gives `score` and `needs_tools_probability` (None when absent)."""
+    when an id has no row (never filled in; an abstention row is a row, kept with its `abstained` status) or a row has
+    an unknown id. A classifier folder (provider "system") also gives `score` and `needs_tools_probability` (None when
+    absent)."""
     folder = Path(path)
     name = Path(os.path.abspath(folder)).name
     for needed in ("meta.json", "labels.jsonl"):
@@ -191,8 +205,9 @@ def build_results(
     meta_rows: list[dict], judges: dict[str, dict[str, dict]], classifiers: dict[str, dict[str, dict]], truths: dict
 ) -> pa.Table:
     """One row per entry of `meta_rows` (prompts file order): the meta columns, the truths, then one column per folder
-    and output, the judges then the classifiers in the order of the dicts. A classifier's `score` and
-    `needs_tools_probability` columns are there only when at least one of its labels has the value."""
+    and output, the judges then the classifiers in the order of the dicts. Every judge has a `<name>.abstained` bool
+    column (true on its abstention rows); a classifier's `score` and `needs_tools_probability` columns are there only
+    when at least one of its labels has the value."""
     columns: dict[str, pa.Array] = {}
     ids = [row["id"] for row in meta_rows]
     for name in META_COLUMNS:
@@ -203,10 +218,12 @@ def build_results(
     _column("undecidable", [truths[i]["undecidable"] for i in ids], pa.bool_(), columns)
     _column("spread", [truths[i]["spread"] for i in ids], pa.int64(), columns)
     _column("lang_disagreement", [truths[i]["lang_disagreement"] for i in ids], pa.bool_(), columns)
-    for folders, optional in ((judges, []), (classifiers, OPTIONAL_LABEL_KEYS)):
+    for folders, optional, judge in ((judges, [], True), (classifiers, OPTIONAL_LABEL_KEYS, False)):
         for name, labels in folders.items():
             for field in FIELDS:
                 _column(f"{name}.{field}", [labels[i][field] for i in ids], _TYPES[field], columns)
+            if judge:
+                _column(f"{name}.{ABSTAINED}", [bool(labels[i].get(ABSTAINED)) for i in ids], pa.bool_(), columns)
             for key in optional:
                 values = [labels[i].get(key) for i in ids]
                 if any(v is not None for v in values):
@@ -295,6 +312,11 @@ def _run(args) -> int:
     def entry(name: str) -> dict:
         return {"name": name, **{k: metas[name].get(k) for k in ("model", "revision", "date")}}
 
+    def abstained(name: str) -> list[dict]:
+        """The abstentions of a judge folder, in prompts file order."""
+        found = abstentions(judges[name])
+        return [{"id": i, "status": found[i]} for i in ids if i in found]
+
     record = {
         "prompts": str(args.prompts),
         "prompts_sha256": digest,
@@ -304,6 +326,7 @@ def _run(args) -> int:
         "classifiers": [entry(name) for name in classifier_order],
         "main": main,
         "gemma": gemma,
+        "abstentions": {name: abstained(name) for name in judge_order},
         "date": datetime.date.today().isoformat(),
         "rules": RULES,
     }
@@ -315,10 +338,12 @@ def _run(args) -> int:
     _write_atomic(run_json, lambda tmp: tmp.write_text(text, encoding="utf-8", newline="\n"))
     spreads = [truth[i]["spread"] for i in ids if truth[i]["spread"] is not None]
     mean_spread = f"{sum(spreads) / len(spreads):.3f}" if spreads else "-"
+    n_abstained = sum(len(rows) for rows in record["abstentions"].values())
     print(
         f"{out}: {table.num_rows} rows, {len(judges)} judges ({len(gemma)} Gemma in --main), {len(classifiers)} "
-        f"classifiers; undecidable {sum(truth[i]['undecidable'] for i in ids)}, language disagreements "
-        f"{sum(truth[i]['lang_disagreement'] for i in ids)}, mean spread {mean_spread}; record in {run_json}"
+        f"classifiers; abstentions {n_abstained}, undecidable {sum(truth[i]['undecidable'] for i in ids)}, language "
+        f"disagreements {sum(truth[i]['lang_disagreement'] for i in ids)}, mean spread {mean_spread}; record in "
+        f"{run_json}"
     )
     plain = truths({name: judges[name] for name in main}, main, meta_rows, gemma, median=plain_lower_median)
     first_id = {}  # base key -> its first id: truth_all is the same on every id of a key

@@ -5,7 +5,8 @@ prompt of that stratum steps in and every other pick stays the same.
 
 Order of the draw, all deterministic given the seed:
 1. each stratum's ids are sorted, shuffled once with `random.Random(seed)` (strata in `STRATA` order), then the vetoed
-   and `null`-complexity ids are dropped;
+   and `null`-complexity ids are dropped (an abstention of the pre-sort judge is never drawn either: `run_draw` leaves
+   it out and names it);
 2. tools: round-robin over the strata, the next `needs_tools: true` id of each stratum is taken until `tools_min` are
    picked or none is left;
 3. tasks: for each task of the rubric (in rubric order) with fewer than `task_min` picks, the next id of that task is
@@ -23,7 +24,7 @@ from pathlib import Path
 
 import pyarrow.parquet as pq
 
-from s1d1_bench.judge_file import read_labels
+from s1d1_bench.judge_file import ABSTAINED, abstentions, read_labels
 from s1d1_bench.rubric import TASKS
 
 STRATA = ("trivial", "low", "medium", "high")
@@ -70,7 +71,7 @@ def stratified_draw(
     rng = random.Random(seed)
     orders: dict[str, list[str]] = {}
     for stratum in STRATA:
-        order = sorted(i for i, lab in labels.items() if lab["complexity"] == stratum)
+        order = sorted(i for i, lab in labels.items() if lab["complexity"] == stratum and not lab.get(ABSTAINED))
         rng.shuffle(order)
         orders[stratum] = [i for i in order if i not in vetoed]
     picked: dict[str, list[str]] = {stratum: [] for stratum in STRATA}
@@ -157,6 +158,11 @@ def run_draw(args) -> int:
     if foreign:
         print(f"bench draw: vetoed id(s) not in the pre-sort: {foreign[:3]}", file=sys.stderr)
         return 1
+    abstained = abstentions(labels)
+    if abstained:  # no answer of the pre-sort judge: no stratum to draw it from
+        names = ", ".join(abstained)
+        print(f"bench draw: {len(abstained)} abstention(s) left out of the draw: {names}", file=sys.stderr)
+        labels = {i: lab for i, lab in labels.items() if i not in abstained}
     draw = stratified_draw(labels, args.seed, args.per_stratum, args.tools_min, args.task_min, vetoed)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)

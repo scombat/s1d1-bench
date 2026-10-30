@@ -2,6 +2,10 @@
 
 A classifier directory (`classifiers/<name>/`) has the same format: `provider` is then "system", and a label may carry
 a `score` and a `needs_tools_probability`, or leave `task` and `needs_tools` null when the system does not predict them.
+
+An abstention row records a judge's non-answer (its final status after the retry was not `ok`): the three fields null
+and `abstained` set to that status, which the last line of the id in `log.jsonl` must carry. A classifier never
+abstains.
 """
 
 import hashlib
@@ -36,6 +40,8 @@ STRING_KEYS = ["judge", "model", "revision", "date", "author", "notes"]  # tempe
 LABEL_KEYS = ["id", "complexity", "task", "needs_tools"]
 OPTIONAL_LABEL_KEYS = ["score", "needs_tools_probability"]  # absent or a number in [0, 1], in any directory
 MISSING_SHOWN = 5  # ids named in the "missing" summary
+ABSTAINED = "abstained"  # the key of an abstention row, whose value is the final status of the id
+ABSTENTION_STATUSES = ["json_error", "truncated", "error"]  # every final status of `bench judge` but "ok"
 
 
 def _prompts_files(prompts_dir: Path, errors: list[str]) -> dict[str, Path]:
@@ -113,11 +119,34 @@ def _is_unit_number(value: object) -> bool:
     return type(value) in (int, float) and 0 <= value <= 1  # bool is an int and NaN fails the comparison
 
 
+def _abstention_faults(row: dict, system: bool) -> list[str]:
+    """The faults of a line that carries `abstained`: the three fields null, a known status, no other key."""
+    faults = []
+    missing = [k for k in LABEL_KEYS if k not in row]
+    extra = [k for k in row if k not in LABEL_KEYS and k != ABSTAINED]
+    if missing:
+        faults.append("missing field " + ", ".join(repr(k) for k in missing))
+    if extra:
+        faults.append("unexpected field " + ", ".join(repr(k) for k in extra) + " on an abstention")
+    if "id" in row and not isinstance(row["id"], str):
+        faults.append(f"id {row['id']!r} is not a string")
+    if system:
+        faults.append(f"{ABSTAINED} {row[ABSTAINED]!r}: a classifier (provider 'system') does not abstain")
+    elif not (isinstance(row[ABSTAINED], str) and row[ABSTAINED] in ABSTENTION_STATUSES):
+        faults.append(f"{ABSTAINED} {row[ABSTAINED]!r} not in {ABSTENTION_STATUSES}")
+    for key in LABEL_KEYS[1:]:
+        if key in row and row[key] is not None:
+            faults.append(f"{key} {row[key]!r} on an abstention: the three fields must be null")
+    return faults
+
+
 def _label_faults(row: object, system: bool) -> list[str]:
     """The faults of one parsed line, each naming its field (the `id` checks are made by the caller). `system` lets
     `task` and `needs_tools` be null."""
     if not isinstance(row, dict):
         return ["not a JSON object"]
+    if ABSTAINED in row:
+        return _abstention_faults(row, system)
     faults = []
     missing = [k for k in LABEL_KEYS if k not in row]
     extra = [k for k in row if k not in LABEL_KEYS and k not in OPTIONAL_LABEL_KEYS]
@@ -142,14 +171,57 @@ def _label_faults(row: object, system: bool) -> list[str]:
     return faults
 
 
+def _last_log_statuses(path: Path, errors: list[str]) -> dict[str, object] | None:
+    """id -> the `status` of its last line in `log.jsonl` (a resumed id is logged again); None, with an error, when
+    a line does not parse."""
+    statuses: dict[str, object] = {}
+    try:
+        with open(path, encoding="utf-8") as f:
+            for number, raw in enumerate(f, start=1):
+                if raw.rstrip("\r\n") == "":
+                    continue
+                try:
+                    row = json.loads(raw)
+                except json.JSONDecodeError:
+                    errors.append(f"log.jsonl:{number}: not valid JSON, cannot check the abstentions")
+                    return None
+                if isinstance(row, dict) and isinstance(row.get("id"), str):
+                    statuses[row["id"]] = row.get("status")
+    except UnicodeDecodeError as exc:
+        errors.append(f"log.jsonl: not valid UTF-8 ({exc.reason}), cannot check the abstentions")
+        return None
+    return statuses
+
+
+def _check_abstentions_against_log(log: Path, rows: dict[str, tuple[int, str]], errors: list[str]) -> None:
+    """Each abstention row (id -> line number, status) must be what the last log line of its id says."""
+    if not rows or not log.is_file():
+        return
+    statuses = _last_log_statuses(log, errors)
+    if statuses is None:
+        return
+    for row_id, (number, status) in rows.items():
+        if row_id not in statuses:
+            errors.append(
+                f"labels.jsonl:{number}: abstention {status!r} for {row_id!r}, which has no line in log.jsonl"
+            )
+        elif statuses[row_id] != status:
+            errors.append(
+                f"labels.jsonl:{number}: abstention {status!r} for {row_id!r}, but its last line in log.jsonl says "
+                f"{statuses[row_id]!r}"
+            )
+
+
 def _check_labels(path: Path, expected: list[str] | None, system: bool, errors: list[str]) -> None:
-    """Append one error per faulty line, then one summary for the ids never seen. `expected` is None when the
-    prompts file is unknown: the ids are then not checked."""
+    """Append one error per faulty line, then one summary for the ids never seen, then the abstentions that the
+    `log.jsonl` next to the labels contradicts. `expected` is None when the prompts file is unknown: the ids are then
+    not checked."""
     if not path.is_file():
         errors.append(f"labels.jsonl: file not found in {path.parent}")
         return
     wanted = set(expected) if expected is not None else None
     first_line: dict[str, int] = {}
+    abstained: dict[str, tuple[int, str]] = {}  # well-formed abstention rows: id -> (line, status)
     try:
         with open(path, encoding="utf-8") as f:
             for number, raw in enumerate(f, start=1):  # physical line numbers; truly empty lines are skipped
@@ -171,6 +243,8 @@ def _check_labels(path: Path, expected: list[str] | None, system: bool, errors: 
                         faults.append(f"unknown id {row_id!r}")
                 if faults:
                     errors.append(f"labels.jsonl:{number}: " + "; ".join(faults))
+                elif ABSTAINED in row:
+                    abstained[row_id] = (number, row[ABSTAINED])
     except UnicodeDecodeError as exc:
         errors.append(f"labels.jsonl: not valid UTF-8 ({exc.reason})")
         return
@@ -179,6 +253,7 @@ def _check_labels(path: Path, expected: list[str] | None, system: bool, errors: 
         if missing:
             shown = ", ".join(missing[:MISSING_SHOWN]) + (", ..." if len(missing) > MISSING_SHOWN else "")
             errors.append(f"labels.jsonl: missing {len(missing)} id(s): {shown}")
+    _check_abstentions_against_log(path.with_name("log.jsonl"), abstained, errors)
 
 
 def validate_judge_dir(judge_dir: Path | str, prompts_dir: Path | str) -> list[str]:
@@ -202,13 +277,23 @@ def validate_judge_dir(judge_dir: Path | str, prompts_dir: Path | str) -> list[s
 
 
 def read_labels(path: Path | str) -> dict[str, dict]:
-    """`id` -> its three label fields, from a labels file already accepted by `validate_judge_dir`."""
+    """`id` -> its three label fields, from a labels file already accepted by `validate_judge_dir`. An abstention
+    keeps its row: the three fields None, plus `abstained` (its status); an answer has no `abstained` key."""
     labels: dict[str, dict] = {}
     for row in read_jsonl(path):
         if row["id"] in labels:
             raise ValueError(f"{path}: duplicate id {row['id']!r}")
         labels[row["id"]] = {k: row[k] for k in LABEL_KEYS if k != "id"}
+        if ABSTAINED in row:
+            if any(v is not None for v in labels[row["id"]].values()):
+                raise ValueError(f"{path}: abstention for id {row['id']!r} with a non-null label field")
+            labels[row["id"]][ABSTAINED] = row[ABSTAINED]
     return labels
+
+
+def abstentions(labels: dict[str, dict]) -> dict[str, str]:
+    """id -> status of the abstentions among `labels` (as `read_labels` gives them), in their order."""
+    return {i: row[ABSTAINED] for i, row in labels.items() if row.get(ABSTAINED)}
 
 
 def write_meta(path: Path | str, **fields) -> None:
@@ -233,5 +318,6 @@ def run_validate(args) -> int:
         for error in errors:
             print(error, file=sys.stderr)
         return 1
-    print("ok")
+    n = sum(ABSTAINED in row for row in read_jsonl(Path(args.judge_dir) / "labels.jsonl"))
+    print(f"ok ({n} abstention{'s' if n > 1 else ''})" if n else "ok")
     return 0

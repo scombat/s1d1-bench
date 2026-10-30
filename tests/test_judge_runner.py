@@ -11,6 +11,14 @@ GOOD = '{"complexity": "low", "task": "chat", "needs_tools": false}'
 GOOD_LABEL = {"complexity": "low", "task": "chat", "needs_tools": False}
 BAD = "not json"
 BAD_TWICE = [BAD, BAD]  # the answer returned to the first attempt and to the retry
+REFUSAL = (  # gpt-oss on 3ce175ed3ef6b933-zho: no JSON object, a json_error after the retry
+    "<|channel|>analysis<|message|>Disallowed.<|end|><|start|>assistant<|channel|>final<|message|>"
+    "I'm sorry, but I can't help with that"
+)
+
+
+def abstention(id_, status):
+    return {"id": id_, "complexity": None, "task": None, "needs_tools": None, "abstained": status}
 PROMPTS_3 = [
     {"id": "p1", "prompt": "What is the capital of France?"},
     {"id": "p2", "prompt": "Write a function that reverses a string."},
@@ -30,7 +38,7 @@ def fake_generate(answers):
         generate.calls += 1
         generate.messages.append(messages)
         answer = queue.pop(0)
-        if isinstance(answer, Exception):
+        if isinstance(answer, BaseException):
             raise answer
         return answer if isinstance(answer, GenerateResult) else result(answer)
 
@@ -145,7 +153,8 @@ def test_run_judge_writes_labels_and_log_with_fake_generate(tmp_path):
     counts = run_judge(PROMPTS_3, generate, tmp_path)
     assert counts == {"ok": 2, "json_error": 1}
     assert generate.calls == 4
-    assert len(read_labels(tmp_path / "labels.jsonl")) == 2
+    labels = read_labels(tmp_path / "labels.jsonl")
+    assert len(labels) == 3 and labels["p2"]["abstained"] == "json_error"
     log = read_jsonl(tmp_path / "log.jsonl")
     assert [r["retries"] for r in log] == [0, 1, 0]
     assert [r["status"] for r in log] == ["ok", "json_error", "ok"]
@@ -187,7 +196,7 @@ def test_prompt_text_cannot_change_the_id_the_label_is_filed_under(tmp_path):
     assert read_jsonl(tmp_path / "labels.jsonl")[0]["id"] == "real"
     other = tmp_path / "other"
     counts = run_judge(prompts, fake_generate([answer, answer]), other)  # an id in the model output is no label
-    assert counts == {"json_error": 1} and not read_jsonl(other / "labels.jsonl")
+    assert counts == {"json_error": 1} and read_jsonl(other / "labels.jsonl") == [abstention("real", "json_error")]
 
 
 def test_truncated_when_finish_reason_is_length(tmp_path):
@@ -197,7 +206,7 @@ def test_truncated_when_finish_reason_is_length(tmp_path):
     assert generate.calls == 1  # no retry
     (line,) = read_jsonl(tmp_path / "log.jsonl")
     assert line["status"] == "truncated" and line["retries"] == 0 and line["raw"] == '{"complexity": "lo'
-    assert read_jsonl(tmp_path / "labels.jsonl") == []
+    assert read_jsonl(tmp_path / "labels.jsonl") == [abstention("p1", "truncated")]
 
 
 def test_a_retry_cut_by_length_is_truncated(tmp_path):
@@ -211,7 +220,7 @@ def test_out_of_enum_value_is_a_json_error_with_one_retry(tmp_path):
     generate = fake_generate([huge, huge])
     assert run_judge(PROMPTS_3[:1], generate, tmp_path) == {"json_error": 1}
     assert generate.calls == 2
-    assert read_jsonl(tmp_path / "labels.jsonl") == []
+    assert read_jsonl(tmp_path / "labels.jsonl") == [abstention("p1", "json_error")]
 
 
 def test_needs_tools_as_int_is_a_json_error(tmp_path):
@@ -227,7 +236,7 @@ def test_generate_raising_is_status_error_without_retry_and_the_run_continues(tm
     first, second = read_jsonl(tmp_path / "log.jsonl")
     assert first["status"] == "error" and first["retries"] == 0 and "boom" in first["raw"]
     assert second["status"] == "ok"
-    assert list(read_labels(tmp_path / "labels.jsonl")) == ["p2"]
+    assert read_jsonl(tmp_path / "labels.jsonl") == [abstention("p1", "error"), {"id": "p2", **GOOD_LABEL}]
 
 
 def test_generate_raising_on_the_retry_is_status_error(tmp_path):
@@ -278,11 +287,47 @@ def test_resume_final_order_is_the_prompt_order(tmp_path):
     assert [r["id"] for r in read_jsonl(tmp_path / "labels.jsonl")] == ["p1", "p2", "p3"]
 
 
-def test_resume_does_not_relabel_failed_ids_as_done(tmp_path):
-    run_judge(PROMPTS_3[:1], fake_generate(BAD_TWICE), tmp_path)  # json_error: no label line
+def test_resume_keeps_an_abstention_and_does_not_ask_again(tmp_path):
+    run_judge(PROMPTS_3[:1], fake_generate(BAD_TWICE), tmp_path)  # json_error: an abstention row
     generate = fake_generate([GOOD])
-    assert run_judge(PROMPTS_3[:1], generate, tmp_path, resume=True) == {"ok": 1}
-    assert [r["id"] for r in read_jsonl(tmp_path / "labels.jsonl")] == ["p1"]
+    assert run_judge(PROMPTS_3[:1], generate, tmp_path, resume=True) == {}
+    assert generate.calls == 0
+    assert read_jsonl(tmp_path / "labels.jsonl") == [abstention("p1", "json_error")]
+
+
+@pytest.mark.parametrize(
+    "answers,status",
+    [
+        (BAD_TWICE, "json_error"),
+        ([REFUSAL, REFUSAL], "json_error"),
+        ([result("cut", finish_reason="length")], "truncated"),
+        ([BAD, result("cut", finish_reason="length")], "truncated"),
+        ([RuntimeError("boom")], "error"),
+        ([BAD, RuntimeError("late")], "error"),
+    ],
+)
+def test_a_final_status_other_than_ok_is_an_abstention_row(tmp_path, answers, status):
+    assert run_judge(PROMPTS_3[:1], fake_generate(answers), tmp_path) == {status: 1}
+    text = (tmp_path / "labels.jsonl").read_text(encoding="utf-8")
+    expected = '{"id": "p1", "complexity": null, "task": null, "needs_tools": null, "abstained": "' + status + '"}\n'
+    assert text == expected
+    assert read_jsonl(tmp_path / "log.jsonl")[-1]["status"] == status  # the row says what the log says
+
+
+def test_an_ok_answer_is_never_an_abstention(tmp_path):
+    null_label = '{"complexity": null, "task": "chat", "needs_tools": false}'  # a null tier is an answer
+    run_judge(PROMPTS_3[:2], fake_generate([GOOD, BAD, null_label]), tmp_path)
+    rows = read_jsonl(tmp_path / "labels.jsonl")
+    assert rows == [{"id": "p1", **GOOD_LABEL}, {"id": "p2", "complexity": None, "task": "chat", "needs_tools": False}]
+    assert all("abstained" not in row for row in rows)
+
+
+def test_abstention_rows_keep_the_prompt_order(tmp_path):
+    run_judge([PROMPTS_3[2]], fake_generate(BAD_TWICE), tmp_path)  # p3 abstains first
+    run_judge(PROMPTS_3, fake_generate([GOOD, *BAD_TWICE]), tmp_path, resume=True)
+    rows = read_jsonl(tmp_path / "labels.jsonl")
+    assert [r["id"] for r in rows] == ["p1", "p2", "p3"]
+    assert [r.get("abstained") for r in rows] == [None, "json_error", "json_error"]
 
 
 @pytest.mark.parametrize("name", ["labels.jsonl", "log.jsonl"])
@@ -532,9 +577,10 @@ def test_bench_judge_refuses_an_existing_folder_without_resume(tmp_path, monkeyp
 def _first_run_then_resume(tmp_path, monkeypatch, *resume_argv, meta=None):
     prompts, _ = prompts_dir_with(tmp_path, PROMPTS_3)
     out = tmp_path / "j"
-    fake_backend(monkeypatch, [GOOD, BAD, BAD, BAD, BAD])  # p1 ok, p2 and p3 json_error
+    fake_backend(monkeypatch, [GOOD, KeyboardInterrupt()])  # p1 ok, then the run is stopped
     base = ["--prompts", prompts / "set.jsonl", "--out", out, "--author", "a"]
-    judge_cmd("--model", "org/m", *base, "--thinking", "off")
+    with pytest.raises(KeyboardInterrupt):
+        judge_cmd("--model", "org/m", *base, "--thinking", "off")
     meta_before = (out / "meta.json").read_text()
     generate, _ = fake_backend(monkeypatch, [GOOD, GOOD], meta=meta)
     code = judge_cmd(*base, *resume_argv, "--resume")
@@ -635,3 +681,40 @@ def test_bench_judge_resume_of_a_folder_without_max_tokens_is_refused(tmp_path, 
     generate, _ = fake_backend(monkeypatch, [GOOD, GOOD])
     assert judge_cmd(*base, "--resume") == 1 and generate.calls == 0
     assert "max_tokens" in capsys.readouterr().err
+
+
+def test_resume_of_a_folder_from_before_abstentions_writes_the_row_and_validate_counts_it(
+    tmp_path, monkeypatch, capsys
+):
+    """The base-v1-gptoss-cap512 case: the old code wrote no row for a refused id; a plain --resume with the same
+    settings asks the model again, which refuses again, and the abstention row is written."""
+    from s1d1_bench.cli import main
+    from s1d1_bench.judge_file import validate_judge_dir
+
+    prompts, _ = prompts_dir_with(tmp_path, PROMPTS_3)
+    out = tmp_path / "j"
+    base = ["--model", "org/m", "--prompts", prompts / "set.jsonl", "--out", out, "--author", "a", "--thinking", "off"]
+    fake_backend(monkeypatch, [GOOD, REFUSAL, REFUSAL, GOOD])
+    assert judge_cmd(*base) == 0
+    labels = out / "labels.jsonl"  # what the old code left: no row for p2, its json_error only in the log
+    labels.write_text("".join(line for line in labels.read_text().splitlines(keepends=True) if '"p2"' not in line))
+    meta_before = (out / "meta.json").read_bytes()
+    assert any("missing 1 id(s): p2" in e for e in validate_judge_dir(out, prompts))
+    capsys.readouterr()
+
+    generate, _ = fake_backend(monkeypatch, [REFUSAL, REFUSAL])  # greedy: the same refusal again
+    assert judge_cmd(*base, "--resume") == 0
+    assert generate.calls == 2  # the first attempt and the retry, for p2 only
+    rows = read_jsonl(labels)
+    assert rows == [{"id": "p1", **GOOD_LABEL}, abstention("p2", "json_error"), {"id": "p3", **GOOD_LABEL}]
+    assert [(r["id"], r["status"]) for r in read_jsonl(out / "log.jsonl")] == [
+        ("p1", "ok"), ("p2", "json_error"), ("p3", "ok"), ("p2", "json_error")
+    ]
+    assert (out / "meta.json").read_bytes() == meta_before
+    assert validate_judge_dir(out, prompts) == []
+    capsys.readouterr()
+    assert main(["validate", str(out), "--prompts", str(prompts)]) == 0
+    assert capsys.readouterr().out.strip() == "ok (1 abstention)"
+
+    generate, _ = fake_backend(monkeypatch, [GOOD])
+    assert judge_cmd(*base, "--resume") == 0 and generate.calls == 0  # nothing left: the abstention is an answer

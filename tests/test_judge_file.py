@@ -414,3 +414,109 @@ def test_cli_validate_accepts_a_system_folder(valid_judge_dir, prompts_dir, caps
     lines = {id_: {"complexity": "low", "task": None, "needs_tools": None, "score": 0.25} for id_ in LABELS}
     assert main(["validate", str(system_dir(valid_judge_dir, lines)), "--prompts", str(prompts_dir)]) == 0
     assert capsys.readouterr().out.strip() == "ok"
+
+
+# --- abstentions: a judge's non-answer (its final status after the retry was not ok)
+
+
+def abstention_line(id_: str, status: str = "json_error", **change) -> str:
+    row = {"id": id_, "complexity": None, "task": None, "needs_tools": None, "abstained": status, **change}
+    return json.dumps(row)
+
+
+def write_log(judge_dir: Path, rows: list[tuple[str, str]]) -> None:
+    text = "".join(json.dumps({"id": i, "status": s, "retries": 1}) + "\n" for i, s in rows)
+    (judge_dir / "log.jsonl").write_text(text, encoding="utf-8")
+
+
+@pytest.mark.parametrize("status", ["json_error", "truncated", "error"])
+def test_an_abstention_row_is_accepted(dir_with_line, prompts_dir, status):
+    assert validate_judge_dir(dir_with_line(abstention_line("a-eng", status)), prompts_dir) == []
+
+
+@pytest.mark.parametrize(
+    "change,fault",
+    [
+        ({"complexity": "low"}, "complexity"),
+        ({"task": "chat"}, "task"),
+        ({"needs_tools": False}, "needs_tools"),
+        ({"abstained": "ok"}, "abstained"),
+        ({"abstained": "refused"}, "abstained"),
+        ({"abstained": None}, "abstained"),
+        ({"abstained": True}, "abstained"),
+        ({"score": 0.5}, "score"),
+    ],
+)
+def test_a_bad_abstention_row_is_rejected(dir_with_line, prompts_dir, change, fault):
+    errors = validate_judge_dir(dir_with_line(abstention_line("a-eng", **change)), prompts_dir)
+    assert len(errors) == 1 and errors[0].startswith("labels.jsonl:1") and fault in errors[0], errors
+
+
+def test_an_abstention_row_still_needs_its_three_fields(dir_with_line, prompts_dir):
+    line = json.dumps({"id": "a-eng", "complexity": None, "abstained": "json_error"})
+    errors = validate_judge_dir(dir_with_line(line), prompts_dir)
+    assert len(errors) == 1 and "missing field 'task', 'needs_tools'" in errors[0], errors
+
+
+def test_a_system_folder_does_not_abstain(valid_judge_dir, prompts_dir):
+    lines = {id_: LABELS[id_] for id_ in LABELS}
+    lines["a-eng"] = {"complexity": None, "task": None, "needs_tools": None, "abstained": "error"}
+    errors = validate_judge_dir(system_dir(valid_judge_dir, lines), prompts_dir)
+    assert len(errors) == 1 and errors[0].startswith("labels.jsonl:1") and "abstained" in errors[0], errors
+
+
+def test_an_abstention_matches_the_last_log_line_of_its_id(dir_with_line, prompts_dir):
+    judge_dir = dir_with_line(abstention_line("a-eng", "json_error"))
+    write_log(judge_dir, [("a-eng", "error"), ("b-eng", "ok"), ("c-eng", "ok"), ("a-eng", "json_error")])
+    assert validate_judge_dir(judge_dir, prompts_dir) == []  # an earlier line is history
+
+
+@pytest.mark.parametrize(
+    "log,fault",
+    [
+        ([("a-eng", "json_error"), ("a-eng", "truncated")], "'truncated'"),  # the last line decides
+        ([("a-eng", "ok")], "'ok'"),
+        ([("b-eng", "ok")], "no line"),
+    ],
+)
+def test_an_abstention_the_log_contradicts_is_rejected(dir_with_line, prompts_dir, log, fault):
+    judge_dir = dir_with_line(abstention_line("a-eng", "json_error"))
+    write_log(judge_dir, log)
+    errors = validate_judge_dir(judge_dir, prompts_dir)
+    assert len(errors) == 1 and errors[0].startswith("labels.jsonl:1") and "log.jsonl" in errors[0], errors
+    assert fault in errors[0]
+
+
+def test_a_log_line_that_does_not_parse_is_named(dir_with_line, prompts_dir):
+    judge_dir = dir_with_line(abstention_line("a-eng", "json_error"))
+    write_log(judge_dir, [("a-eng", "json_error")])
+    with open(judge_dir / "log.jsonl", "a", encoding="utf-8") as f:
+        f.write('{"id": "b-eng", "sta')
+    errors = validate_judge_dir(judge_dir, prompts_dir)
+    assert errors == ["log.jsonl:2: not valid JSON, cannot check the abstentions"], errors
+
+
+def test_the_log_is_not_read_without_an_abstention(valid_judge_dir, prompts_dir):
+    (valid_judge_dir / "log.jsonl").write_text("not json\n", encoding="utf-8")
+    assert validate_judge_dir(valid_judge_dir, prompts_dir) == []
+
+
+def test_read_labels_keeps_an_abstention_with_null_fields(dir_with_line):
+    judge_dir = dir_with_line(abstention_line("a-eng", "truncated"))
+    labels = read_labels(judge_dir / "labels.jsonl")
+    assert labels["a-eng"] == {"complexity": None, "task": None, "needs_tools": None, "abstained": "truncated"}
+    assert labels["b-eng"] == LABELS["b-eng"]  # no `abstained` key on an answer
+
+
+def test_read_labels_refuses_an_abstention_with_a_label(dir_with_line):
+    judge_dir = dir_with_line(abstention_line("a-eng", complexity="low"))
+    with pytest.raises(ValueError, match="a-eng"):
+        read_labels(judge_dir / "labels.jsonl")
+
+
+@pytest.mark.parametrize("n,summary", [(0, "ok"), (1, "ok (1 abstention)"), (2, "ok (2 abstentions)")])
+def test_cli_validate_counts_the_abstentions(valid_judge_dir, prompts_dir, capsys, n, summary):
+    lines = [abstention_line(i) if k < n else VALID_LINES[i] for k, i in enumerate(LABELS)]
+    (valid_judge_dir / "labels.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    assert main(["validate", str(valid_judge_dir), "--prompts", str(prompts_dir)]) == 0
+    assert capsys.readouterr().out.strip() == summary

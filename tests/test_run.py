@@ -71,6 +71,11 @@ def write_folder(folder: Path, labels: dict[str, dict], prompts_sha: str, model=
     return folder
 
 
+def A(status="json_error") -> dict:
+    """An abstention row as read_labels gives it."""
+    return {"complexity": None, "task": None, "needs_tools": None, "abstained": status}
+
+
 def every(level, **kw) -> dict[str, dict]:
     return {i: L(level, **kw) for i in IDS}
 
@@ -359,6 +364,8 @@ def test_columns_and_row_count(tmp_path):
     folder_columns = []
     for name in ["j-b", "j-a", "j-c", "j-off", "laya", "random", "s1d1-small-int8"]:
         folder_columns += [f"{name}.complexity", f"{name}.task", f"{name}.needs_tools"]
+        if name.startswith("j-"):
+            folder_columns += [f"{name}.abstained"]  # every judge folder, never a classifier
         if name == "laya":
             folder_columns += ["laya.score"]
         if name == "s1d1-small-int8":
@@ -386,6 +393,8 @@ def test_columns_and_row_count(tmp_path):
     assert rows[0]["laya.task"] is None and rows[0]["laya.needs_tools"] is None and rows[0]["laya.score"] == 0.5
     assert rows[0]["s1d1-small-int8.needs_tools_probability"] == 0.1
     assert rows[0]["random.task"] == "math" and rows[0]["j-off.complexity"] == "trivial"
+    assert schema.field("j-a.abstained").type == pa.bool_()
+    assert {r[f"{name}.abstained"] for r in rows for name in ("j-a", "j-b", "j-c", "j-off")} == {False}
 
 
 def test_run_json_records_the_inputs(tmp_path):
@@ -401,7 +410,8 @@ def test_run_json_records_the_inputs(tmp_path):
     assert [j["name"] for j in record["judges"]] == ["j-b", "j-a", "j-c", "j-off"]
     assert record["judges"][0] == {"name": "j-b", "model": GEMMA_MODEL, "revision": "rev-j-b", "date": "2026-10-29"}
     assert [c["name"] for c in record["classifiers"]] == ["laya", "random", "s1d1-small-int8"]
-    assert "rounded down" in record["rules"] and "null" in record["rules"]
+    assert "rounded down" in record["rules"] and "null" in record["rules"] and "abstention" in record["rules"]
+    assert record["abstentions"] == {"j-b": [], "j-a": [], "j-c": [], "j-off": []}
     text = (tmp_path / "results" / "set.run.json").read_text(encoding="utf-8")
     assert text == json.dumps(record, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
 
@@ -465,3 +475,92 @@ def test_a_folder_matched_twice_is_loaded_once(tmp_path):
     table = pq.read_table(tmp_path / "r" / "x.parquet")
     assert table.column_names.count("j-a.complexity") == 1
     assert not any(c.startswith("laya.") for c in table.column_names)  # no --classifiers: no classifier column
+
+
+# --- abstentions ------------------------------------------------------------------------------------------------------
+
+
+def test_an_abstention_is_a_null_vote_toward_undecidable():
+    # k1: j-a abstains on its 4 versions, j-b gives a null tier on 3: 7 of 12 null votes -> undecidable
+    labels = {
+        "j-a": {i: A() if i.startswith("k1") else L("high") for i in IDS},
+        "j-b": by_lang({"eng": None, "fra": None, "rus": None, "zho": "high"}),
+        "j-c": every("high"),
+    }
+    labels["j-b"].update({i: L("high") for i in IDS if i.startswith("k2")})
+    result = truths(labels, MAIN, meta_rows())
+    null_row = L(None, task=None, needs_tools=None)
+    nulls = {**labels, "j-a": {i: null_row if i.startswith("k1") else L("high") for i in IDS}}
+    assert result == truths(nulls, MAIN, meta_rows())  # exactly as a null vote on every field
+    for i in IDS:
+        assert result[i]["undecidable"] is i.startswith("k1")
+    # 6 of 12: j-a abstains on 4, j-b null on 2: decidable
+    labels["j-b"] = by_lang({"eng": None, "fra": None, "rus": "high", "zho": "high"})
+    assert truths(labels, MAIN, meta_rows())["k1-eng"]["truth_all"]["complexity"] == "high"
+
+
+def test_an_abstaining_judge_gives_no_task_tools_or_spread_vote():
+    labels = {
+        "j-b": every("expert", task="math", needs_tools=True),  # first in --main: wins every tie it is in
+        "j-a": every("low", task="coding_debugging"),
+        "j-c": every("medium", task="creative_writing"),
+    }
+    labels["j-b"]["k1-eng"] = A("truncated")
+    result = truths(labels, MAIN, meta_rows())
+    # k1-eng: j-a and j-c are left, one vote each: the tie goes to j-a, the first of them in --main
+    assert result["k1-eng"]["truth_lang"] == {"complexity": "low", "task": "coding_debugging", "needs_tools": False}
+    assert result["k1-eng"]["spread"] == 1  # low and medium; j-b's expert elsewhere does not count here
+    assert result["k1-fra"]["spread"] == 3
+    # truth_all of k1: j-b votes on 3 versions, 3 math / 4 coding_debugging / 4 creative_writing: j-a first
+    assert result["k1-eng"]["truth_all"]["task"] == "coding_debugging"
+    assert result["k2-eng"]["truth_all"]["task"] == "math"  # 4/4/4: j-b first
+    assert result["k1-eng"]["truth_all"]["needs_tools"] is False  # 3 true, 8 false
+
+
+def test_run_writes_the_abstained_column_and_lists_the_abstentions(tmp_path, capsys):
+    prompts = full_tree(tmp_path)
+    good = sha(prompts)
+    labels = {**every("low"), "k1-zho": A("json_error"), "k2-eng": A("error")}
+    path = tmp_path / "judges" / "j-a" / "labels.jsonl"
+    write_jsonl(path, [{"id": i, **lab} for i, lab in labels.items()])
+    labels_off = {**every("trivial"), "k2-rus": A("truncated")}
+    write_jsonl(tmp_path / "judges" / "j-off" / "labels.jsonl", [{"id": i, **lab} for i, lab in labels_off.items()])
+    assert good == sha(prompts)
+    assert run_cli(tmp_path, prompts) == 0
+    out = capsys.readouterr().out
+    assert "abstentions 3" in out
+    rows = pq.read_table(tmp_path / "results" / "set.parquet").to_pylist()
+    by_id = {r["id"]: r for r in rows}
+    assert by_id["k1-zho"]["j-a.abstained"] is True and by_id["k1-zho"]["j-a.complexity"] is None
+    assert by_id["k2-eng"]["j-a.abstained"] is True and by_id["k1-eng"]["j-a.abstained"] is False
+    assert by_id["k2-rus"]["j-off.abstained"] is True
+    assert sum(r["j-b.abstained"] for r in rows) == 0
+    record = json.loads((tmp_path / "results" / "set.run.json").read_text(encoding="utf-8"))
+    assert record["abstentions"] == {
+        "j-b": [],
+        "j-a": [{"id": "k1-zho", "status": "json_error"}, {"id": "k2-eng", "status": "error"}],  # prompts order
+        "j-c": [],
+        "j-off": [{"id": "k2-rus", "status": "truncated"}],
+    }
+
+
+def test_an_id_without_any_row_is_still_refused_next_to_abstentions(tmp_path, capsys):
+    prompts = full_tree(tmp_path)
+    labels = {**every("low"), "k1-zho": A()}
+    del labels["k2-zho"]
+    write_jsonl(tmp_path / "judges" / "j-a" / "labels.jsonl", [{"id": i, **lab} for i, lab in labels.items()])
+    assert run_cli(tmp_path, prompts) == 1
+    err = capsys.readouterr().err
+    assert "j-a" in err and "k2-zho" in err and "never fills in" in err
+    assert not (tmp_path / "results").exists()
+
+
+def test_load_folder_keeps_an_abstention_and_refuses_one_in_a_classifier(tmp_path):
+    prompts = write_set(tmp_path)
+    judge = write_folder(tmp_path / "judges" / "j", {**every("low"), "k1-eng": A()}, sha(prompts))
+    _, _, labels = load_folder(judge, sha(prompts), IDS)
+    assert labels["k1-eng"] == A() and labels["k1-fra"] == L("low")
+    rows = {**every("low", score=0.3), "k1-eng": A()}
+    classifier = write_folder(tmp_path / "classifiers" / "c", rows, sha(prompts), system=True)
+    with pytest.raises(ValueError, match="abstain"):
+        load_folder(classifier, sha(prompts), IDS)
