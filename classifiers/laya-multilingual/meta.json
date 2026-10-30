@@ -1,0 +1,15 @@
+{
+  "judge": "laya-multilingual",
+  "model": "convaiinnovations/laya/multilingual",
+  "provider": "system",
+  "revision": "laya 0.4.15 convaiinnovations/laya@7b928d828b7b0e022f929d9bd2e44165aa270148",
+  "date": "2026-10-30",
+  "temperature": 0,
+  "thinking": "none",
+  "instructions": "none",
+  "prompts_sha256": "e6a6d4c12ef8b95caea942337a3a1e16ec1622cb4e75c8ee0b473ef609a32490",
+  "author": "scombat",
+  "replayable": true,
+  "licence": "CC-BY-4.0",
+  "notes": "Replay: uv run --group laya bench classify laya --laya-model multilingual --revision 7b928d828b7b0e022f929d9bd2e44165aa270148 (laya 0.4.15, device mps). The question is LiteLLM's complexity router `tier` question, one choice question with its four criteria and its instructions, as docs/27 reads it: copied identically from bench/laya_scores.py of the research repo, read on 2026-10-30 (the LiteLLM file was read on 2026-10-25). Laya runs locally, batches of 32 prompts sorted by length. score = expected level (SIMPLE 0 to REASONING 3 under the probabilities of Laya) / 3; tier = nearest anchor of the score (an exact midpoint goes to the lower tier). task and needs_tools are null: Laya does not predict them. 3 prompts truncated at the token budget of the checkpoint."
+}

@@ -17,18 +17,22 @@ COMMANDS: dict[str, tuple[str, str]] = {
     "translate": ("translate", "run_translate_cmd"),
     "witness": ("witness", "run_witness"),
     "check": ("check", "run_check"),
+    "classify": ("classify", "run_classify_cmd"),
+    "run": ("run", "run_run_cmd"),
 }
 
 _HELP = {
     "pool": "build the prompt pool",
     "export": "export the prompts to judge",
     "judge": "run a local judge over the prompts",
-    "validate": "check a judge directory",
+    "validate": "check a judge or classifier directory",
     "agree": "measure how often judges agree, pair by pair",
     "draw": "draw the base prompts, stratified on a pre-sort judge file",
     "translate": "translate a prompts file into one language",
     "witness": "fetch the m-ArenaHard translations of the Arena-Hard prompts of a set",
     "check": "flag the translations of a set for a human review (structure, labels, same request, review sheet)",
+    "classify": "write a classifier folder: a witness (random, length, constant) or a system (s1d1, laya)",
+    "run": "merge the judge and classifier folders of a set into one table, with the truths of the main judges",
 }
 
 
@@ -91,7 +95,7 @@ def _judge_arguments(sub: argparse.ArgumentParser) -> None:
 
 
 def _validate_arguments(sub: argparse.ArgumentParser) -> None:
-    sub.add_argument("judge_dir", type=Path, help="judge directory, judges/<name>")
+    sub.add_argument("judge_dir", type=Path, help="judge or classifier directory, judges/<name> or classifiers/<name>")
     sub.add_argument("--prompts", type=Path, default=Path("data/prompts"), help="directory of the prompts files")
 
 
@@ -176,6 +180,49 @@ def _check_arguments(sub: argparse.ArgumentParser) -> None:
     sub.add_argument("--notes", default="", help="request: free text for <lang>.request.meta.json")
 
 
+def _classify_arguments(sub: argparse.ArgumentParser) -> None:
+    from s1d1_bench.rubric import LEVELS  # light, as above
+
+    sub.add_argument(
+        "adapter",
+        choices=["random", "length", "constant", "s1d1", "laya"],
+        help="random, length, constant: the witnesses; s1d1, laya: the systems under test",
+    )
+    sub.add_argument("--prompts", type=Path, required=True, help="prompts to classify (jsonl of id, prompt)")
+    sub.add_argument(
+        "--out", type=Path, required=True, help="classifier directory, classifiers/<name> (must not exist)"
+    )
+    sub.add_argument("--author", required=True, help="who contributes the classifier file")
+    sub.add_argument("--notes", default="", help="free text for meta.json")
+    sub.add_argument("--seed", type=int, default=0, help="random: seed of the draws")
+    sub.add_argument("--draws", type=int, default=10, help="random: number of draws (labels.jsonl is draw 0)")
+    sub.add_argument("--level", choices=LEVELS, default="low", help="constant: the tier given to every prompt")
+    sub.add_argument("--model", default=None, help="s1d1: Hub repo id of the weights")
+    sub.add_argument(
+        "--revision", default=None, help="s1d1, laya: Hub revision of the weights (default: the current one)"
+    )
+    sub.add_argument("--backend", default="auto", help="s1d1: auto (variant.json of the repo), onnx, torch or mlx")
+    sub.add_argument(
+        "--laya-model", choices=["english", "multilingual"], default=None, help="laya: the checkpoint to question"
+    )
+
+
+def _run_arguments(sub: argparse.ArgumentParser) -> None:
+    sub.add_argument("--prompts", type=Path, required=True, help="prompts file of the set (.meta.parquet beside it)")
+    sub.add_argument(
+        "--judges", action="append", required=True, help="glob of judge folders, e.g. 'judges/base-v1-*'; repeatable"
+    )
+    sub.add_argument(
+        "--main", required=True, help="comma-separated judge folder names that make the truths, in priority order"
+    )
+    sub.add_argument(
+        "--classifiers", action="append", default=None, help="glob of classifier folders, e.g. 'classifiers/*'"
+    )
+    sub.add_argument(
+        "--out", type=Path, required=True, help="results table, results/<set>.parquet (+ <set>.run.json beside it)"
+    )
+
+
 # subcommand -> function adding its arguments to its parser
 _ARGUMENTS = {
     "pool": _pool_arguments,
@@ -187,6 +234,8 @@ _ARGUMENTS = {
     "translate": _translate_arguments,
     "witness": _witness_arguments,
     "check": _check_arguments,
+    "classify": _classify_arguments,
+    "run": _run_arguments,
 }
 
 

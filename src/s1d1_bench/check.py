@@ -15,7 +15,7 @@ from pathlib import Path
 
 from s1d1_bench.export import read_translations
 from s1d1_bench.jsonl import read_jsonl, write_jsonl
-from s1d1_bench.judge_file import read_labels
+from s1d1_bench.judge_file import ABSTAINED, read_labels
 from s1d1_bench.judge_runner import GenerateFn, GenerateResult, local_path_keys, resume_conflicts
 from s1d1_bench.runfile import find_json_objects, read_done, repair_log, strip_reasoning, write_atomic
 from s1d1_bench.translate import LANGUAGES
@@ -365,8 +365,9 @@ def _structure_flags(rows: list[dict], english: dict[str, str], lang: str) -> li
 
 
 def _label_flags(rows: list[dict], lang: str, eng_dir: Path, tr_dir: Path, witness_dir: Path | None) -> list[dict]:
-    """The label flags of each translated id. An id the English or the translation judge did not label (its labels
-    file holds only the ids labelled ok) gives a `label_missing` flag naming the folder, not a comparison."""
+    """The label flags of each translated id. An id the English or the translation judge did not label (no row, or
+    an abstention row: the judge gave no answer) gives a `label_missing` flag naming the folder, not a comparison. A
+    witness label that is an abstention counts as no witness."""
     eng_labels, tr_labels = read_labels(eng_dir / "labels.jsonl"), read_labels(tr_dir / "labels.jsonl")
     witness_labels = read_labels(witness_dir / "labels.jsonl") if witness_dir else {}
     flags = []
@@ -374,10 +375,18 @@ def _label_flags(rows: list[dict], lang: str, eng_dir: Path, tr_dir: Path, witne
         eng_id = f"{row['base_key']}-eng"
         sides = [(eng_id, eng_dir, eng_labels), (row["id"], tr_dir, tr_labels)]
         missing = [f"{i} in {folder}" for i, folder, labels in sides if i not in labels]
-        if missing:
-            flags.append(_flag(row, lang, "labels", "label_missing", "no label for " + ", ".join(missing)))
+        abstained = [
+            f"abstention ({labels[i][ABSTAINED]}) for {i} in {folder}"
+            for i, folder, labels in sides
+            if i in labels and labels[i].get(ABSTAINED)
+        ]
+        if missing or abstained:
+            detail = "; ".join((["no label for " + ", ".join(missing)] if missing else []) + abstained)
+            flags.append(_flag(row, lang, "labels", "label_missing", detail))
             continue
         witness = witness_labels.get(row["id"])
+        if witness is not None and witness.get(ABSTAINED):
+            witness = None
         for f in label_faults(eng_labels[eng_id], tr_labels[row["id"]], witness):
             detail = f["detail"] + (f" witness={_show(witness[f['rule']])}" if witness else "")
             flags.append(_flag(row, lang, "labels", f["rule"], detail, f["lifted"]))

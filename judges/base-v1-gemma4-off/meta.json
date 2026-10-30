@@ -1,0 +1,18 @@
+{
+  "judge": "base-v1-gemma4-off",
+  "model": "mlx-community/gemma-4-31b-it-8bit",
+  "provider": "local",
+  "revision": "f5f3dc92ab4af76724c36c21eb6bedadb3a851be",
+  "date": "2026-10-30",
+  "temperature": 0,
+  "thinking": "off",
+  "instructions": "v7-single",
+  "prompts_sha256": "e6a6d4c12ef8b95caea942337a3a1e16ec1622cb4e75c8ee0b473ef609a32490",
+  "author": "scombat",
+  "replayable": true,
+  "licence": "CC-BY-4.0",
+  "notes": "gemma4: enable_thinking=False (the chat template prefills an empty thought channel): no reasoning. Bench judge on base-v1 (360); thinking-effect pair, not in the main median (docs/34 decision 2).",
+  "quantization": "8bit-gs64",
+  "mlx_lm_version": "0.32.2",
+  "max_tokens": 1024
+}

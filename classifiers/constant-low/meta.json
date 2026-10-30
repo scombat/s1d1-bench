@@ -1,0 +1,15 @@
+{
+  "judge": "constant-low",
+  "model": "witness:constant-low",
+  "provider": "system",
+  "revision": "n/a",
+  "date": "2026-10-30",
+  "temperature": 0,
+  "thinking": "none",
+  "instructions": "none",
+  "prompts_sha256": "e6a6d4c12ef8b95caea942337a3a1e16ec1622cb4e75c8ee0b473ef609a32490",
+  "author": "scombat",
+  "replayable": true,
+  "licence": "CC-BY-4.0",
+  "notes": "Witness: the tier low for every prompt, score 0.25 (its anchor). task and needs_tools are null."
+}

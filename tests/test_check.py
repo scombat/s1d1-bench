@@ -733,3 +733,36 @@ def test_cli_check_request_help_lists_its_arguments(capsys):
     assert (args.max_tokens, args.consigne, args.out) == (512, Path("consigne/check-same-request-v1.md"),
                                                           Path("data/checks"))
     assert (args.model, args.author, args.thinking, args.resume, args.notes) == (None, None, None, False, "")
+
+
+def test_run_check_labels_names_an_abstention_instead_of_comparing_it(tmp_path):
+    english, translations, _ = write_set(tmp_path)
+    abstained = {"complexity": None, "task": None, "needs_tools": None, "abstained": "json_error"}
+    eng = write_labels(
+        tmp_path / "judges" / "eng",
+        [
+            {"id": "ka-eng", **abstained},
+            {"id": "kb-eng", "complexity": "low", "task": "editing", "needs_tools": False},
+            {"id": "kc-eng", "complexity": "low", "task": "creative_writing", "needs_tools": False},
+        ],
+    )
+    fra = write_labels(
+        tmp_path / "judges" / "fra",
+        [
+            {"id": "ka-fra", "complexity": "low", "task": "coding_debugging", "needs_tools": True},
+            {"id": "kb-fra", "complexity": "high", "task": "translation", "needs_tools": False},
+            {"id": "kc-fra", **abstained, "abstained": "truncated"},
+        ],
+    )
+    wit = write_labels(tmp_path / "judges" / "wit", [{"id": "kb-fra", **abstained}])  # a witness that abstained
+    args = args_for(tmp_path, "labels", english, translations, labels_english=eng, labels=fra, labels_witness=wit)
+    assert run_check(args) == 0
+    rows = read_jsonl(tmp_path / "checks" / "base-v1" / "fra.labels.jsonl")
+    assert [(r["id"], r["rule"], r["lifted"]) for r in rows] == [
+        ("ka-fra", "label_missing", False),
+        ("kb-fra", "task", False),  # no witness to lift it
+        ("kc-fra", "label_missing", False),
+    ]
+    assert rows[0]["detail"] == f"abstention (json_error) for ka-eng in {eng}"
+    assert rows[1]["detail"] == "eng=editing tr=translation"
+    assert rows[2]["detail"] == f"abstention (truncated) for kc-fra in {fra}"

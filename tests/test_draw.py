@@ -141,3 +141,26 @@ def test_cli_refuses_a_veto_on_an_unknown_id(tmp_path, capsys):
     rc = main(["draw", "--presort", str(presort), "--meta", str(meta), "--out", str(out), "--veto", str(veto)])
     assert rc == 1
     assert "zzz" in capsys.readouterr().err
+
+
+def test_cli_leaves_an_abstention_out_of_the_draw_and_says_so(tmp_path, capsys):
+    labels = pool(n_per_stratum=3)
+    presort = tmp_path / "presort"
+    presort.mkdir()
+    abstained = {"complexity": None, "task": None, "needs_tools": None, "abstained": "json_error"}
+    write_jsonl(presort / "labels.jsonl", [{"id": i} | lab for i, lab in labels.items()] + [{"id": "gone"} | abstained])
+    meta = tmp_path / "set.meta.parquet"
+    ids = [*labels, "gone"]
+    pq.write_table(pa.table({"id": ids, "base_key": [i.upper() for i in ids]}), meta)
+    out = tmp_path / "base.select.txt"
+    argv = ["draw", "--presort", str(presort), "--meta", str(meta), "--out", str(out), "--per-stratum", "3"]
+    assert main(argv + ["--tools-min", "0", "--task-min", "0"]) == 0
+    assert "GONE" not in out.read_text().split() and len(out.read_text().split()) == 12
+    assert "1 abstention(s) left out of the draw: gone" in capsys.readouterr().err
+
+
+def test_an_abstention_is_never_drawn():
+    abstained = {"complexity": None, "task": None, "needs_tools": None, "abstained": "truncated"}
+    labels = pool(n_per_stratum=2) | {"x": abstained}
+    d = stratified_draw(labels, per_stratum=5, tools_min=0, task_min=0)
+    assert "x" not in d.ids()

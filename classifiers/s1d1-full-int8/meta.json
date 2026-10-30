@@ -1,0 +1,16 @@
+{
+  "judge": "s1d1-full-int8",
+  "model": "scombat/s1d1-router-6src-full-onnx-int8",
+  "provider": "system",
+  "revision": "068d0d20d5901c2db6934c89fde48b87c973fed8",
+  "date": "2026-10-30",
+  "temperature": 0,
+  "thinking": "none",
+  "instructions": "none",
+  "prompts_sha256": "e6a6d4c12ef8b95caea942337a3a1e16ec1622cb4e75c8ee0b473ef609a32490",
+  "author": "scombat",
+  "replayable": true,
+  "licence": "CC-BY-4.0",
+  "notes": "Replay: bench classify s1d1 --model scombat/s1d1-router-6src-full-onnx-int8 --revision 068d0d20d5901c2db6934c89fde48b87c973fed8 --backend onnx. s1d1_router.py of scombat/s1d1-router@7fb9a4e3d03e3d942a98648268ff76c6152c18d6, backend onnx, device cpu, precision onnx-int8. Prompts sorted by length in characters, batches of at most 64 prompts or about 16384 tokens, truncated at the router's MAX_LENGTH; tier = complexity_tier of decode() (capped at high), score = complexity_score. revision pinned to the card revision 068d0d2; the Hub head is bd27c6b43e433124513e496a19b5293fa2cbfb25 (later commits are metadata-only: the *.onnx and *.npy files have the same lfs sha256 at the head and at the card revision; README.md, eval.json, footprint.json and variant.json differ, the variant.json difference being the measured sigma and its date only).",
+  "quantization": "onnx-int8"
+}
