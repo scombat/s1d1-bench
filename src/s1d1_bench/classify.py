@@ -15,8 +15,10 @@ Three witnesses live here, systems that read no model and give the floor a real 
 - `constant`: one tier for every prompt (`--level`, low by default), `score` = its anchor, `task` and `needs_tools`
   null.
 
-The model adapters are dispatched from `run_classify_cmd` too: `s1d1` (the Hub router, see `s1d1_backend`) and `laya`
-(Laya asked LiteLLM's tier question, see `laya_backend`).
+The system adapters are dispatched from `run_classify_cmd` too: `s1d1` (the Hub router, see `s1d1_backend`), `laya`
+(Laya asked LiteLLM's tier question, see `laya_backend`) and `litellm-heuristic` (LiteLLM's own heuristic complexity
+scorer, vendored verbatim in `s1d1_bench.vendor.litellm_heuristic`: its four tiers map name to name onto low, medium,
+high, expert; its raw score, which is not on the v7 scale, stays in `decisions.jsonl` and never reaches `labels.jsonl`).
 """
 
 import datetime
@@ -36,6 +38,8 @@ from s1d1_bench.rubric import LEVELS, TASKS
 ANCHORS = {"trivial": 0.01, "low": 0.25, "medium": 0.50, "high": 0.75, "expert": 1.00}
 DECILE_TIERS = (2, 3, 3, 1, 1)  # deciles giving trivial, low, medium, high, expert (docs/34 § 3)
 DECILES = 10
+# LiteLLM's ComplexityTier names, translated name to name, with no arithmetic
+TIER_TO_LEVEL = {"SIMPLE": "low", "MEDIUM": "medium", "COMPLEX": "high", "REASONING": "expert"}
 
 
 def nearest_anchor(score: float) -> str:
@@ -246,6 +250,31 @@ def _laya(args, prompts: list[dict], digest: str) -> int:
     return write_run(args, digest, rows, model=info["model"], revision=info["revision"], notes=notes)
 
 
+def _litellm_heuristic(args, prompts: list[dict], digest: str) -> int:
+    from s1d1_bench.vendor.litellm_heuristic import COMMIT, TAG, classify
+
+    decisions = [(p["id"], classify(p["prompt"])) for p in prompts]
+    rows = [
+        {"id": i, "complexity": TIER_TO_LEVEL[d.tier], "task": None, "needs_tools": None} for i, d in decisions
+    ]
+    raw = [
+        {"id": i, "tier": d.tier, "score": d.score, "signals": list(d.signals), "cause": d.cause}
+        for i, d in decisions
+    ]
+    notes = (
+        "Replay: uv run bench classify litellm-heuristic --prompts ... --out ... --author ... (no model, no network). "
+        "LiteLLM's heuristic complexity scorer, tiers translated name to name: SIMPLE -> low, MEDIUM -> medium, "
+        "COMPLEX -> high, REASONING -> expert (no trivial). The raw score of LiteLLM is in decisions.jsonl with the "
+        "tier, the signals and the cause; it is not on the v7 scale, so labels.jsonl has no score and the score is "
+        "for rank metrics only. Each prompt alone, system_prompt None, LiteLLM's default configuration. task and "
+        f"needs_tools are null. Code copied verbatim ({TAG}), see src/s1d1_bench/vendor/litellm_heuristic/NOTICE.md."
+    )
+    return write_run(
+        args, digest, rows, model="litellm:complexity_router:heuristic", revision=f"{TAG} {COMMIT}", notes=notes,
+        extra={"decisions.jsonl": raw},
+    )
+
+
 # adapter -> function (args, prompts, sha256 of the prompts file) -> exit code
 ADAPTERS: dict[str, Callable[[object, list[dict], str], int]] = {
     "random": _random,
@@ -253,6 +282,7 @@ ADAPTERS: dict[str, Callable[[object, list[dict], str], int]] = {
     "constant": _constant,
     "s1d1": _s1d1,
     "laya": _laya,
+    "litellm-heuristic": _litellm_heuristic,
 }
 
 

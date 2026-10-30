@@ -185,8 +185,8 @@ def _classify_arguments(sub: argparse.ArgumentParser) -> None:
 
     sub.add_argument(
         "adapter",
-        choices=["random", "length", "constant", "s1d1", "laya"],
-        help="random, length, constant: the witnesses; s1d1, laya: the systems under test",
+        choices=["random", "length", "constant", "s1d1", "laya", "litellm-heuristic"],
+        help="random, length, constant: the witnesses; s1d1, laya, litellm-heuristic: the systems under test",
     )
     sub.add_argument("--prompts", type=Path, required=True, help="prompts to classify (jsonl of id, prompt)")
     sub.add_argument(
