@@ -1,0 +1,15 @@
+{
+  "judge": "litellm-heuristic",
+  "model": "litellm:complexity_router:heuristic",
+  "provider": "system",
+  "revision": "v1.106.6 61c6ab78393ef45683dd7d963d2a315bd845e20b",
+  "date": "2026-10-30",
+  "temperature": 0,
+  "thinking": "none",
+  "instructions": "none",
+  "prompts_sha256": "e6a6d4c12ef8b95caea942337a3a1e16ec1622cb4e75c8ee0b473ef609a32490",
+  "author": "scombat",
+  "replayable": true,
+  "licence": "CC-BY-4.0",
+  "notes": "Replay: uv run bench classify litellm-heuristic --prompts ... --out ... --author ... (no model, no network). LiteLLM's heuristic complexity scorer, tiers translated name to name: SIMPLE -> low, MEDIUM -> medium, COMPLEX -> high, REASONING -> expert (no trivial). The raw score of LiteLLM is in decisions.jsonl with the tier, the signals and the cause; it is not on the v7 scale, so labels.jsonl has no score and the score is for rank metrics only. Each prompt alone, system_prompt None, LiteLLM's default configuration. task and needs_tools are null. Code copied verbatim (v1.106.6), see src/s1d1_bench/vendor/litellm_heuristic/NOTICE.md."
+}

@@ -565,3 +565,86 @@ def test_load_folder_keeps_an_abstention_and_refuses_one_in_a_classifier(tmp_pat
     classifier = write_folder(tmp_path / "classifiers" / "c", rows, sha(prompts), system=True)
     with pytest.raises(ValueError, match="abstain"):
         load_folder(classifier, sha(prompts), IDS)
+
+
+# --- raw decisions (decisions.jsonl of a classifier) ------------------------------------------------------------------
+
+
+def write_decisions(folder: Path, rows: list[dict]) -> None:
+    write_jsonl(folder / "decisions.jsonl", rows)
+
+
+def raw_row(i: str, tier: str = "MEDIUM", score: float = 0.12) -> dict:
+    return {"id": i, "tier": tier, "score": score, "signals": ["code"], "cause": "score"}
+
+
+def test_run_adds_raw_score_and_raw_tier_from_decisions(tmp_path, capsys):
+    prompts = full_tree(tmp_path)
+    classifiers = tmp_path / "classifiers"
+    # prompts file order is not sorted: the columns must follow the ids, not the order of the decisions file
+    raws = [raw_row(i, "SIMPLE" if n % 2 else "REASONING", -0.25 if n == 0 else 0.5 + n) for n, i in enumerate(IDS)]
+    write_decisions(classifiers / "laya", list(reversed(raws)))
+    assert run_cli(tmp_path, prompts) == 0
+    table = pq.read_table(tmp_path / "results" / "set.parquet")
+    names = table.column_names
+    assert [c for c in names if "raw_" in c] == ["laya.raw_score", "laya.raw_tier"]  # the others have none
+    assert names[names.index("laya.score") + 1 : names.index("laya.score") + 3] == ["laya.raw_score", "laya.raw_tier"]
+    assert table.schema.field("laya.raw_score").type == pa.float64()
+    assert table.schema.field("laya.raw_tier").type == pa.string()
+    assert table.column("id").to_pylist() == IDS
+    assert table.column("laya.raw_score").to_pylist() == [r["score"] for r in raws]
+    assert table.column("laya.raw_score").to_pylist()[0] == -0.25  # negative: kept as is, no clamp, no rounding
+    assert table.column("laya.raw_tier").to_pylist() == [r["tier"] for r in raws]
+    assert table.column("laya.score").to_pylist() == [0.5] * len(IDS)  # the label score is untouched
+    record = json.loads((tmp_path / "results" / "set.run.json").read_text(encoding="utf-8"))
+    entries = {c["name"]: c for c in record["classifiers"]}
+    assert entries["laya"]["raw_decisions"] is True
+    assert "raw_decisions" not in entries["random"] and "raw_decisions" not in entries["s1d1-small-int8"]
+    assert all("raw_decisions" not in j for j in record["judges"])
+    assert "raw decisions" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("case", ["missing", "unknown", "duplicate"])
+def test_run_refuses_decisions_with_a_missing_or_unknown_id(tmp_path, capsys, case):
+    prompts = full_tree(tmp_path)
+    folder = tmp_path / "classifiers" / "laya"
+    rows = [raw_row(i) for i in IDS]
+    expected = {"missing": "k2-zho", "unknown": "k9-eng", "duplicate": "k1-eng"}[case]
+    if case == "missing":
+        rows = [r for r in rows if r["id"] != expected]
+    elif case == "unknown":
+        rows.append(raw_row(expected))
+    else:
+        rows.append(raw_row(expected, "COMPLEX"))
+    write_decisions(folder, rows)
+    out = tmp_path / "results" / "set.parquet"
+    out.parent.mkdir()
+    out.write_bytes(b"old")
+    assert run_cli(tmp_path, prompts) == 1
+    err = capsys.readouterr().err
+    assert "laya" in err and "decisions.jsonl" in err and repr(expected) in err
+    assert {"missing": "no decision", "unknown": "not in the prompts file", "duplicate": "duplicate id"}[case] in err
+    assert out.read_bytes() == b"old" and not out.with_name("set.run.json").exists()  # nothing written
+
+
+def test_run_refuses_a_decision_without_a_tier_or_a_score(tmp_path, capsys):
+    prompts = full_tree(tmp_path)
+    rows = [raw_row(i) for i in IDS]
+    del rows[2]["score"]
+    write_decisions(tmp_path / "classifiers" / "laya", rows)
+    assert run_cli(tmp_path, prompts) == 1
+    err = capsys.readouterr().err
+    assert "laya" in err and "decisions.jsonl" in err and "score" in err
+    assert not (tmp_path / "results").exists()
+
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf")])
+def test_run_refuses_a_non_finite_raw_score(tmp_path, capsys, bad):
+    prompts = full_tree(tmp_path)
+    rows = [raw_row(i) for i in IDS]
+    rows[3]["score"] = bad  # json.dumps writes NaN / Infinity / -Infinity, which json.loads reads back
+    write_decisions(tmp_path / "classifiers" / "laya", rows)
+    assert run_cli(tmp_path, prompts) == 1
+    err = capsys.readouterr().err
+    assert "laya" in err and repr(IDS[3]) in err and "finite" in err
+    assert not (tmp_path / "results").exists()

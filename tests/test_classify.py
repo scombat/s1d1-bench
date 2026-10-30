@@ -256,3 +256,79 @@ def test_cli_refuses_a_bad_prompts_file_and_writes_nothing(tmp_path, capsys):
     write_jsonl(nodash, [{"id": "nodash", "prompt": "x"}])
     assert _classify("length", nodash, out) == 1
     assert "nodash" in capsys.readouterr().err and not out.exists()
+
+
+# ---------- litellm-heuristic ----------
+
+LITELLM_PROMPTS = [
+    {"id": "thanks-eng", "prompt": "thanks"},
+    {
+        "id": "proof-eng",
+        "prompt": "Prove step by step that the algorithm is correct, think through each case carefully and reason "
+        "about the proof.",
+    },
+]
+
+
+@pytest.fixture
+def litellm_prompts_file(tmp_path):
+    d = tmp_path / "litellm-prompts"
+    d.mkdir()
+    write_jsonl(d / "mini.jsonl", LITELLM_PROMPTS)
+    return d / "mini.jsonl"
+
+
+def test_litellm_heuristic_adapter_writes_name_to_name_tiers_and_raw_decisions(litellm_prompts_file, tmp_path):
+    out = tmp_path / "litellm-heuristic"
+    assert _classify("litellm-heuristic", litellm_prompts_file, out) == 0
+    labels = read_jsonl(out / "labels.jsonl")
+    assert labels == [
+        {"id": "thanks-eng", "complexity": "low", "task": None, "needs_tools": None},
+        {"id": "proof-eng", "complexity": "expert", "task": None, "needs_tools": None},
+    ]
+    assert all("score" not in row for row in labels)
+    decisions = read_jsonl(out / "decisions.jsonl")
+    assert [d["id"] for d in decisions] == [p["id"] for p in LITELLM_PROMPTS]
+    thanks, proof = decisions
+    assert (thanks["tier"], thanks["cause"]) == ("SIMPLE", "heuristic_scorer")
+    from s1d1_bench.vendor.litellm_heuristic import classify
+
+    assert thanks["score"] == classify("thanks").score  # exact: never rounded, clamped or rescaled
+    assert thanks["score"] == pytest.approx(-0.15) and thanks["score"] < 0  # scale sanity check
+    assert thanks["signals"] == ["short (1 tokens)", "simple (thanks)"]
+    assert (proof["tier"], proof["cause"]) == ("REASONING", "reasoning_override")
+    assert isinstance(proof["signals"], list) and proof["score"] > 0
+    assert proof["score"] == classify(LITELLM_PROMPTS[1]["prompt"]).score
+    assert set(thanks) == set(proof) == {"id", "tier", "score", "signals", "cause"}
+
+
+def test_litellm_heuristic_folder_validates(litellm_prompts_file, tmp_path):
+    out = tmp_path / "litellm-heuristic"
+    assert _classify("litellm-heuristic", litellm_prompts_file, out) == 0
+    assert validate_judge_dir(out, litellm_prompts_file.parent) == []  # decisions.jsonl is ignored by validate
+
+
+def test_litellm_heuristic_meta_names_the_tag_and_commit(litellm_prompts_file, tmp_path):
+    from s1d1_bench.vendor.litellm_heuristic import COMMIT, TAG
+
+    out = tmp_path / "litellm-heuristic"
+    assert _classify("litellm-heuristic", litellm_prompts_file, out, "--notes", "extra words") == 0
+    meta = json.loads((out / "meta.json").read_text(encoding="utf-8"))
+    assert meta["model"] == "litellm:complexity_router:heuristic"
+    assert meta["revision"] == f"{TAG} {COMMIT}"
+    assert meta["replayable"] is True and meta["author"] == "tester"
+    for fragment in (
+        "uv run bench classify litellm-heuristic --prompts",
+        "SIMPLE -> low",
+        "COMPLEX -> high",
+        "REASONING -> expert",
+        "decisions.jsonl",
+        "not on the v7 scale",
+        "rank metrics only",
+        "system_prompt None",
+        "default configuration",
+        "src/s1d1_bench/vendor/litellm_heuristic/NOTICE.md",
+        "extra words",
+    ):
+        assert fragment in meta["notes"], fragment
+    assert "/Users/" not in meta["notes"] and str(tmp_path) not in meta["notes"]

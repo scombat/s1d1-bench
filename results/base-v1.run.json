@@ -38,6 +38,13 @@
     },
     {
       "date": "2026-10-30",
+      "model": "litellm:complexity_router:heuristic",
+      "name": "litellm-heuristic",
+      "raw_decisions": true,
+      "revision": "v1.106.6 61c6ab78393ef45683dd7d963d2a315bd845e20b"
+    },
+    {
+      "date": "2026-10-30",
       "model": "witness:random",
       "name": "random",
       "revision": "seed 0"
