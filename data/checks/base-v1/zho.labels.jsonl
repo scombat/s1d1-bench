@@ -1,0 +1,16 @@
+{"id": "0d6af8a8a2e072a6-zho", "base_key": "0d6af8a8a2e072a6", "lang": "zho", "check": "labels", "rule": "needs_tools", "detail": "eng=true tr=false", "lifted": false}
+{"id": "2370e0473fe2f515-zho", "base_key": "2370e0473fe2f515", "lang": "zho", "check": "labels", "rule": "task", "detail": "eng=writing tr=coding_debugging witness=writing", "lifted": false}
+{"id": "2bbd145263ec23e4-zho", "base_key": "2bbd145263ec23e4", "lang": "zho", "check": "labels", "rule": "task", "detail": "eng=summarization tr=information_seeking", "lifted": false}
+{"id": "2bbd145263ec23e4-zho", "base_key": "2bbd145263ec23e4", "lang": "zho", "check": "labels", "rule": "needs_tools", "detail": "eng=true tr=false", "lifted": false}
+{"id": "3f542e8df9a624c4-zho", "base_key": "3f542e8df9a624c4", "lang": "zho", "check": "labels", "rule": "task", "detail": "eng=classification tr=role_playing witness=role_playing", "lifted": true}
+{"id": "5649f92a19700204-zho", "base_key": "5649f92a19700204", "lang": "zho", "check": "labels", "rule": "task", "detail": "eng=reasoning tr=information_seeking", "lifted": false}
+{"id": "7ef9a2da3786930d-zho", "base_key": "7ef9a2da3786930d", "lang": "zho", "check": "labels", "rule": "task", "detail": "eng=data_analysis tr=information_seeking witness=information_seeking", "lifted": true}
+{"id": "9502863b1de1ca21-zho", "base_key": "9502863b1de1ca21", "lang": "zho", "check": "labels", "rule": "needs_tools", "detail": "eng=true tr=false", "lifted": false}
+{"id": "976852f28de3d18b-zho", "base_key": "976852f28de3d18b", "lang": "zho", "check": "labels", "rule": "task", "detail": "eng=reasoning tr=information_seeking", "lifted": false}
+{"id": "984977c869981dfe-zho", "base_key": "984977c869981dfe", "lang": "zho", "check": "labels", "rule": "task", "detail": "eng=reasoning tr=information_seeking", "lifted": false}
+{"id": "9b4d1c67e687db74-zho", "base_key": "9b4d1c67e687db74", "lang": "zho", "check": "labels", "rule": "task", "detail": "eng=advice_seeking tr=information_seeking witness=advice_seeking", "lifted": false}
+{"id": "baeba6101b4316a8-zho", "base_key": "baeba6101b4316a8", "lang": "zho", "check": "labels", "rule": "task", "detail": "eng=completion tr=writing", "lifted": false}
+{"id": "c8931cad47554d9e-zho", "base_key": "c8931cad47554d9e", "lang": "zho", "check": "labels", "rule": "task", "detail": "eng=summarization tr=writing", "lifted": false}
+{"id": "d50168e5362628b5-zho", "base_key": "d50168e5362628b5", "lang": "zho", "check": "labels", "rule": "task", "detail": "eng=planning tr=brainstorming witness=planning", "lifted": false}
+{"id": "d756a9b1ff9e2bff-zho", "base_key": "d756a9b1ff9e2bff", "lang": "zho", "check": "labels", "rule": "task", "detail": "eng=other tr=information_seeking", "lifted": false}
+{"id": "e944f9b1b3bbc893-zho", "base_key": "e944f9b1b3bbc893", "lang": "zho", "check": "labels", "rule": "task", "detail": "eng=advice_seeking tr=information_seeking", "lifted": false}

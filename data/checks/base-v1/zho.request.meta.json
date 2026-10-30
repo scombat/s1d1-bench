@@ -1,0 +1,19 @@
+{
+  "lang": "zho",
+  "model": "mlx-community/gemma-4-31b-it-8bit",
+  "provider": "local",
+  "revision": "f5f3dc92ab4af76724c36c21eb6bedadb3a851be",
+  "date": "2026-10-30",
+  "temperature": 0,
+  "thinking": "off",
+  "consigne": "check-same-request-v1",
+  "consigne_sha256": "c6f68d53009aa9cd3c9bd9992dbfb5f4fa234608ad4b7916ecf05c39192770d3",
+  "english_prompts_sha256": "105e43b765fb57be8c980dcc6e2a1c6ed439139cd05e2c6e6380974063f80024",
+  "translations_sha256": "43c02bc421af93dac50364ccb3fe6fbdb4a1e5b0b0956c9f4675da29b501e441",
+  "author": "scombat",
+  "replayable": true,
+  "notes": "gemma4: enable_thinking=False (the chat template prefills an empty thought channel): no reasoning.",
+  "quantization": "8bit-gs64",
+  "mlx_lm_version": "0.32.2",
+  "max_tokens": 512
+}
