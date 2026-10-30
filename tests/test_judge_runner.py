@@ -19,6 +19,8 @@ REFUSAL = (  # gpt-oss on 3ce175ed3ef6b933-zho: no JSON object, a json_error aft
 
 def abstention(id_, status):
     return {"id": id_, "complexity": None, "task": None, "needs_tools": None, "abstained": status}
+
+
 PROMPTS_3 = [
     {"id": "p1", "prompt": "What is the capital of France?"},
     {"id": "p2", "prompt": "Write a function that reverses a string."},
@@ -236,7 +238,7 @@ def test_generate_raising_is_status_error_without_retry_and_the_run_continues(tm
     first, second = read_jsonl(tmp_path / "log.jsonl")
     assert first["status"] == "error" and first["retries"] == 0 and "boom" in first["raw"]
     assert second["status"] == "ok"
-    assert read_jsonl(tmp_path / "labels.jsonl") == [abstention("p1", "error"), {"id": "p2", **GOOD_LABEL}]
+    assert read_jsonl(tmp_path / "labels.jsonl") == [{"id": "p2", **GOOD_LABEL}]  # an error is no abstention
 
 
 def test_generate_raising_on_the_retry_is_status_error(tmp_path):
@@ -244,6 +246,17 @@ def test_generate_raising_on_the_retry_is_status_error(tmp_path):
     assert counts == {"error": 1}
     (line,) = read_jsonl(tmp_path / "log.jsonl")
     assert line["retries"] == 1 and "late" in line["raw"]
+    assert read_jsonl(tmp_path / "labels.jsonl") == []
+
+
+@pytest.mark.parametrize("answers", [[RuntimeError("boom")], [BAD, RuntimeError("late")]])
+def test_an_error_leaves_no_row_and_resume_asks_again(tmp_path, answers):
+    """Ruling R7: an exception of the backend (possibly transient) is not the model's output, so no abstention."""
+    assert run_judge(PROMPTS_3[:2], fake_generate([*answers, GOOD]), tmp_path) == {"error": 1, "ok": 1}
+    assert [r["id"] for r in read_jsonl(tmp_path / "labels.jsonl")] == ["p2"]
+    generate = fake_generate([GOOD])
+    assert run_judge(PROMPTS_3[:2], generate, tmp_path, resume=True) == {"ok": 1} and generate.calls == 1
+    assert read_jsonl(tmp_path / "labels.jsonl") == [{"id": "p1", **GOOD_LABEL}, {"id": "p2", **GOOD_LABEL}]
 
 
 def test_duplicate_prompt_ids_fail_before_any_generation(tmp_path):
@@ -302,11 +315,9 @@ def test_resume_keeps_an_abstention_and_does_not_ask_again(tmp_path):
         ([REFUSAL, REFUSAL], "json_error"),
         ([result("cut", finish_reason="length")], "truncated"),
         ([BAD, result("cut", finish_reason="length")], "truncated"),
-        ([RuntimeError("boom")], "error"),
-        ([BAD, RuntimeError("late")], "error"),
     ],
 )
-def test_a_final_status_other_than_ok_is_an_abstention_row(tmp_path, answers, status):
+def test_a_refusal_or_a_cut_short_answer_is_an_abstention_row(tmp_path, answers, status):
     assert run_judge(PROMPTS_3[:1], fake_generate(answers), tmp_path) == {status: 1}
     text = (tmp_path / "labels.jsonl").read_text(encoding="utf-8")
     expected = '{"id": "p1", "complexity": null, "task": null, "needs_tools": null, "abstained": "' + status + '"}\n'
@@ -708,7 +719,10 @@ def test_resume_of_a_folder_from_before_abstentions_writes_the_row_and_validate_
     rows = read_jsonl(labels)
     assert rows == [{"id": "p1", **GOOD_LABEL}, abstention("p2", "json_error"), {"id": "p3", **GOOD_LABEL}]
     assert [(r["id"], r["status"]) for r in read_jsonl(out / "log.jsonl")] == [
-        ("p1", "ok"), ("p2", "json_error"), ("p3", "ok"), ("p2", "json_error")
+        ("p1", "ok"),
+        ("p2", "json_error"),
+        ("p3", "ok"),
+        ("p2", "json_error"),
     ]
     assert (out / "meta.json").read_bytes() == meta_before
     assert validate_judge_dir(out, prompts) == []

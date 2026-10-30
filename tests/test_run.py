@@ -411,6 +411,7 @@ def test_run_json_records_the_inputs(tmp_path):
     assert record["judges"][0] == {"name": "j-b", "model": GEMMA_MODEL, "revision": "rev-j-b", "date": "2026-10-29"}
     assert [c["name"] for c in record["classifiers"]] == ["laya", "random", "s1d1-small-int8"]
     assert "rounded down" in record["rules"] and "null" in record["rules"] and "abstention" in record["rules"]
+    assert "docs/34 §0.3" in record["rules"] and "decision 3" not in record["rules"]
     assert record["abstentions"] == {"j-b": [], "j-a": [], "j-c": [], "j-off": []}
     text = (tmp_path / "results" / "set.run.json").read_text(encoding="utf-8")
     assert text == json.dumps(record, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
@@ -520,7 +521,7 @@ def test_an_abstaining_judge_gives_no_task_tools_or_spread_vote():
 def test_run_writes_the_abstained_column_and_lists_the_abstentions(tmp_path, capsys):
     prompts = full_tree(tmp_path)
     good = sha(prompts)
-    labels = {**every("low"), "k1-zho": A("json_error"), "k2-eng": A("error")}
+    labels = {**every("low"), "k1-zho": A("json_error"), "k2-eng": A("truncated")}
     path = tmp_path / "judges" / "j-a" / "labels.jsonl"
     write_jsonl(path, [{"id": i, **lab} for i, lab in labels.items()])
     labels_off = {**every("trivial"), "k2-rus": A("truncated")}
@@ -538,7 +539,7 @@ def test_run_writes_the_abstained_column_and_lists_the_abstentions(tmp_path, cap
     record = json.loads((tmp_path / "results" / "set.run.json").read_text(encoding="utf-8"))
     assert record["abstentions"] == {
         "j-b": [],
-        "j-a": [{"id": "k1-zho", "status": "json_error"}, {"id": "k2-eng", "status": "error"}],  # prompts order
+        "j-a": [{"id": "k1-zho", "status": "json_error"}, {"id": "k2-eng", "status": "truncated"}],  # prompts order
         "j-c": [],
         "j-off": [{"id": "k2-rus", "status": "truncated"}],
     }

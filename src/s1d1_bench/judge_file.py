@@ -3,9 +3,9 @@
 A classifier directory (`classifiers/<name>/`) has the same format: `provider` is then "system", and a label may carry
 a `score` and a `needs_tools_probability`, or leave `task` and `needs_tools` null when the system does not predict them.
 
-An abstention row records a judge's non-answer (its final status after the retry was not `ok`): the three fields null
-and `abstained` set to that status, which the last line of the id in `log.jsonl` must carry. A classifier never
-abstains.
+An abstention row records a judge's non-answer (its final status after the retry was `json_error` or `truncated`: the
+model's own output, such as a refusal): the three fields null and `abstained` set to that status, which the last line
+of the id in `log.jsonl` must carry. A backend `error` is no abstention. A classifier never abstains.
 """
 
 import hashlib
@@ -41,7 +41,9 @@ LABEL_KEYS = ["id", "complexity", "task", "needs_tools"]
 OPTIONAL_LABEL_KEYS = ["score", "needs_tools_probability"]  # absent or a number in [0, 1], in any directory
 MISSING_SHOWN = 5  # ids named in the "missing" summary
 ABSTAINED = "abstained"  # the key of an abstention row, whose value is the final status of the id
-ABSTENTION_STATUSES = ["json_error", "truncated", "error"]  # every final status of `bench judge` but "ok"
+# the final statuses of `bench judge` that are the model's own output (ruling R7): an `error` (an exception of the
+# backend, possibly transient) is not one, its id gets no row and `--resume` asks it again
+ABSTENTION_STATUSES = ["json_error", "truncated"]
 
 
 def _prompts_files(prompts_dir: Path, errors: list[str]) -> dict[str, Path]:

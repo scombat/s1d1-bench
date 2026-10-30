@@ -1,9 +1,10 @@
 """The core of `bench judge`: build the judge messages, parse its answers, run a prompt list with an injectable
 generation function (no model here), keep `labels.jsonl` and `log.jsonl` up to date line by line, resume.
 
-An id whose final status after the retry is not `ok` (`json_error`, `truncated`, `error`) gets an abstention row in
-`labels.jsonl`: the three fields null and `abstained` set to that status. A non-answer is recorded, never a label
-invented; `--resume` asks again only for the ids without a row."""
+An id whose final status after the retry is `json_error` or `truncated` (the model's own output, such as a refusal)
+gets an abstention row in `labels.jsonl`: the three fields null and `abstained` set to that status. A non-answer is
+recorded, never a label invented. An `error` (an exception of the backend, possibly transient) gets no row (ruling R7);
+`--resume` asks again only for the ids without a row."""
 
 import json
 import re
@@ -12,7 +13,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from s1d1_bench.judge_file import ABSTAINED
+from s1d1_bench.judge_file import ABSTAINED, ABSTENTION_STATUSES
 from s1d1_bench.rubric import LEVELS, TASKS, load_rubric
 from s1d1_bench.runfile import find_json_objects, read_done, repair_log, strip_reasoning, write_atomic
 
@@ -105,13 +106,13 @@ def _abstention(prompt_id: str, status: str) -> dict:
 
 
 def run_judge(prompts: list[dict], generate: GenerateFn, out_dir: Path, resume: bool = False) -> dict[str, int]:
-    """Judge `prompts` ({"id", "prompt"}) into `out_dir/labels.jsonl` (one row per id tried: its label, or an
-    abstention row when its final status is not ok; prompt order at the end) and `out_dir/log.jsonl` (every attempt
-    of every prompt). Returns the count of each status that occurred in this call.
+    """Judge `prompts` ({"id", "prompt"}) into `out_dir/labels.jsonl` (its label for an `ok` id, an abstention row for
+    a `json_error` or `truncated` one, nothing for an `error`; prompt order at the end) and `out_dir/log.jsonl` (every
+    prompt tried). Returns the count of each status that occurred in this call.
 
     A judge folder is immutable: without `resume`, existing files raise FileExistsError. With `resume`, ids that
     already have a row (a label or an abstention) are skipped and the new lines are appended; an id without a row
-    (a run stopped before it, or a folder written before abstention rows existed) is judged again.
+    (a run stopped before it, an `error`, or a folder written before abstention rows existed) is judged again.
     """
     ids = [p["id"] for p in prompts]
     duplicates = sorted({i for i in ids if ids.count(i) > 1})
@@ -148,7 +149,12 @@ def run_judge(prompts: list[dict], generate: GenerateFn, out_dir: Path, resume: 
             log_row = {"id": item["id"], "status": status, **fields}
             log_f.write(json.dumps(log_row, ensure_ascii=False) + "\n")  # log first: a crash before the label
             log_f.flush()  # line only costs a regeneration on resume
-            row = {"id": item["id"], **label} if status == "ok" else _abstention(item["id"], status)
+            if status == "ok":
+                row = {"id": item["id"], **label}
+            elif status in ABSTENTION_STATUSES:
+                row = _abstention(item["id"], status)
+            else:  # an error of the backend: no row, `--resume` asks again
+                continue
             labels_f.write(json.dumps(row, ensure_ascii=False) + "\n")
             labels_f.flush()
             done[item["id"]] = row

@@ -160,7 +160,7 @@ def test_cli_leaves_an_abstention_out_of_the_draw_and_says_so(tmp_path, capsys):
 
 
 def test_an_abstention_is_never_drawn():
-    abstained = {"complexity": None, "task": None, "needs_tools": None, "abstained": "error"}
+    abstained = {"complexity": None, "task": None, "needs_tools": None, "abstained": "truncated"}
     labels = pool(n_per_stratum=2) | {"x": abstained}
     d = stratified_draw(labels, per_stratum=5, tools_min=0, task_min=0)
     assert "x" not in d.ids()

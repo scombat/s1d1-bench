@@ -131,7 +131,7 @@ def A(status="json_error"):
 def test_an_abstention_on_either_side_leaves_the_id_out_of_the_pair():
     r = pairwise_agreement(
         {
-            "a": {"1": L("low"), "2": A(), "3": L("high"), "4": A("error")},
+            "a": {"1": L("low"), "2": A(), "3": L("high"), "4": A("truncated")},
             "b": {"1": L("low"), "2": L("low"), "3": A("truncated"), "4": A()},
             "c": {"1": L("low"), "2": L("low"), "3": L("high"), "4": L(None)},
         }

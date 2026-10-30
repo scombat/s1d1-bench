@@ -246,12 +246,13 @@ deux votes du milieu sont égaux ou voisins (6/6 sur deux paliers voisins donne 
 medium. Le palier est nul (`undecidable`) quand les `null` sont strictement majoritaires (7 sur 12 ; 6 sur 12 ne
 l'est pas). `task` et `needs_tools` vont au vote majoritaire, l'égalité tranchée par le premier juge de `--main`.
 
-Les abstentions : un juge qui ne rend pas d'étiquette lisible (refus, JSON illisible, réponse coupée, erreur) a une
-ligne `"abstained"` dans `labels.jsonl` (voir [judges/README.md](judges/README.md)). Pour les vérités, c'est un vote
-nul sur les trois champs : hors médiane, hors majorité et hors `spread`, compté comme un `null` vers `undecidable`.
-`bench run` l'écrit dans la colonne `<juge>.abstained` et la liste dans `run.json` ; un id sans aucune ligne reste
-refusé, jamais rempli. `bench agree` laisse hors de la paire un id où l'un des deux juges s'est abstenu (colonne
-`abstained`).
+Les abstentions : un juge dont la sortie ne donne pas d'étiquette lisible (refus, JSON illisible, réponse coupée :
+`json_error` ou `truncated`) a une ligne `"abstained"` dans `labels.jsonl` (voir [judges/README.md](judges/README.md)) ;
+une `error` du moteur n'en est pas une (elle peut être passagère : l'id reste sans ligne et `--resume` le redemande).
+Pour les vérités, une abstention est un vote nul sur les trois champs : hors médiane, hors majorité et hors `spread`,
+compté comme un `null` vers `undecidable`. `bench run` l'écrit dans la colonne `<juge>.abstained` et la liste dans
+`run.json` ; un id sans aucune ligne reste refusé, jamais rempli. `bench agree` laisse hors de la paire un id où l'un
+des deux juges s'est abstenu (colonne `abstained`).
 
 ## Dépendances
 

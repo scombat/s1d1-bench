@@ -35,7 +35,7 @@ GEMMA = "gemma"  # a main judge whose meta.json `model` holds this (any case) is
 RULES = (
     "complexity: ordinal median (trivial<low<medium<high<expert) of the non-null votes once sorted: an odd count "
     "takes the middle vote, an even count the mean of the two middle tier indices (n/2-1 and n/2) rounded down "
-    "(low+high -> medium, low+medium -> low; docs/34 decision 3); null when the null votes are strictly more than "
+    "(low+high -> medium, low+medium -> low; docs/34 §0.3); null when the null votes are strictly more than "
     "half (7 of 12 is undecidable, 6 of 12 is not). truth_all: the main judges' votes on the 4 language versions of"
     " the base key (3 judges = 12 votes), repeated on each version; truth_lang: their votes on the id. task, "
     "needs_tools: majority of the non-null votes, a tie going to the value voted first in priority order (--main "

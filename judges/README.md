@@ -44,20 +44,21 @@ Aucun contrôle de qualité du contenu : un juge médiocre se voit dans son acco
 
 ### Les abstentions
 
-Quand `bench judge` n'obtient pas d'étiquette lisible après la relance (état final `json_error`, `truncated` ou
-`error` dans `log.jsonl`, par exemple un refus du modèle), il écrit une ligne d'abstention plutôt que rien :
+Quand le modèle ne rend pas d'étiquette lisible après la relance (état final `json_error` ou `truncated` dans
+`log.jsonl`, par exemple un refus), `bench judge` écrit une ligne d'abstention plutôt que rien :
 
 ```json
 {"id": "3ce175ed3ef6b933-zho", "complexity": null, "task": null, "needs_tools": null, "abstained": "json_error"}
 ```
 
 Un refus est une sortie du juge, comme un palier `null` ; ce qui est interdit, c'est d'inventer une étiquette, pas de
-consigner une non-réponse. Une réponse `ok` n'est jamais une abstention. `bench validate` accepte une ligne `abstained`
-seulement si ses trois champs sont `null`, si l'état est l'un des trois et, quand `log.jsonl` est à côté, si la
-dernière ligne de cet id dans le journal porte le même état ; un classifieur (`provider: system`) ne s'abstient
-jamais. Le résumé devient `ok (1 abstention)`, `ok (N abstentions)`. `--resume` ne redemande que les ids sans ligne :
-un dossier écrit avant cette règle, auquel il manque la ligne d'un id refusé, la reçoit par un simple `--resume` avec
-le même modèle et les mêmes réglages.
+consigner une non-réponse. Une réponse `ok` n'est jamais une abstention. Une `error` non plus : c'est une exception du
+moteur, pas une sortie du modèle, et elle peut être passagère ; l'id reste sans ligne et `--resume` le redemande.
+`bench validate` accepte une ligne `abstained` seulement si ses trois champs sont `null`, si l'état est l'un des deux
+et, quand `log.jsonl` est à côté, si la dernière ligne de cet id dans le journal porte le même état ; un classifieur
+(`provider: system`) ne s'abstient jamais. Le résumé devient `ok (1 abstention)`, `ok (N abstentions)`. `--resume` ne
+redemande que les ids sans ligne : un dossier écrit avant cette règle, auquel il manque la ligne d'un id refusé, la
+reçoit par un simple `--resume` avec le même modèle et les mêmes réglages.
 
 `judges/trial-gptoss-off` (essai de 50 prompts, gpt-oss sans réflexion : sur un prompt, `"task": "design"`, hors
 grille, à l'essai comme à la relance) date d'avant cette règle : l'utilisateur l'a retiré du dépôt, il reste comme

@@ -429,7 +429,7 @@ def write_log(judge_dir: Path, rows: list[tuple[str, str]]) -> None:
     (judge_dir / "log.jsonl").write_text(text, encoding="utf-8")
 
 
-@pytest.mark.parametrize("status", ["json_error", "truncated", "error"])
+@pytest.mark.parametrize("status", ["json_error", "truncated"])
 def test_an_abstention_row_is_accepted(dir_with_line, prompts_dir, status):
     assert validate_judge_dir(dir_with_line(abstention_line("a-eng", status)), prompts_dir) == []
 
@@ -442,6 +442,7 @@ def test_an_abstention_row_is_accepted(dir_with_line, prompts_dir, status):
         ({"needs_tools": False}, "needs_tools"),
         ({"abstained": "ok"}, "abstained"),
         ({"abstained": "refused"}, "abstained"),
+        ({"abstained": "error"}, "abstained"),  # ruling R7: a backend error is no abstention
         ({"abstained": None}, "abstained"),
         ({"abstained": True}, "abstained"),
         ({"score": 0.5}, "score"),
@@ -460,7 +461,7 @@ def test_an_abstention_row_still_needs_its_three_fields(dir_with_line, prompts_d
 
 def test_a_system_folder_does_not_abstain(valid_judge_dir, prompts_dir):
     lines = {id_: LABELS[id_] for id_ in LABELS}
-    lines["a-eng"] = {"complexity": None, "task": None, "needs_tools": None, "abstained": "error"}
+    lines["a-eng"] = {"complexity": None, "task": None, "needs_tools": None, "abstained": "truncated"}
     errors = validate_judge_dir(system_dir(valid_judge_dir, lines), prompts_dir)
     assert len(errors) == 1 and errors[0].startswith("labels.jsonl:1") and "abstained" in errors[0], errors
 
