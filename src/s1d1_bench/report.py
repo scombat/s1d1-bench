@@ -6,7 +6,8 @@ the truth of the two others) and the floor (`length`, `constant-low`, the ten dr
 tables by language, source, origin and truth tier, `task` and `needs_tools`, the rank metrics of the scores, the
 calibration of the s1d1 scores against the anchor of the truth tier, the paired differences with the 2 sigma rule, the
 two predictions written before the figures (docs/34 § 7.4) and the inputs. `write_tables` writes them as CSV,
-`markdown_table` renders one in French for the index.
+`markdown_table` renders one in French for the index. `run_report_cmd` is the command: these tables, then the figures
+(`report_figures`, matplotlib) and `index.md` (`report_index`, from `report/TEMPLATE.md`).
 
 Conventions:
 
@@ -41,7 +42,9 @@ folder for every classifier of the run record and `random/draws.jsonl` (the ten 
 """
 
 import csv
+import json
 import math
+import sys
 from collections.abc import Callable, Sequence
 from functools import partial
 from itertools import combinations
@@ -50,6 +53,7 @@ from typing import NamedTuple
 
 import numpy as np
 import pyarrow as pa
+import pyarrow.parquet as pq
 
 from s1d1_bench import metrics
 from s1d1_bench.classify import ANCHORS
@@ -824,24 +828,27 @@ def _csv_cell(value) -> str:
     return str(value)
 
 
+def write_csv(path: Path, columns: Sequence[str], rows: Sequence[dict]) -> Path:
+    """Write `rows` (dicts) under the header `columns` as CSV: UTF-8, `.` as the decimal point, floats at full
+    precision, nan and null as an empty cell, booleans true/false."""
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f, lineterminator="\n")
+        writer.writerow(columns)
+        for row in rows:
+            writer.writerow([_csv_cell(row.get(c)) for c in columns])
+    return path
+
+
 def write_tables(computed: dict[str, pa.Table], out_dir: Path | str) -> list[Path]:
-    """Write each table as `out_dir/tables/<name>.csv` (UTF-8, `.` as the decimal point, floats at full precision, nan
-    and null as an empty cell, booleans true/false); return the paths in the order of `computed`."""
+    """Write each table as `out_dir/tables/<name>.csv` (`write_csv`); return the paths in the order of `computed`."""
     folder = Path(out_dir) / "tables"
     folder.mkdir(parents=True, exist_ok=True)
-    paths = []
-    for name, table in computed.items():
-        path = folder / f"{name}.csv"
-        with open(path, "w", encoding="utf-8", newline="") as f:
-            writer = csv.writer(f, lineterminator="\n")
-            writer.writerow(table.column_names)
-            for row in table.to_pylist():
-                writer.writerow([_csv_cell(row[c]) for c in table.column_names])
-        paths.append(path)
-    return paths
+    return [write_csv(folder / f"{name}.csv", t.column_names, t.to_pylist()) for name, t in computed.items()]
 
 
-def _french(value, digits: int) -> str:
+def french(value, digits: int = 3) -> str:
+    """A value as the report writes it: floats at `digits` decimals with a comma, booleans oui/non, nan and null as
+    a dash, `|` escaped for Markdown."""
     if value is None or (isinstance(value, float) and math.isnan(value)):
         return "—"
     if isinstance(value, bool):
@@ -869,13 +876,52 @@ def markdown_table(
 
     def cell(row: dict, column: str) -> str:
         value = row[column]
-        text = _french(value, digits)
+        text = french(value, digits)
         if column in paired and isinstance(value, float) and not math.isnan(value):
             lo, hi = row[f"{column}_lo"], row[f"{column}_hi"]
             if lo is not None and hi is not None and not (math.isnan(lo) or math.isnan(hi)):
-                text += f" [{_french(lo, digits)} ; {_french(hi, digits)}]"
+                text += f" [{french(lo, digits)} ; {french(hi, digits)}]"
         return text
 
     lines = ["| " + " | ".join(labels.get(c, c) for c in columns) + " |", "|" + "|".join("---" for _ in columns) + "|"]
     lines += ["| " + " | ".join(cell(row, c) for c in columns) + " |" for row in table.to_pylist()]
     return "\n".join(lines)
+
+
+# --- the command --------------------------------------------------------------------------------------------------
+
+MATPLOTLIB_HINT = (
+    "matplotlib is missing: it comes with the report dependency group (numpy with it), "
+    "uv run --group report bench report ..."
+)
+
+
+def run_report_cmd(args) -> int:
+    """`bench report`: `--out/tables/*.csv`, `--out/figures/*.svg` (each with its CSV) and `--out/index.md`, from
+    `--results`, its `<stem>.run.json`, `--meta` and the `--classifiers` root. Exit 1 with a message on a refusal (a
+    missing input, a classifier folder or `random/draws.jsonl` missing from the root) or when matplotlib is missing;
+    the check of matplotlib comes first, before any computation."""
+    try:
+        import matplotlib  # noqa: F401  (the figures need it; checked before the tables take their time)
+    except ImportError:
+        print(f"bench report: {MATPLOTLIB_HINT}", file=sys.stderr)
+        return 1
+    from s1d1_bench.report_figures import figures
+    from s1d1_bench.report_index import write_index
+
+    results_path = Path(args.results)
+    run_path = results_path.with_name(results_path.stem + ".run.json")
+    try:
+        if not run_path.is_file():
+            raise ValueError(f"{run_path}: missing (the run record of {results_path}, written by bench run)")
+        run = json.loads(run_path.read_text(encoding="utf-8"))
+        computed = tables(pq.read_table(results_path), pq.read_table(args.meta), run, args.classifiers, args.sigma)
+        written = write_tables(computed, args.out)
+        drawn = figures(computed, args.out, args.sigma)
+        index = write_index(args.out, computed, drawn, run, args.template, classifiers_root=args.classifiers)
+    except (ValueError, OSError) as exc:
+        print(f"bench report: {exc}", file=sys.stderr)
+        return 1
+    n_figures = sum(f.svg is not None for f in drawn)
+    print(f"bench report: {len(written)} tables, {n_figures} figures (SVG + CSV), {index}")
+    return 0

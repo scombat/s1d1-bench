@@ -526,3 +526,222 @@ def test_confusion_and_judge_spread_tables(small):
     )  # fmt: skip
     assert one(spread, tier="trivial", spread=0)["n_ids"] == 4
     assert math.isnan(one(spread, tier="expert", spread=0)["mean_spread_tier"])
+
+
+# --- 10b: the figures, the index and the command ----------------------------------------------------------------------
+
+TEMPLATE = Path(__file__).resolve().parents[1] / "report" / "TEMPLATE.md"
+CAVEATS = (
+    "Plafond = accord de chaque juge principal avec la médiane des autres",
+    "il ne dépasse pas la grille",
+    "Plancher = les témoins",
+    "(a) Si la grille elle-même correspond à « quel modèle suffit »",
+    "(b) Le routage",
+    "(c) La distribution réelle des prompts",
+    "(d) Les prompts agentiques et multi-tours",
+    "(e) Les langues autres que les quatre choisies",
+)
+
+
+def fake_report_inputs(tmp_path: Path):
+    """The amendment's fake set on disk: 2 keys x 4 languages x the 3 main judges x 3 classifiers (s1d1-like, rank-only
+    through `.raw_score`, one without task), the classifiers root with random/draws.jsonl; returns the CLI arguments."""
+    import json
+
+    import pyarrow.parquet as pq
+
+    votes = {j: v for j, v in small_votes().items() if j in MAIN}
+    results, meta, run, root = build(tmp_path, KEYS, votes, small_preds(), small_decisions())
+    (tmp_path / "results").mkdir()
+    pq.write_table(results, tmp_path / "results" / "fake.parquet")
+    (tmp_path / "results" / "fake.run.json").write_text(json.dumps(run), encoding="utf-8")
+    pq.write_table(meta, tmp_path / "fake.meta.parquet")
+    results_path, meta_path = tmp_path / "results" / "fake.parquet", tmp_path / "fake.meta.parquet"
+    args = ["report", "--results", str(results_path), "--meta", str(meta_path), "--classifiers", str(root)]
+    args += ["--template", str(TEMPLATE)]
+    return args, (results, meta, run, root)
+
+
+def markdown_tables(text: str) -> list[list[list[str]]]:
+    """Every Markdown table of `text` as a list of rows (header first), each a list of cells."""
+    found, current = [], []
+    for line in text.splitlines() + [""]:
+        if line.startswith("|"):
+            if not line.startswith("|---"):
+                current.append([c.strip() for c in line.strip("|").split(" | ")])
+        elif current:
+            found.append(current)
+            current = []
+    return found
+
+
+def test_fill_refuses_a_hole_without_value_and_a_value_without_hole():
+    from s1d1_bench.report_index import fill
+
+    assert fill("a {x} b {x} {y_2}", {"x": "1", "y_2": "{z}"}) == "a 1 b 1 {z}"  # a value is never filled again
+    with pytest.raises(ValueError, match="unknown_hole"):
+        fill("a {unknown_hole}", {})
+    with pytest.raises(ValueError, match="extra"):
+        fill("a {x}", {"x": "1", "extra": "2"})
+
+
+def test_write_index_raises_when_a_hole_of_the_template_stays_empty(small, tmp_path):
+    from s1d1_bench.report_figures import NAMES, Figure
+    from s1d1_bench.report_index import write_index
+
+    computed, (_, _, run, root) = small
+    absent = [Figure(name, None, None, ("rien à tracer",)) for name in NAMES]
+    with pytest.raises(ValueError, match="figure_qwk_bars"):  # no figure given: its hole has no value
+        write_index(tmp_path, computed, [], run, TEMPLATE)
+    template = tmp_path / "template.md"
+    template.write_text(TEMPLATE.read_text(encoding="utf-8") + "\n{unknown_hole}\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="unknown_hole"):
+        write_index(tmp_path, computed, absent, run, template)
+    assert not (tmp_path / "index.md").exists()
+    # the real template, every figure absent: written, nothing left unfilled
+    text = write_index(tmp_path, computed, absent, run, TEMPLATE, classifiers_root=root).read_text(encoding="utf-8")
+    from s1d1_bench.report_index import HOLE
+
+    assert HOLE.search(text) is None
+    assert "_Figure `qwk-bars` non tracée : rien à tracer._" in text
+
+
+def test_write_index_refuses_a_superiority_sentence(small, tmp_path):
+    from s1d1_bench.report_figures import NAMES, Figure
+    from s1d1_bench.report_index import write_index
+
+    computed, (_, _, run, _) = small
+    absent = [Figure(name, None, None, ()) for name in NAMES]
+    with pytest.raises(ValueError, match="meilleur que"):  # the set name lands in the title
+        write_index(tmp_path, computed, absent, run | {"prompts": "data/prompts/meilleur que.jsonl"}, TEMPLATE)
+    template = TEMPLATE.read_text(encoding="utf-8").lower()
+    assert "meilleur que" not in template and "mieux que" not in template
+
+
+def test_report_command_on_the_fake_set(tmp_path, capsys):
+    pytest.importorskip("matplotlib")
+    from s1d1_bench.cli import main
+    from s1d1_bench.report import french
+    from s1d1_bench.report_figures import NAMES
+    from s1d1_bench.report_index import HOLE
+
+    args, inputs = fake_report_inputs(tmp_path)
+    out = tmp_path / "out"
+    assert main([*args, "--out", str(out)]) == 0
+    assert "index.md" in capsys.readouterr().out
+    assert {p.stem for p in (out / "tables").glob("*.csv")} == set(TABLES)
+    svgs = sorted((out / "figures").glob("*.svg"))
+    assert {p.stem for p in svgs} == set(NAMES)  # every figure has something to draw here
+    for svg in svgs:
+        assert svg.with_suffix(".csv").is_file(), svg.name
+        assert b"<dc:date>" not in svg.read_bytes()  # no date in the metadata
+    assert {p.stem for p in (out / "figures").glob("*.csv")} == {p.stem for p in svgs}
+
+    text = (out / "index.md").read_text(encoding="utf-8")
+    assert HOLE.search(text) is None
+    for caveat in CAVEATS:
+        assert caveat in text, caveat
+    assert "meilleur que" not in text.lower() and "mieux que" not in text.lower()
+    # the sentence of docs/32 § 5 with its numbers: s1d1 QWK 6/7 against truth_all, the ceiling mean, 8 ids, 2 keys
+    computed = tables(*inputs, sigma=0.005)
+    mean = one(computed["ceiling"], judge="mean")
+    assert (
+        "Sur 8 ids, soit 2 prompts de base en 4 langues, `s1d1-full-int8` s'accorde avec la médiane de\n> 3 juges"
+        in text
+    )
+    assert f"QWK {french(6 / 7)} " in text and french(6 / 7) == "0,857"
+    assert f"le plafond inter-juges est {french(mean['qwk'])}" in text
+    assert "Laya english absent de ce run" in text  # an absent candidate fills its hole, said as such
+    assert "La règle des 2 σ" in text and "borne basse > 2 σ = 0,010" in text
+    # the absent roles and panels are said, never a crash
+    assert "La prédiction 1 n'a pas été évaluée" in text and "La prédiction 2 n'a pas été évaluée" in text
+    assert "figure `confusion` : `laya-multilingual-tier` absent : pas de panneau de confusion" in text
+    assert "plancher, `length` : pas de ligne de plancher" in text
+
+    # the rank-only candidate has neither MAE nor ECE anywhere, the candidate without task no task row
+    for path in [*(out / "tables").glob("*.csv"), *(out / "figures").glob("*.csv")]:
+        with open(path, encoding="utf-8", newline="") as f:
+            reader = csv.DictReader(f)
+            columns = set(reader.fieldnames or [])
+            rows_here = list(reader)
+        if columns & {"mae", "ece"}:
+            assert all("laya-rank" not in row.values() for row in rows_here), path.name
+        if path.stem in ("task", "needs_tools"):
+            assert all(row["name"] != "notask" for row in rows_here), path.name
+    for table in markdown_tables(text):
+        header, body = table[0], table[1:]
+        names = {row[0] for row in body}
+        if "MAE" in header or "ECE" in header:
+            assert "laya-rank" not in names and "s1d1-full-int8" in names
+        if "F1 macro" in header or "ids positifs" in header:
+            assert "notask" not in names
+    assert "laya-rank" in {row[0] for t in markdown_tables(text) if "AUROC (high ou expert)" in t[0] for row in t[1:]}
+
+
+def test_report_svg_byte_identical_across_two_runs(tmp_path):
+    pytest.importorskip("matplotlib")
+    from s1d1_bench.cli import main
+
+    args, _ = fake_report_inputs(tmp_path)
+    assert main([*args, "--out", str(tmp_path / "one")]) == 0
+    assert main([*args, "--out", str(tmp_path / "two")]) == 0
+    first = sorted((tmp_path / "one").rglob("*.*"))
+    assert any(p.suffix == ".svg" for p in first)
+    for path in first:
+        twin = tmp_path / "two" / path.relative_to(tmp_path / "one")
+        assert path.read_bytes() == twin.read_bytes(), path.name
+
+
+def test_figures_skip_a_figure_with_nothing_to_draw(small, tmp_path):
+    pytest.importorskip("matplotlib")
+    from s1d1_bench.report_figures import figures
+
+    computed, _ = small
+    empty = dict(computed)
+    empty["calibration_bins"] = computed["calibration_bins"].slice(0, 0)
+    stale = tmp_path / "figures" / "reliability-s1d1.svg"
+    stale.parent.mkdir(parents=True)
+    stale.write_text("old", encoding="utf-8")
+    drawn = {f.name: f for f in figures(empty, tmp_path)}
+    reliability = drawn["reliability-s1d1"]
+    assert reliability.svg is None and reliability.csv is None and reliability.notes
+    assert not stale.exists()  # a stale file of a figure not drawn is removed
+    confusion = drawn["confusion"]
+    assert confusion.svg.is_file()
+    assert any("litellm-heuristic" in note for note in confusion.notes)  # the panels of absent candidates
+
+
+def test_report_command_refusals(tmp_path, capsys, monkeypatch):
+    import sys
+
+    from s1d1_bench.cli import main
+
+    args, (_, _, _, root) = fake_report_inputs(tmp_path)
+    out = ["--out", str(tmp_path / "out")]
+    # matplotlib missing: exit 1 with the hint, before any computation
+    monkeypatch.setitem(sys.modules, "matplotlib", None)
+    assert main([*args, *out]) == 1
+    assert "uv run --group report" in capsys.readouterr().err
+    monkeypatch.undo()
+    pytest.importorskip("matplotlib")
+    (root / "notask").rmdir()
+    assert main([*args, *out]) == 1
+    assert "notask" in capsys.readouterr().err
+    (root / "notask").mkdir()
+    (tmp_path / "results" / "fake.run.json").unlink()
+    assert main([*args, *out]) == 1
+    assert "fake.run.json" in capsys.readouterr().err
+    assert not (tmp_path / "out" / "index.md").exists()
+
+
+def test_report_without_numpy_exits_1_with_the_hint(tmp_path, capsys, monkeypatch):
+    import sys
+
+    from s1d1_bench.cli import main
+
+    monkeypatch.delitem(sys.modules, "s1d1_bench.report")
+    monkeypatch.setitem(sys.modules, "numpy", None)
+    code = main(["report", "--results", "r.parquet", "--meta", "m.parquet", "--out", str(tmp_path)])
+    assert code == 1
+    err = capsys.readouterr().err
+    assert "numpy" in err and "uv run --group report bench report" in err
