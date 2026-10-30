@@ -29,7 +29,8 @@ notation v7 (palier de complexité, score, tâche, `needs_tools`).
 - `bench classify` : fait classer les prompts par un classifieur et écrit un dossier `classifiers/<nom>` au format d'un juge,
   plus le score quand il est sur l'échelle v7. Six adaptateurs : trois témoins (`random`, `length`, `constant`) et trois
   systèmes à l'essai (`s1d1`, poids du Hub ; `laya` ; `litellm-heuristic`, le scorer à règles de LiteLLM, sans modèle), ce
-  dernier gardant ses décisions brutes à part dans `decisions.jsonl`.
+  dernier et `laya` gardant leurs décisions brutes à part dans `decisions.jsonl` (palier nom à nom, sans `score` dans
+  `labels.jsonl`).
 - `bench run` : réunit les dossiers de juges et de classifieurs d'un jeu en un tableau, une ligne par id, avec les vérités
   des juges principaux (`results/<jeu>.parquet` et `<jeu>.run.json`).
 
@@ -306,8 +307,10 @@ ci-dessous, la colonne `abstained` compte les ids laissés hors de la paire.
 | `classifiers/s1d1-compact-int8` | `scombat/s1d1-router-6src-compact-onnx-int8`, ONNX int8, CPU | carte `7e87870` | 28,5 s |
 | `classifiers/s1d1-small-int8` | `scombat/s1d1-router-6src-small-onnx-int8`, ONNX int8, CPU | carte `33c7f34` | 12,2 s |
 | `classifiers/s1d1-tiny-int8` | `scombat/s1d1-router-6src-tiny-onnx-int8`, ONNX int8, CPU | tête du Hub `dac13b5` | 6,7 s |
-| `classifiers/laya-english` | Laya 0.4.15, point de contrôle english, mps | `convaiinnovations/laya@7b928d82…` | 13,1 s |
-| `classifiers/laya-multilingual` | Laya 0.4.15, point de contrôle multilingual, mps | `convaiinnovations/laya@7b928d82…` | 9,0 s |
+| `classifiers/laya-english` | ne compte plus (voir plus bas) : Laya 0.4.15, point de contrôle english, mps, ancre la plus proche | `convaiinnovations/laya@7b928d82…` | 13,1 s |
+| `classifiers/laya-multilingual` | ne compte plus (voir plus bas) : Laya 0.4.15, point de contrôle multilingual, mps, ancre la plus proche | `convaiinnovations/laya@7b928d82…` | 9,0 s |
+| `classifiers/laya-english-tier` | Laya 0.4.15, point de contrôle english, mps, palier le plus probable nom à nom | `convaiinnovations/laya@7b928d82…` | ≈ 20 s (non chronométré) |
+| `classifiers/laya-multilingual-tier` | Laya 0.4.15, point de contrôle multilingual, mps, palier le plus probable nom à nom | `convaiinnovations/laya@7b928d82…` | ≈ 20 s (non chronométré) |
 | `classifiers/litellm-heuristic` | scorer heuristique intégré de LiteLLM (`classifier_type: heuristic`, configuration par défaut), code copié tel quel au tag v1.106.6, sans modèle | tag `v1.106.6`, commit `61c6ab78…` | moins d'une seconde |
 
 Les durées des classifieurs sont celles du classement des 360 prompts, avec le petit téléchargement du Hub, les poids étant
@@ -379,10 +382,21 @@ autre nom.
 
   ```
   uv run --group laya bench classify laya --laya-model english --revision 7b928d828b7b0e022f929d9bd2e44165aa270148 \
-      --prompts data/prompts/base-v1.jsonl --out classifiers/laya-english --author <nom>
+      --prompts data/prompts/base-v1.jsonl --out classifiers/laya-english-tier --author <nom>
   ```
 
-  `--laya-model multilingual` et `--out classifiers/laya-multilingual` pour l'autre point de contrôle.
+  `--laya-model multilingual` et `--out classifiers/laya-multilingual-tier` pour l'autre point de contrôle.
+
+  **Deux dossiers Laya par point de contrôle, et lesquels comptent.** Laya répond à la question à quatre paliers de
+  LiteLLM (`SIMPLE`, `MEDIUM`, `COMPLEX`, `REASONING`), la même que celle du scorer de LiteLLM ci-dessous, et les deux
+  candidats se lisent avec la même table, nom à nom : `SIMPLE` → low, `MEDIUM` → medium, `COMPLEX` → high, `REASONING` →
+  expert, jamais trivial. Les dossiers **`laya-english-tier` et `laya-multilingual-tier` sont ceux qui comptent** : le palier
+  est le plus probable des quatre (égalité : le nom le plus bas), `labels.jsonl` n'a pas de `score`, et `decisions.jsonl` garde
+  par id le palier de Laya, le niveau attendu `Σ i·pᵢ` sur 0..3 (écrit `score`, il ne sert qu'aux métriques de rang) et les
+  quatre probabilités telles quelles. Les dossiers **`laya-english` et `laya-multilingual`** de la première PR convertissaient
+  le niveau attendu divisé par 3 en palier par l'ancre la plus proche (SIMPLE devenait trivial, MEDIUM low, COMPLEX high) :
+  une autre table que celle du scorer de LiteLLM. Ils restent dans le dépôt, parce qu'un dossier de classifieur ne se
+  modifie jamais, mais `bench run` ne les charge plus et ni les résultats ni le rapport n'en parlent.
 - **Le scorer de LiteLLM** (sans modèle, sans groupe, sans réseau) :
 
   ```
@@ -392,9 +406,15 @@ autre nom.
 
   ```
   uv run bench run --prompts data/prompts/base-v1.jsonl --judges 'judges/base-v1-*' \
-      --main base-v1-gemma4-cap512,base-v1-qwen3-cap512,base-v1-gptoss-cap512 --classifiers 'classifiers/*' \
+      --main base-v1-gemma4-cap512,base-v1-qwen3-cap512,base-v1-gptoss-cap512 \
+      --classifiers 'classifiers/s1d1-*' --classifiers classifiers/laya-english-tier \
+      --classifiers classifiers/laya-multilingual-tier --classifiers classifiers/litellm-heuristic \
+      --classifiers classifiers/random --classifiers classifiers/length --classifiers classifiers/constant-low \
       --out results/base-v1.parquet
   ```
+
+  Les classifieurs sont listés un à un : `'classifiers/*'` chargerait aussi `laya-english` et `laya-multilingual`, qui ne
+  comptent plus (voir Laya plus haut).
 - **Vérifier** les dossiers déposés, comme le fait la CI (`.github/workflows/ci.yml`) :
 
   ```
