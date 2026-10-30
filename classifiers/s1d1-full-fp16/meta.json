@@ -1,0 +1,16 @@
+{
+  "judge": "s1d1-full-fp16",
+  "model": "scombat/s1d1-router",
+  "provider": "system",
+  "revision": "7fb9a4e3d03e3d942a98648268ff76c6152c18d6",
+  "date": "2026-10-30",
+  "temperature": 0,
+  "thinking": "none",
+  "instructions": "none",
+  "prompts_sha256": "e6a6d4c12ef8b95caea942337a3a1e16ec1622cb4e75c8ee0b473ef609a32490",
+  "author": "scombat",
+  "replayable": true,
+  "licence": "CC-BY-4.0",
+  "notes": "Replay: bench classify s1d1 --model scombat/s1d1-router --revision 7fb9a4e3d03e3d942a98648268ff76c6152c18d6 --backend torch. s1d1_router.py of scombat/s1d1-router@7fb9a4e3d03e3d942a98648268ff76c6152c18d6, backend torch, device mps, precision torch-fp16. Prompts sorted by length in characters, batches of at most 64 prompts or about 16384 tokens, truncated at the router's MAX_LENGTH; tier = complexity_tier of decode() (capped at high), score = complexity_score. the card gives no revision for this repo; the current head 7fb9a4e3d03e3d942a98648268ff76c6152c18d6 is used; the later Hub commits are metadata-only for the weights. Checked on the Hub (read only, HfApi(token=False)): list_repo_commits gives 20 commits; model.safetensors was added at d092e7e36f42b9856609bdf31d9cc4c22865d6c1 (Add the full model weights (PyTorch fp16)) and has the same lfs sha256 (5e9e0a5ede4c...) at every commit from there to the head (8 commits checked); the commits after it touch the card, config.json (175a032, problem_type regression and output names), the loader and s1d1_router.py (03d5ac9, 58d8bb0, 4ff8679 and later) and the LiteLLM integration files: config.json and s1d1_router.py therefore changed after the weights were added, so metadata-only holds for the weight files, the head's config.json and router file being the ones used.",
+  "quantization": "torch-fp16"
+}

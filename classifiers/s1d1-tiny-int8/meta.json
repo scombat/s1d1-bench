@@ -1,0 +1,16 @@
+{
+  "judge": "s1d1-tiny-int8",
+  "model": "scombat/s1d1-router-6src-tiny-onnx-int8",
+  "provider": "system",
+  "revision": "dac13b5c0356864ea4501fa151d74dcd8b3ea22a",
+  "date": "2026-10-30",
+  "temperature": 0,
+  "thinking": "none",
+  "instructions": "none",
+  "prompts_sha256": "e6a6d4c12ef8b95caea942337a3a1e16ec1622cb4e75c8ee0b473ef609a32490",
+  "author": "scombat",
+  "replayable": true,
+  "licence": "CC-BY-4.0",
+  "notes": "Replay: bench classify s1d1 --model scombat/s1d1-router-6src-tiny-onnx-int8 --revision dac13b5c0356864ea4501fa151d74dcd8b3ea22a --backend onnx. s1d1_router.py of scombat/s1d1-router@7fb9a4e3d03e3d942a98648268ff76c6152c18d6, backend onnx, device cpu, precision onnx-int8. Prompts sorted by length in characters, batches of at most 64 prompts or about 16384 tokens, truncated at the router's MAX_LENGTH; tier = complexity_tier of decode() (capped at high), score = complexity_score. the card gives no revision for this repo; the current head dac13b5c0356864ea4501fa151d74dcd8b3ea22a is used; the later Hub commits are metadata-only. Checked on the Hub (read only, HfApi(token=False)): list_repo_commits gives 10 commits; the last commit that changed the weights is 868fb8f99f7027dd894644cf0f1e72ff549a5480 (int8 with reduce_range); model_int8.onnx and vocab_map.npy have the same lfs sha256 at that commit and at the head, and the three commits after it (e17ea03, b4fcf7c, dac13b5) only touch the card, variant.json (sigma) and eval.json/footprint.json.",
+  "quantization": "onnx-int8"
+}
