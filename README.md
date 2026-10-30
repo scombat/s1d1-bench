@@ -198,9 +198,9 @@ uv run bench check structure --set base-v1 --lang fra --english data/prompts/bas
     --translations data/translations/base-v1
 uv run bench check labels --set base-v1 --lang fra --english data/prompts/base-v1-eng.jsonl \
     --translations data/translations/base-v1 --labels-english judges/check-qwen3-off-eng \
-    --labels judges/check-qwen3-off-fra --labels-witness judges/witness-qwen3-off-fra \
-    --witness data/translations/base-v1/witness-arena
-uv run bench check review ...   # mêmes options que labels
+    --labels judges/check-qwen3-off-fra --labels-witness judges/witness-qwen3-off-fra
+uv run bench check review --set base-v1 --lang fra --english data/prompts/base-v1-eng.jsonl \
+    --translations data/translations/base-v1 --witness data/translations/base-v1/witness-arena
 ```
 
 Le témoin Google est brut : entités HTML (`&#39;`) et espaces en bord de ligne y restent, nous ne le nettoyons pas.
@@ -231,7 +231,8 @@ uv run bench export --select data/prompts/base-v1.select.txt --handwritten data/
 ```
 
 Les fichiers `base-v1-<lang>.jsonl` sont ceux que les juges de vérification ont vus, avant corrections ; ils restent tels
-quels (leur SHA-256 est celui que `bench validate` demande aux dossiers `check-*`). `meta.parquet` porte `translator`
+quels (leur SHA-256 est celui que `bench validate` demande aux dossiers `check-*`), et `bench export` refuse de réécrire
+un fichier de prompts qu'un dossier de juge épingle par son SHA-256 si le contenu change. `meta.parquet` porte `translator`
 (`modèle@révision`, vide en anglais) et `corrected`.
 
 ## Dépendances

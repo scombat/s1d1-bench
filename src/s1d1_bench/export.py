@@ -236,6 +236,29 @@ def _drop_unselected(translations: dict[str, list[dict]], unselected: set[str]) 
     return kept
 
 
+def _refuse_to_rewrite_a_judged_file(jsonl: Path, prompts: list[dict], judges_dir: Path) -> None:
+    """A prompts file that a judge folder pins by SHA-256 is never rewritten with other content (the CI would then
+    refuse that folder). Re-exporting the very same content stays allowed."""
+    if not jsonl.exists():
+        return
+    old = hashlib.sha256(jsonl.read_bytes()).hexdigest()
+    metas = {d.parent.name: json.loads(d.read_text(encoding="utf-8")) for d in judges_dir.glob("*/meta.json")}
+    pinned = [name for name, meta in metas.items() if meta.get("prompts_sha256") == old]
+    if not pinned:
+        return
+    probe = jsonl.with_name(jsonl.name + ".probe")
+    try:
+        write_jsonl(probe, prompts)
+        new = hashlib.sha256(probe.read_bytes()).hexdigest()
+    finally:
+        probe.unlink(missing_ok=True)
+    if new != old:
+        raise SystemExit(
+            f"bench export: {jsonl.name} is pinned by judge folder(s) {', '.join(sorted(pinned))} and the new content "
+            "differs; export under another --name (the corrections are applied by the final export)"
+        )
+
+
 def run_export(args) -> int:
     root = Path(args.root)
 
@@ -267,6 +290,7 @@ def run_export(args) -> int:
     out = at("data/prompts")
     out.mkdir(parents=True, exist_ok=True)
     jsonl = out / f"{args.name}.jsonl"
+    _refuse_to_rewrite_a_judged_file(jsonl, prompts, at("judges"))
     write_jsonl(jsonl, prompts)
     pq.write_table(meta, out / f"{args.name}.meta.parquet", compression="zstd")
     (out / f"{args.name}.sha256").write_text(hashlib.sha256(jsonl.read_bytes()).hexdigest() + "\n", encoding="ascii")

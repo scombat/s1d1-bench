@@ -235,6 +235,21 @@ def test_re_export_of_a_smaller_set_leaves_no_stale_lot(tmp_path):
     assert sorted(p.name for p in lots.iterdir()) == ["01.md", "notes.txt"]
 
 
+def test_export_refuses_to_rewrite_a_file_a_judge_folder_pins(tmp_path):
+    argv = _pool_files(tmp_path, [SELECTED_2[0], SELECTED_2[1]])
+    assert main(argv) == 0
+    jsonl = tmp_path / "data/prompts/t.jsonl"
+    judge = tmp_path / "judges/j"
+    judge.mkdir(parents=True)
+    (judge / "meta.json").write_text(json.dumps({"prompts_sha256": hashlib.sha256(jsonl.read_bytes()).hexdigest()}))
+    before = jsonl.read_bytes()
+    assert main(argv) == 0  # same content: allowed
+    argv = _pool_files(tmp_path, [SELECTED_2[0]])
+    with pytest.raises(SystemExit, match="pinned by judge folder"):
+        main(argv)
+    assert jsonl.read_bytes() == before and not list(jsonl.parent.glob("*.probe"))
+
+
 def test_meta_columns_end_with_translator_and_corrected():
     import pyarrow as pa
 
