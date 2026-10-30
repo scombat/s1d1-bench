@@ -1,3 +1,4 @@
+import csv
 import math
 from pathlib import Path
 
@@ -9,8 +10,10 @@ from s1d1_bench import metrics
 from s1d1_bench.jsonl import write_jsonl
 from s1d1_bench.report import (
     CEILING_NOTE,
+    CONSTANT_SCORE,
     FAILS,
     IN_TRUTH,
+    MACRO_F1_NOTE,
     OUTSIDE,
     PASSES,
     RAW,
@@ -93,13 +96,14 @@ KEYS = ["k1", "k2"]
 
 def small_votes():
     """k1: j-a and j-c say high, j-b low (12 votes: 4 low, 8 high -> truth_all high; the 8 votes of j-b and j-c give
-    medium, the rest of j-a); k2: all trivial; j-c abstains on k2-zho; the non-main judges vary."""
+    medium, the rest of j-a); k2: all trivial; j-c abstains on k2-zho; the non-main judges vary, j-a-off votes null
+    (not an abstention) on k1-eng."""
     votes = {j: {} for j in MAIN + OTHERS}
     for lang in LANGS:
         votes["j-a"][f"k1-{lang}"] = label("high")
         votes["j-b"][f"k1-{lang}"] = label("low")
         votes["j-c"][f"k1-{lang}"] = label("high")
-        votes["j-a-off"][f"k1-{lang}"] = label("medium")
+        votes["j-a-off"][f"k1-{lang}"] = label("medium" if lang != "eng" else None)  # a null vote, no abstention
         votes["j-d-off"][f"k1-{lang}"] = label("high", task="coding_debugging", needs_tools=True)
         for j in MAIN + OTHERS:
             votes[j][f"k2-{lang}"] = label("trivial")
@@ -153,7 +157,7 @@ def test_every_table_is_there(small):
         "agreement_all", "agreement_nogemma", "ceiling", "floor", "exact_vs_constant_low", "judge_pairs",
         "by_language", "lang_change", "truth_lang_vs_all", "by_source", "by_origin", "by_tier", "task",
         "needs_tools", "needs_tools_pr", "rank_metrics", "calibration", "calibration_bins", "paired", "predictions",
-        "inputs", "inputs_summary", "skipped",
+        "confusion", "judge_spread_by_tier", "inputs", "inputs_summary", "skipped",
     ]:  # fmt: skip
         assert name in computed, name
         assert isinstance(computed[name], pa.Table)
@@ -214,6 +218,7 @@ def test_rank_only_candidate_has_rank_metrics_but_no_calibration(small):
     assert rank["scale"] == RAW
     assert rank["spearman"] == pytest.approx(1.0)  # raw 2.0 on k1 (high), -1.0 on k2 (trivial)
     assert rank["auroc_high"] == pytest.approx(1.0)
+    assert rank["note"] is None  # a score that varies
     assert one(computed["rank_metrics"], name="s1d1-full-int8")["scale"] == V7
     assert "laya-rank" not in {r["name"] for r in computed["calibration"].to_pylist()}
     assert "laya-rank" not in {r["candidate"] for r in computed["calibration_bins"].to_pylist()}
@@ -235,8 +240,9 @@ def test_candidate_without_task_has_no_task_nor_needs_tools_row(small):
     task = one(computed["task"], name="s1d1-full-int8")
     # truth task: information_seeking everywhere; s1d1 says coding_debugging on k1: accuracy 4/8
     assert task["accuracy"] == pytest.approx(0.5)
+    assert task["note"] == MACRO_F1_NOTE
     needs = one(computed["needs_tools"], name="s1d1-full-int8")
-    assert needs["positives"] == 0  # no id needs tools in the truth
+    assert needs["n_ids_positive"] == 0  # no id needs tools in the truth
     assert math.isnan(needs["auroc"])  # one class empty
     assert "peu de positifs" in needs["note"]
     assert math.isnan(one(computed["needs_tools"], name="j-b")["auroc"])  # no probability for a judge
@@ -281,7 +287,7 @@ def test_judge_pairs_flag_the_thinking_pair(small):
     assert pair["thinking_pair"] is True
     assert one(table, judge_a="j-b", judge_b="j-c")["thinking_pair"] is False
     assert one(table, judge_a="j-b", judge_b="j-c")["n_ids"] == 7
-    assert one(table, judge_a="j-b", judge_b="j-c")["left_out"] == 1
+    assert one(table, judge_a="j-b", judge_b="j-c")["n_ids_left_out"] == 1
 
 
 def test_floor_random_band_and_missing_roles_are_skipped(small):
@@ -305,7 +311,12 @@ def test_paired_rows_and_the_inputs(small):
     assert {r["candidate"] for r in paired.to_pylist()} == {"laya-rank", "notask"}
     assert all(r["rule_2sigma"] in (PASSES, FAILS) for r in paired.to_pylist())
     inputs = computed["inputs"]
-    assert one(inputs, name="j-c")["abstentions"] == 1
+    jc = one(inputs, name="j-c")
+    assert (jc["n_ids_abstained"], jc["n_ids_null_vote"], jc["null_votes_ids"]) == (1, 1, "k2-zho")
+    off = one(inputs, name="j-a-off")  # a null vote that is not an abstention is counted too
+    assert (off["n_ids_abstained"], off["n_ids_null_vote"], off["null_votes_ids"]) == (0, 1, "k1-eng")
+    assert one(inputs, name="j-b")["null_votes_ids"] == ""
+    assert one(inputs, name="s1d1-full-int8")["null_votes_ids"] is None
     assert one(inputs, name="s1d1-full-int8")["role"] == "candidate"
     summary = {r["item"]: r["value"] for r in computed["inputs_summary"].to_pylist()}
     assert summary["rows"] == "8 ids"
@@ -330,7 +341,7 @@ WIDE_KEYS = [f"w{n}" for n in range(10)]
 
 def wide_set(tmp_path):
     """Ten keys, truth tier n % 5 for key wn (every judge agrees). Candidates: s1d1-full-int8 one tier off on w1,
-    `twin` one tier off on w2 (the paired difference straddles 0), `flat` low everywhere (far below)."""
+    `twin` one tier off on w2 (the paired difference straddles 0), `flat` low everywhere (far below), score 0.25."""
     ids = ids_of(WIDE_KEYS)
     votes = {j: {i: label(LEVELS[int(i[1]) % 5]) for i in ids} for j in MAIN}
 
@@ -343,7 +354,7 @@ def wide_set(tmp_path):
     preds = {
         "s1d1-full-int8": tiers("w1"),
         "twin": tiers("w2"),
-        "flat": {i: label("low") for i in ids},
+        "flat": {i: label("low", score=0.25) for i in ids},
     }
     return build(tmp_path, WIDE_KEYS, votes, preds)
 
@@ -421,6 +432,10 @@ def test_markdown_table_french_formatting():
     assert markdown_table(table, columns=["name", "qwk_lo"], labels={"name": "candidat"}).splitlines()[0] == (
         "| candidat | qwk_lo |"
     )
+    # the number of draws used goes with the interval: hidden unless asked for
+    used = table.append_column("qwk_draws_used", pa.array([1000, 0]))
+    assert markdown_table(used).splitlines()[0] == "| name | n_ids | qwk | verified | note |"
+    assert markdown_table(used, columns=["qwk_draws_used"]).splitlines()[2] == "| 1000 |"
 
 
 def test_write_tables_and_determinism(small, tmp_path):
@@ -431,12 +446,83 @@ def test_write_tables_and_determinism(small, tmp_path):
     assert all(p.parent == tmp_path / "one" / "tables" for p in first)
     for a, b in zip(first, second, strict=True):
         assert a.read_bytes() == b.read_bytes(), a.name
-    text = (tmp_path / "one" / "tables" / "agreement_all.csv").read_text(encoding="utf-8")
-    header, s1d1 = text.splitlines()[0], next(line for line in text.splitlines() if line.startswith("s1d1-full-int8"))
-    cells = dict(zip(header.split(","), s1d1.split(","), strict=True))
+
+    def read(name):
+        with open(tmp_path / "one" / "tables" / f"{name}.csv", encoding="utf-8", newline="") as f:
+            return list(csv.DictReader(f))
+
+    s1d1 = next(row for row in read("agreement_all") if row["name"] == "s1d1-full-int8")
     # full precision ('.' as the decimal point): the cell reads back as the very float of the table
-    assert float(cells["qwk"]) == one(computed["agreement_all"], name="s1d1-full-int8")["qwk"] == pytest.approx(6 / 7)
-    by_source = (tmp_path / "one" / "tables" / "by_source.csv").read_text(encoding="utf-8").splitlines()
-    head = by_source[0].split(",")
-    row = next(line.split(",") for line in by_source[1:] if line.startswith("s1d1-full-int8,candidate,oasst2"))
-    assert row[head.index("qwk")] == ""  # nan is written empty
+    assert float(s1d1["qwk"]) == one(computed["agreement_all"], name="s1d1-full-int8")["qwk"] == pytest.approx(6 / 7)
+    row = next(r for r in read("by_source") if (r["name"], r["source"]) == ("s1d1-full-int8", "oasst2"))
+    assert row["qwk"] == ""  # nan is written empty
+    assert row["qwk_draws_used"] == "0"
+
+
+def test_rank_metrics_mark_a_constant_score(tmp_path):
+    computed = tables(*wide_set(tmp_path), sigma=0.005)
+    flat = one(computed["rank_metrics"], name="flat")
+    assert flat["note"] == CONSTANT_SCORE
+    assert math.isnan(flat["spearman"])
+    assert flat["auroc_high"] == pytest.approx(0.5)  # no discrimination: kept, and marked
+
+
+def test_subgroup_qwk_drops_the_draws_with_a_single_truth_tier(tmp_path):
+    """Three keys: k1 (oasst2, truth high), k2 (handwritten, medium), k3 (oasst2, trivial). In oasst2, a draw that holds
+    k1 but not k3 (or the reverse) has a single truth tier there: metrics.qwk would give exactly 0 whatever the
+    prediction. Those draws are dropped (nan); only the draws holding both k1 and k3 make the interval."""
+    keys = ["k1", "k2", "k3"]
+    truth_of = {"k1": "high", "k2": "medium", "k3": "trivial"}
+    ids = ids_of(keys)
+    votes = {j: {i: label(truth_of[i[:2]]) for i in ids} for j in MAIN}
+    predicted = {
+        "k1": ["high", "high", "medium", "medium"],
+        "k2": ["medium"] * 4,
+        "k3": ["trivial", "trivial", "low", "low"],
+    }
+    preds = {"s1d1-full-int8": {f"{k}-{lang}": label(predicted[k][n]) for k in keys for n, lang in enumerate(LANGS)}}
+    results, meta, run, root = build(tmp_path, keys, votes, preds)
+    row = one(tables(results, meta, run, root)["by_source"], name="s1d1-full-int8", source="oasst2")
+    truth = np.array([LEVELS.index(v) for v in results["truth_all.complexity"].to_pylist()])
+    pred = np.array([LEVELS.index(v) for v in results["s1d1-full-int8.complexity"].to_pylist()])
+    base = results["base_key"].to_pylist()
+    groups = {k: [i for i, b in enumerate(base) if b == k] for k in keys}
+    oasst2 = set(groups["k1"] + groups["k3"])
+    kept, degenerate = [], 0
+    for draw in metrics.bootstrap_draws(keys, groups, 1000, 0):
+        rows_in = [i for i in draw if i in oasst2]
+        if len(set(truth[rows_in].tolist())) >= 2:
+            kept.append(metrics.qwk(truth[rows_in], pred[rows_in]))
+        else:
+            degenerate += 1
+    assert 0 < degenerate < 1000  # both kinds of draw occur
+    assert row["qwk_draws_used"] == len(kept)
+    assert (row["qwk_lo"], row["qwk_hi"]) == pytest.approx(metrics.percentile_interval(kept))
+    assert row["qwk_lo"] > 0
+    # counting the degenerate draws as 0 would have pulled the low end down to 0
+    assert metrics.percentile_interval(kept + [0.0] * degenerate)[0] == 0.0
+    assert row["exact_draws_used"] == 1000 - sum(
+        1 for draw in metrics.bootstrap_draws(keys, groups, 1000, 0) if not oasst2 & set(draw)
+    )
+
+
+def test_confusion_and_judge_spread_tables(small):
+    computed, _ = small
+    confusion = computed["confusion"]
+    assert len(confusion) == 3 * 25  # every candidate, the full 5 x 5 grid
+    cells = {(r["truth_tier"], r["pred_tier"]): r for r in rows(confusion, candidate="s1d1-full-int8")}
+    # truth high: high 2, medium 2; truth trivial: trivial 2, low 2 (row-normalised per truth tier)
+    assert (cells["high", "high"]["n_ids"], cells["high", "high"]["row_share"]) == (2, pytest.approx(0.5))
+    assert (cells["high", "medium"]["n_ids"], cells["high", "medium"]["row_share"]) == (2, pytest.approx(0.5))
+    assert (cells["trivial", "low"]["n_ids"], cells["trivial", "low"]["row_share"]) == (2, pytest.approx(0.5))
+    assert cells["medium", "medium"]["n_ids"] == 0 and cells["medium", "medium"]["row_share"] == 0.0
+    assert sum(r["n_ids"] for r in rows(confusion, candidate="s1d1-full-int8")) == 8
+    spread = computed["judge_spread_by_tier"]
+    assert len(spread) == 25  # 5 tiers x spread 0..4
+    # k1 (truth high): j-a high, j-b low, j-c high -> spread 2 on its 4 ids; k2 (trivial): all trivial -> 0
+    high = one(spread, tier="high", spread=2)
+    assert (high["n_ids"], high["n_ids_tier"], high["mean_spread_tier"], high["n_ids_null_spread_tier"]) == (
+        4, 4, pytest.approx(2.0), 0,
+    )  # fmt: skip
+    assert one(spread, tier="trivial", spread=0)["n_ids"] == 4
+    assert math.isnan(one(spread, tier="expert", spread=0)["mean_spread_tier"])

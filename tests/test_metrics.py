@@ -11,6 +11,7 @@ from s1d1_bench.metrics import (
     accuracy,
     auroc,
     bootstrap,
+    bootstrap_draws,
     confusion,
     ece,
     f1,
@@ -21,6 +22,7 @@ from s1d1_bench.metrics import (
     not_predicted,
     one_vs_rest_truth,
     paired_difference,
+    percentile_interval,
     pr_curve,
     qwk,
     rank_only,
@@ -358,6 +360,21 @@ def test_bootstrap_same_seed_same_bounds_and_the_seed_matters():
     assert bootstrap(keys, groups, stat, n=200, seed=8) != first
     low, high = first
     assert low < float(np.mean(values)) < high
+
+
+def test_bootstrap_draws_snapshot_for_seed_0():
+    # pinned: numpy's default_rng(0) gives integers(0, 3, 3) = [2, 1, 1] then [0, 0, 0]; the literal guards the draw
+    # scheme (one rng.integers(0, len(keys), len(keys)) per draw, in turn) against a silent change, since every interval
+    # of the report depends on it
+    groups = {"A": [0], "B": [1], "C": [2]}
+    assert bootstrap_draws(["A", "B", "C"], groups, n=2, seed=0) == [[2, 1, 1], [0, 0, 0]]
+    # the mean of [0, 1, 5] on those draws: (5 + 1 + 1) / 3 = 7/3 and 0; percentiles of [0, 7/3] by linear
+    # interpolation: 2.5 % -> 0.025 * 7/3, 97.5 % -> 0.975 * 7/3
+    values = np.array([0.0, 1.0, 5.0])
+    bounds = bootstrap(["A", "B", "C"], groups, lambda idx: float(np.mean(values[idx])), n=2, seed=0)
+    assert bounds == pytest.approx((0.025 * 7 / 3, 0.975 * 7 / 3))
+    assert percentile_interval([math.nan, 0.0, 7 / 3]) == pytest.approx(bounds)
+    assert all(math.isnan(b) for b in percentile_interval([math.nan]))
 
 
 def test_bootstrap_bounds_by_hand():

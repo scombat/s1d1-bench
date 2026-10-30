@@ -14,9 +14,15 @@ Conventions:
   prompts (90 prompts de base, one per `base_key`).
 - Intervals: 95 % bootstrap over the base keys, the four versions of a key travelling together: the draws of
   `metrics.bootstrap` (n = 1000, seed 0), made once and shared by every statistic, so the interval of a paired
-  difference is that of `metrics.paired_difference`. A statistic undefined on a draw (nan) drops that draw. Columns
-  `<m>`, `<m>_lo`, `<m>_hi`. A subgroup (a language, a source, a tier) is measured on the rows of each draw that fall
-  in it: the draw is over all the keys, never within the subgroup.
+  difference is that of `metrics.paired_difference` (`metrics.bootstrap_draws`, `metrics.percentile_interval`). A
+  statistic undefined on a draw (nan) drops that draw. Columns `<m>`, `<m>_lo`, `<m>_hi` and `<m>_draws_used` (how many
+  of the 1000 draws the interval is made of). A subgroup (a language, a source, a tier) is measured on the rows of each
+  draw that fall in it: the draw is over all the keys, never within the subgroup, so a draw may hold no row of it (nan).
+- QWK is nan on rows whose truth holds a single tier, on all the rows as on a draw: there `metrics.qwk` is 0 (or 0/0)
+  by construction, whatever the prediction, which is no agreement measure; such draws are dropped and
+  `qwk_draws_used` says how many are left.
+- macro-F1 (`task`): the unweighted mean of the per-task F1 over the labels present in the truth or the prediction of
+  the rows measured, the union taken anew on each draw (the default of `metrics.macro_f1`).
 - Truth tier: `truth_all.complexity` (an index of `rubric.LEVELS`); a null truth (undecidable) is left out of every tier
   metric and counted in `inputs_summary`. A judge's abstention (`<judge>.abstained`) or null vote leaves that id out
   for that judge only. The truth of `task` and `needs_tools` is `truth_all.task` and `truth_all.needs_tools`.
@@ -65,6 +71,11 @@ LOW = LEVELS.index("low")
 CANDIDATE, IN_TRUTH, OUTSIDE = "candidate", "judge-in-truth", "judge-outside-truth"
 CEILING_NOTE = "plafond sur 8 votes, pas 12"
 FEW_POSITIVES = "peu de positifs: l'IC le dit"
+MACRO_F1_NOTE = (
+    "macro-F1 : moyenne des F1 par tâche sur l'union des tâches de la vérité et de la prédiction, refaite à chaque "
+    "tirage"
+)
+CONSTANT_SCORE = "score constant"  # rank_metrics: Spearman nan, AUROC 0,5 (no discrimination)
 V7, RAW = "v7 score", "raw (not on the v7 scale; ranks only)"
 PASSES, FAILS = "passe", "ne passe pas"
 RULE_2SIGMA = (
@@ -79,7 +90,8 @@ PREDICTION_2 = "QWK(length) < QWK(litellm-heuristic) < QWK(s1d1-full-int8), cont
 TABLES = (
     "agreement_all", "agreement_nogemma", "ceiling", "floor", "exact_vs_constant_low", "judge_pairs", "by_language",
     "lang_change", "truth_lang_vs_all", "by_source", "by_origin", "by_tier", "task", "needs_tools", "needs_tools_pr",
-    "rank_metrics", "calibration", "calibration_bins", "paired", "predictions", "inputs", "inputs_summary", "skipped",
+    "rank_metrics", "calibration", "calibration_bins", "paired", "predictions", "confusion", "judge_spread_by_tier",
+    "inputs", "inputs_summary", "skipped",
 )  # fmt: skip
 
 
@@ -96,11 +108,16 @@ _NAN = Estimate(math.nan, math.nan, math.nan, np.full(N_BOOT, math.nan))
 
 
 def _interval(draws: np.ndarray) -> tuple[float, float]:
-    return metrics._interval(draws.tolist())  # the percentile rule of metrics.bootstrap, nan draws dropped
+    return metrics.percentile_interval(draws.tolist())  # the interval rule of metrics.bootstrap, nan draws dropped
+
+
+_SUFFIXES = ("", "_lo", "_hi", "_draws_used")
 
 
 def _columns(name: str, estimate: Estimate) -> dict:
-    return {name: estimate.value, f"{name}_lo": estimate.lo, f"{name}_hi": estimate.hi}
+    """`<name>`, `<name>_lo`, `<name>_hi` and `<name>_draws_used` (the draws where the statistic is defined)."""
+    used = int(np.count_nonzero(~np.isnan(estimate.draws)))
+    return {name: estimate.value, f"{name}_lo": estimate.lo, f"{name}_hi": estimate.hi, f"{name}_draws_used": used}
 
 
 class _Resampler:
@@ -115,7 +132,7 @@ class _Resampler:
             groups.setdefault(key, []).append(i)
         self.keys, self.groups = list(groups), groups
         self.rows = np.array([i for key in self.keys for i in groups[key]], dtype=int)
-        self.draws = [np.asarray(d, dtype=int) for d in metrics._draws(self.keys, groups, N_BOOT, SEED)]
+        self.draws = [np.asarray(d, dtype=int) for d in metrics.bootstrap_draws(self.keys, groups, N_BOOT, SEED)]
         self.counts = np.stack([np.bincount(d, minlength=len(base_keys)) for d in self.draws]).astype(float)
 
     def mean(self, values: np.ndarray, mask: np.ndarray) -> Estimate:
@@ -260,18 +277,24 @@ class _Report:
     # --- the statistics -------------------------------------------------------------------------------------------
 
     def qwk(self, truth: np.ndarray, pred: np.ndarray, mask: np.ndarray) -> Estimate:
-        return self.resampler.stat(_on(metrics.qwk, truth, pred), mask)
+        """QWK of `pred` against `truth` on the rows of `mask`; nan on rows (all of them, or a draw's) whose truth holds
+        a single tier, where `metrics.qwk` is 0 or 0/0 by construction."""
 
-    def agreement(self, truth: np.ndarray, pred: np.ndarray, mask=None, alpha=False, min_tiers=1, keep=None) -> dict:
+        def statistic(indices: np.ndarray) -> float:
+            t = truth[indices]
+            return math.nan if t.min() == t.max() else metrics.qwk(t, pred[indices])
+
+        return self.resampler.stat(statistic, mask)
+
+    def agreement(self, truth: np.ndarray, pred: np.ndarray, mask=None, alpha=False, keep=None) -> dict:
         """n_ids, QWK, exact, within one (and the ordinal alpha of the two coders) with their intervals, on the rows
-        where both are non-null (and `mask`). QWK is nan when the truth has fewer than `min_tiers` distinct tiers. The
-        QWK estimate is kept in `qwk_all[keep]` when `keep` names a candidate (for the paired differences)."""
+        where both are non-null (and `mask`). The QWK estimate is kept in `qwk_all[keep]` when `keep` names a candidate
+        (for the paired differences)."""
         valid = (truth >= 0) & (pred >= 0)
         if mask is not None:
             valid &= mask
         out: dict = {"n_ids": int(valid.sum())}
-        enough = len(np.unique(truth[valid])) >= min_tiers
-        qwk = self.qwk(truth, pred, valid) if enough else _NAN
+        qwk = self.qwk(truth, pred, valid)
         if keep is not None:
             self.qwk_all[keep] = qwk
         out |= _columns("qwk", qwk)
@@ -330,7 +353,7 @@ class _Report:
 
     def floor(self, agreement_all: pa.Table) -> pa.Table:
         by_name = {row["name"]: row for row in agreement_all.to_pylist()}
-        metric_columns = [f"{m}{s}" for m in ("qwk", "exact", "within_one") for s in ("", "_lo", "_hi")]
+        metric_columns = [f"{m}{s}" for m in ("qwk", "exact", "within_one") for s in _SUFFIXES]
         result = []
         for name, kind in ((FLOOR, "informed witness"), (CONSTANT, "constant witness")):
             if name not in by_name:
@@ -352,12 +375,14 @@ class _Report:
             }
             draws.append(values)
             row = {"name": RANDOM, "kind": "random draw", "draw": draw, "n_ids": int(valid.sum())}
-            result.append(row | {c: math.nan for c in metric_columns} | values)
+            result.append(row | {c: None if c.endswith("_draws_used") else math.nan for c in metric_columns} | values)
         for kind, summary in (("random min", min), ("random max", max), ("random mean", lambda v: sum(v) / len(v))):
             if draws:
                 row = {"name": RANDOM, "kind": kind, "draw": None, "n_ids": None}
                 values = {m: float(summary([d[m] for d in draws])) for m in ("qwk", "exact", "within_one")}
-                result.append(row | {c: math.nan for c in metric_columns} | values)
+                result.append(
+                    row | {c: None if c.endswith("_draws_used") else math.nan for c in metric_columns} | values
+                )
         return pa.Table.from_pylist(result)
 
     def exact_vs_constant_low(self) -> pa.Table:
@@ -371,7 +396,8 @@ class _Report:
             valid = (truth >= 0) & (pred >= 0)
             exact = self.resampler.mean((truth == pred).astype(float), valid)
             share = float((pred[valid] == LOW).mean()) if valid.any() else math.nan
-            result.append({"name": name, "n_ids": int(valid.sum()), **_columns("exact", exact), "share_low": share})
+            row = {"name": name, "n_ids": int(valid.sum()), **_columns("exact", exact), "share_low_of_ids": share}
+            result.append(row)
         return pa.Table.from_pylist(result)
 
     def judge_pairs(self) -> pa.Table:
@@ -381,7 +407,7 @@ class _Report:
             ta, tb = self.tier[a], self.tier[b]
             both = (ta >= 0) & (tb >= 0)
             row = {"judge_a": a, "judge_b": b, "role_a": self.role(a), "role_b": self.role(b)}
-            row |= {"n_ids": int(both.sum()), "left_out": int(self.n - both.sum())}
+            row |= {"n_ids": int(both.sum()), "n_ids_left_out": int(self.n - both.sum())}
             row |= _columns("qwk", self.qwk(ta, tb, both))
             row |= _columns("exact", self.resampler.mean((ta == tb).astype(float), both))
             row["thinking_pair"] = models[a] is not None and models[a] == models[b]
@@ -397,7 +423,7 @@ class _Report:
                 for suffix, truth in (("all", "truth_all"), ("lang", "truth_lang")):
                     found = self.agreement(self.truth[truth], self.tier[name], here)
                     row[f"n_ids_{suffix}"] = found["n_ids"]
-                    row |= {f"{m}_{suffix}{s}": found[f"{m}{s}"] for m in ("qwk", "exact") for s in ("", "_lo", "_hi")}
+                    row |= {f"{m}_{suffix}{s}": found[f"{m}{s}"] for m in ("qwk", "exact") for s in _SUFFIXES}
                 result.append(row)
         return pa.Table.from_pylist(result)
 
@@ -447,9 +473,9 @@ class _Report:
         result = []
         for name in self.entities():
             for value in sorted(set(self.group[group])):
-                found = self.agreement(truth, self.tier[name], self.group[group] == value, min_tiers=2)
+                found = self.agreement(truth, self.tier[name], self.group[group] == value)
                 row = {"name": name, "role": self.role(name), group: value, "n_ids": found["n_ids"]}
-                result.append(row | {f"{m}{s}": found[f"{m}{s}"] for m in ("exact", "qwk") for s in ("", "_lo", "_hi")})
+                result.append(row | {f"{m}{s}": found[f"{m}{s}"] for m in ("exact", "qwk") for s in _SUFFIXES})
         return pa.Table.from_pylist(result)
 
     def by_tier(self) -> pa.Table:
@@ -476,7 +502,7 @@ class _Report:
             row = {"name": name, "role": self.role(name), "n_ids": int(valid.sum())}
             row |= _columns("accuracy", self.resampler.mean((truth == pred).astype(float), valid))
             row |= _columns("macro_f1", self.resampler.stat(_on(metrics.macro_f1, truth, pred, as_lists=True), valid))
-            result.append(row)
+            result.append(row | {"note": MACRO_F1_NOTE})
         return pa.Table.from_pylist(result)
 
     def needs_tools(self) -> tuple[pa.Table, pa.Table]:
@@ -489,7 +515,7 @@ class _Report:
             valid = (truth >= 0) & (pred >= 0)
             y, p = truth.astype(bool), pred.astype(bool)
             row = {"name": name, "role": self.role(name), "n_ids": int(valid.sum())}
-            row["positives"] = int((truth[valid] == 1).sum())
+            row["n_ids_positive"] = int((truth[valid] == 1).sum())
             row |= _columns("f1", self.resampler.stat(_on(metrics.f1, y, p, as_lists=True), valid))
             row |= _columns("mcc", self.resampler.stat(_on(metrics.mcc, y, p, as_lists=True), valid))
             row |= _columns("accuracy", self.resampler.mean((truth == pred).astype(float), valid))
@@ -536,6 +562,7 @@ class _Report:
             row["n_ids"] = int(valid.sum())
             row |= _columns("spearman", self.resampler.stat(_on(metrics.spearman, score, truth), valid))
             row |= _columns("auroc_high", self.resampler.stat(_on(metrics.auroc, high, score), valid))
+            row["note"] = CONSTANT_SCORE if len(np.unique(score[valid])) == 1 else None
             result.append(row)
         return pa.Table.from_pylist(result)
 
@@ -560,14 +587,17 @@ class _Report:
                         "candidate": name,
                         "bin_low": low,
                         "bin_high": high,
-                        "n": n,
+                        "n_ids": n,
                         "mean_score": mean_score,
                         "mean_anchor": mean_anchor,
                     }
                 )
         empty_bins = pa.table(
             {"candidate": pa.array([], type=pa.string())}
-            | {k: pa.array([], type=pa.float64()) for k in ("bin_low", "bin_high", "n", "mean_score", "mean_anchor")}
+            | {
+                k: pa.array([], type=pa.float64())
+                for k in ("bin_low", "bin_high", "n_ids", "mean_score", "mean_anchor")
+            }
         )
         return pa.Table.from_pylist(result), (pa.Table.from_pylist(bins) if bins else empty_bins)
 
@@ -590,6 +620,7 @@ class _Report:
                     "difference": reference.value - other.value,
                     "lo": lo,
                     "hi": hi,
+                    "draws_used": int(np.count_nonzero(~np.isnan(draws))),
                     "sigma": self.sigma,
                     "threshold": 2 * self.sigma,
                     "rule_2sigma": two_sigma_rule(lo, hi, self.sigma),
@@ -615,6 +646,7 @@ class _Report:
                         "qwk": r["qwk_all"],
                         "qwk_lo": r["qwk_all_lo"],
                         "qwk_hi": r["qwk_all_hi"],
+                        "qwk_draws_used": r["qwk_all_draws_used"],
                         "verified": verified,
                     }
                 )
@@ -639,6 +671,7 @@ class _Report:
                         "qwk": rows[name]["qwk"],
                         "qwk_lo": rows[name]["qwk_lo"],
                         "qwk_hi": rows[name]["qwk_hi"],
+                        "qwk_draws_used": rows[name]["qwk_draws_used"],
                         "verified": verified,
                     }
                 )
@@ -646,8 +679,60 @@ class _Report:
             return pa.table({"prediction": pa.array([], type=pa.string()), "verified": pa.array([], type=pa.bool_())})
         return pa.Table.from_pylist(result)
 
+    def confusion(self) -> pa.Table:
+        """Long format, every candidate: one row per (truth tier, predicted tier) of the 5 x 5 grid, `n_ids` and
+        `row_share` (the share of the ids of that truth tier, `metrics.confusion`: a truth tier without any id gives
+        0 everywhere); undecidable and null predictions are left out."""
+        truth = self.truth["truth_all"]
+        result = []
+        for name in self.candidates:
+            pred = self.tier[name]
+            valid = (truth >= 0) & (pred >= 0)
+            counts = np.zeros((len(LEVELS), len(LEVELS)), dtype=int)
+            np.add.at(counts, (truth[valid], pred[valid]), 1)
+            shares = metrics.confusion(truth[valid].tolist(), pred[valid].tolist(), list(range(len(LEVELS))))
+            for i, j in np.ndindex(counts.shape):
+                result.append(
+                    {
+                        "candidate": name,
+                        "truth_tier": LEVELS[i],
+                        "pred_tier": LEVELS[j],
+                        "n_ids": int(counts[i, j]),
+                        "row_share": float(shares[i, j]),
+                    }
+                )
+        if not result:
+            return pa.table({"candidate": pa.array([], type=pa.string())})
+        return pa.Table.from_pylist(result)
+
+    def judge_spread_by_tier(self) -> pa.Table:
+        """Per truth tier and per spread value 0..4 (`spread` of the results: max - min tier index over the main
+        judges' non-null votes on the id): `n_ids`; and per tier `n_ids_tier` (ids with a spread), `mean_spread_tier`
+        and `n_ids_null_spread_tier` (ids of the tier with a null spread, left out). Undecidable ids are left out."""
+        truth = self.truth["truth_all"]
+        spread = np.array([-1 if v is None else int(v) for v in self.data["spread"]], dtype=int)
+        result = []
+        for k, level in enumerate(LEVELS):
+            here = (truth == k) & (spread >= 0)
+            mean = float(spread[here].mean()) if here.any() else math.nan
+            nulls = int(((truth == k) & (spread < 0)).sum())
+            for value in range(len(LEVELS)):
+                result.append(
+                    {
+                        "tier": level,
+                        "spread": value,
+                        "n_ids": int((here & (spread == value)).sum()),
+                        "n_ids_tier": int(here.sum()),
+                        "mean_spread_tier": mean,
+                        "n_ids_null_spread_tier": nulls,
+                    }
+                )
+        return pa.Table.from_pylist(result)
+
     def inputs(self) -> tuple[pa.Table, pa.Table]:
         abstentions = self.run.get("abstentions", {})
+        # the ids whose complexity vote is null, abstention or not (a judge may answer null on one field)
+        nulls = {j: [i for i, c in zip(self.ids, self.tier[j], strict=True) if c < 0] for j in self.judges}
         result = []
         for kind, entries in (("judge", self.run["judges"]), ("classifier", self.run["classifiers"])):
             for entry in entries:
@@ -660,7 +745,9 @@ class _Report:
                         "model": entry.get("model"),
                         "revision": entry.get("revision"),
                         "date": entry.get("date"),
-                        "abstentions": len(abstentions.get(name, [])) if kind == "judge" else None,
+                        "n_ids_abstained": len(abstentions.get(name, [])) if kind == "judge" else None,
+                        "n_ids_null_vote": len(nulls[name]) if kind == "judge" else None,
+                        "null_votes_ids": ", ".join(nulls[name]) if kind == "judge" else None,
                     }
                 )
         undecidable = [i for i, t in zip(self.ids, self.truth["truth_all"], strict=True) if t < 0]
@@ -717,6 +804,8 @@ def tables(
     out["calibration"], out["calibration_bins"] = report.calibration()
     out["paired"] = report.paired()
     out["predictions"] = report.predictions(out["agreement_all"], out["by_language"])
+    out["confusion"] = report.confusion()
+    out["judge_spread_by_tier"] = report.judge_spread_by_tier()
     out["inputs"], out["inputs_summary"] = report.inputs()
     out["skipped"] = report.skipped_table()
     return {name: out[name] for name in TABLES}
@@ -768,13 +857,14 @@ def markdown_table(
     table: pa.Table, columns: Sequence[str] | None = None, digits: int = 3, labels: dict[str, str] | None = None
 ) -> str:
     """`table` as a Markdown table with French numbers (`0,812 [0,771 ; 0,848]`): a column `<m>` that has `<m>_lo` and
-    `<m>_hi` beside it shows its interval in the same cell, and those two columns are not shown on their own unless
-    `columns` names them. Floats at `digits` decimals with a comma, booleans oui/non, nan and null as a dash; `labels`
-    renames headers."""
+    `<m>_hi` beside it shows its interval in the same cell, and those two columns and `<m>_draws_used` are not shown
+    on their own unless `columns` names them. Floats at `digits` decimals with a comma, booleans oui/non, nan and
+    null as a dash; `labels` renames headers."""
     names = table.column_names
     paired = {c for c in names if f"{c}_lo" in names and f"{c}_hi" in names}
     if columns is None:
-        columns = [c for c in names if not (c.endswith(("_lo", "_hi")) and c[:-3] in paired)]
+        hidden = {f"{c}{suffix}" for c in paired for suffix in _SUFFIXES[1:]}
+        columns = [c for c in names if c not in hidden]
     labels = labels or {}
 
     def cell(row: dict, column: str) -> str:

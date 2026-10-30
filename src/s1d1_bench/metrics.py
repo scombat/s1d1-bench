@@ -253,10 +253,11 @@ def ece(score: Sequence[float], target: Sequence[float], bins: int = 10) -> floa
 # --- bootstrap ----------------------------------------------------------------------------------------------------
 
 
-def _draws(keys: Sequence[str], groups: dict[str, list[int]], n: int, seed: int) -> list[list[int]]:
-    """n resamples of the keys with replacement, each as the concatenated row indices of the drawn keys (a key drawn
-    twice contributes its indices twice). `np.random.default_rng(seed)`, `rng.integers(0, len(keys), len(keys))` for
-    each draw in turn."""
+def bootstrap_draws(keys: Sequence[str], groups: dict[str, list[int]], n: int = 1000, seed: int = 0) -> list[list[int]]:
+    """The draws of `bootstrap` and `paired_difference`: n resamples of the keys with replacement, each as the
+    concatenated row indices of the drawn keys (a key drawn twice contributes its indices twice).
+    `np.random.default_rng(seed)`, `rng.integers(0, len(keys), len(keys))` for each draw in turn. A caller that
+    computes many statistics on the same draws makes them once here and applies `percentile_interval`."""
     if not keys:
         raise ValueError("no key to resample")
     rng = np.random.default_rng(seed)
@@ -264,7 +265,9 @@ def _draws(keys: Sequence[str], groups: dict[str, list[int]], n: int, seed: int)
     return [np.concatenate([rows[i] for i in rng.integers(0, len(keys), len(keys))]).tolist() for _ in range(n)]
 
 
-def _interval(values: list[float]) -> tuple[float, float]:
+def percentile_interval(values: Sequence[float]) -> tuple[float, float]:
+    """The 2.5 and 97.5 percentiles (linear interpolation) of the non-nan `values`; (nan, nan) when none is left. The
+    interval rule of `bootstrap` and `paired_difference`."""
     kept = [v for v in values if not math.isnan(v)]
     if not kept:
         return math.nan, math.nan
@@ -285,7 +288,7 @@ def bootstrap(
     contributes its indices twice, 8 for 4 versions). Returns the 2.5 and 97.5 percentiles (linear interpolation) of
     the non-nan statistics; a nan draw (a degenerate resample) is dropped, all draws nan gives (nan, nan). The same
     `seed` gives the same bounds."""
-    return _interval([stat(draw) for draw in _draws(keys, groups, n, seed)])
+    return percentile_interval([stat(draw) for draw in bootstrap_draws(keys, groups, n, seed)])
 
 
 def paired_difference(
@@ -301,8 +304,8 @@ def paired_difference(
     statistics (as `bootstrap`; a draw where either is nan is dropped, none left gives (nan, nan)). A positive
     difference means `stat_a` is the higher."""
     everything = [i for key in keys for i in groups[key]]
-    differences = [stat_a(draw) - stat_b(draw) for draw in _draws(keys, groups, n, seed)]
-    return stat_a(everything) - stat_b(everything), *_interval(differences)
+    differences = [stat_a(draw) - stat_b(draw) for draw in bootstrap_draws(keys, groups, n, seed)]
+    return stat_a(everything) - stat_b(everything), *percentile_interval(differences)
 
 
 # --- the report's helpers -----------------------------------------------------------------------------------------
