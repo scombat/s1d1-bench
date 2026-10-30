@@ -15,8 +15,8 @@ Three witnesses live here, systems that read no model and give the floor a real 
 - `constant`: one tier for every prompt (`--level`, low by default), `score` = its anchor, `task` and `needs_tools`
   null.
 
-The model adapters are dispatched from `run_classify_cmd` too: `s1d1` (the Hub router, see `s1d1_backend`); `laya` is
-not written yet.
+The model adapters are dispatched from `run_classify_cmd` too: `s1d1` (the Hub router, see `s1d1_backend`) and `laya`
+(Laya asked LiteLLM's tier question, see `laya_backend`).
 """
 
 import datetime
@@ -220,13 +220,39 @@ def _s1d1(args, prompts: list[dict], digest: str) -> int:
     )
 
 
-# adapter -> function (args, prompts, sha256 of the prompts file) -> exit code. `laya` is added by the task that
-# writes it: until then it is absent and the command says so.
+def _laya(args, prompts: list[dict], digest: str) -> int:
+    if not args.laya_model:
+        return _fail("the laya adapter needs --laya-model english or multilingual, the checkpoint to question")
+    try:
+        from s1d1_bench import laya_backend
+
+        classify, info = laya_backend.make_laya_classifier(args.laya_model, args.revision)
+        results = classify([p["prompt"] for p in prompts])
+    except ImportError as exc:  # the laya dependency group is not installed: nothing was written
+        return _fail(
+            f"{exc}. The laya adapter needs the laya dependency group: uv run --group laya bench classify laya ..."
+        )
+    rows = [{"id": p["id"], **result} for p, result in zip(prompts, results, strict=True)]
+    notes = (
+        f"Replay: uv run --group laya bench classify laya --laya-model {args.laya_model} --revision {info['commit']} "
+        f"(laya {info['laya_version']}, device {info['device']}). The question is LiteLLM's complexity router `tier` "
+        "question, one choice question with its four criteria and its instructions, as docs/27 reads it: copied "
+        "identically from bench/laya_scores.py of the research repo, read on 2026-10-30 (the LiteLLM file was read on "
+        f"2026-10-25). Laya runs locally, batches of {laya_backend.BATCH} prompts sorted by length. score = expected "
+        "level (SIMPLE 0 to REASONING 3 under the probabilities of Laya) / 3; tier = nearest anchor of the score "
+        "(an exact midpoint goes to the lower tier). task and needs_tools are null: Laya does not predict them. "
+        f"{info['truncated']} prompts truncated at the token budget of the checkpoint."
+    )
+    return write_run(args, digest, rows, model=info["model"], revision=info["revision"], notes=notes)
+
+
+# adapter -> function (args, prompts, sha256 of the prompts file) -> exit code
 ADAPTERS: dict[str, Callable[[object, list[dict], str], int]] = {
     "random": _random,
     "length": _length,
     "constant": _constant,
     "s1d1": _s1d1,
+    "laya": _laya,
 }
 
 

@@ -178,9 +178,14 @@ def test_parser_declares_every_option_of_the_brief(prompts_file, tmp_path):
         build_parser().parse_args(["classify", "bogus", "--prompts", "p", "--out", "o", "--author", "a"])
 
 
-def test_laya_is_not_implemented_yet(prompts_file, tmp_path, capsys):
+def test_an_adapter_that_is_not_registered_is_refused(prompts_file, tmp_path, capsys):
+    from types import SimpleNamespace
+
+    from s1d1_bench.classify import run_classify_cmd
+
     out = tmp_path / "out"
-    assert _classify("laya", prompts_file, out) == 2
+    args = SimpleNamespace(adapter="bogus", out=str(out), prompts=str(prompts_file))
+    assert run_classify_cmd(args) == 2
     assert "not implemented yet" in capsys.readouterr().err
     assert not out.exists()
 
