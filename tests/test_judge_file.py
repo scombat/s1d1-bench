@@ -111,7 +111,7 @@ def test_valid_dir_is_accepted(valid_judge_dir, prompts_dir):
         ('{"id": "a-eng", "complexity": "low", "task": "unknown_task", "needs_tools": true}', "task"),
         ('{"id": "zzz-eng", "complexity": "low", "task": "chat", "needs_tools": true}', "unknown id"),
         ('{"id": "a-eng", "complexity": "low", "task": "chat"}', "needs_tools"),
-        ('{"id": "a-eng", "complexity": "low", "task": "chat", "needs_tools": true, "score": 0.2}', "score"),
+        ('{"id": "a-eng", "complexity": "low", "task": "chat", "needs_tools": true, "rank": 0.2}', "rank"),
         ('["a-eng"]', "object"),
         ("{not json", "JSON"),
     ],
@@ -315,3 +315,102 @@ def test_the_shipped_example_is_accepted():
     judge_dir = REPO_ROOT / "judges" / "example-chat"
     assert validate_judge_dir(judge_dir, REPO_ROOT / "data" / "prompts") == []
     assert main(["validate", str(judge_dir), "--prompts", str(REPO_ROOT / "data" / "prompts")]) == 0
+
+
+def system_dir(judge_dir: Path, lines: dict[str, dict]) -> Path:
+    """`judge_dir` turned into a classifier folder: system meta, and `lines` (id -> label fields) as its labels."""
+    edit_meta(judge_dir, provider="system", instructions="none", thinking="none")
+    text = "\n".join(json.dumps({"id": id_, **fields}) for id_, fields in lines.items()) + "\n"
+    (judge_dir / "labels.jsonl").write_text(text, encoding="utf-8")
+    return judge_dir
+
+
+def scored(id_: str, **extra) -> dict:
+    return {**LABELS[id_], **extra}
+
+
+def test_validate_accepts_a_system_folder_with_scores(valid_judge_dir, prompts_dir):
+    lines = {
+        "a-eng": scored("a-eng", score=0.0, needs_tools_probability=0.5),
+        "b-eng": scored("b-eng", score=1, needs_tools_probability=1),
+        "c-eng": scored("c-eng", score=0.73),  # both keys are optional, one by one
+    }
+    assert validate_judge_dir(system_dir(valid_judge_dir, lines), prompts_dir) == []
+
+
+@pytest.mark.parametrize(
+    "field,bad",
+    [
+        ("score", 1.2),
+        ("score", -0.01),
+        ("score", "0.5"),
+        ("score", True),
+        ("score", None),
+        ("score", float("nan")),
+        ("needs_tools_probability", 2),
+        ("needs_tools_probability", -1),
+        ("needs_tools_probability", False),
+        ("needs_tools_probability", None),
+    ],
+)
+def test_validate_refuses_score_out_of_range(valid_judge_dir, prompts_dir, field, bad):
+    lines = {id_: scored(id_) for id_ in LABELS}
+    lines["a-eng"] = scored("a-eng", **{field: bad})
+    errors = validate_judge_dir(system_dir(valid_judge_dir, lines), prompts_dir)
+    assert len(errors) == 1 and errors[0].startswith("labels.jsonl:1") and field in errors[0], errors
+
+
+def test_scores_are_checked_in_a_judge_folder_too(valid_judge_dir, prompts_dir):
+    assert validate_judge_dir(valid_judge_dir, prompts_dir) == []
+    lines = {id_: scored(id_) for id_ in LABELS}
+    lines["a-eng"] = scored("a-eng", score=3)
+    (valid_judge_dir / "labels.jsonl").write_text("\n".join(json.dumps({"id": i, **f}) for i, f in lines.items()))
+    errors = validate_judge_dir(valid_judge_dir, prompts_dir)
+    assert len(errors) == 1 and "score" in errors[0]
+
+
+@pytest.mark.parametrize("field", ["task", "needs_tools"])
+def test_validate_refuses_null_task_for_a_local_judge(dir_with_line, prompts_dir, field):
+    row = {"id": "a-eng", **LABELS["a-eng"], field: None}
+    errors = validate_judge_dir(dir_with_line(json.dumps(row)), prompts_dir)
+    assert len(errors) == 1 and errors[0].startswith("labels.jsonl:1") and field in errors[0], errors
+
+
+def test_validate_accepts_null_task_for_a_system_folder(valid_judge_dir, prompts_dir):
+    lines = {id_: {"complexity": LABELS[id_]["complexity"], "task": None, "needs_tools": None} for id_ in LABELS}
+    lines["a-eng"]["score"] = 0.01
+    assert validate_judge_dir(system_dir(valid_judge_dir, lines), prompts_dir) == []
+
+
+def test_a_system_folder_still_refuses_a_bad_task_and_a_bad_complexity(valid_judge_dir, prompts_dir):
+    lines = {id_: scored(id_) for id_ in LABELS}
+    lines["a-eng"] = {"complexity": "Medium", "task": "nope", "needs_tools": "x"}
+    errors = validate_judge_dir(system_dir(valid_judge_dir, lines), prompts_dir)
+    assert len(errors) == 1 and all(field in errors[0] for field in ("complexity", "task", "needs_tools"))
+
+
+def test_a_system_folder_may_not_hide_a_label_key(valid_judge_dir, prompts_dir):
+    lines = {id_: scored(id_) for id_ in LABELS}
+    lines["a-eng"] = {"complexity": "trivial", "needs_tools": None}  # null is allowed, absent is not
+    errors = validate_judge_dir(system_dir(valid_judge_dir, lines), prompts_dir)
+    assert len(errors) == 1 and "missing field 'task'" in errors[0]
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"provider": "system"},  # a system folder needs instructions "none"
+        {"instructions": "none"},  # and a judge cannot have it
+        {"provider": "human", "instructions": "none"},
+    ],
+)
+def test_provider_system_and_instructions_none_go_together(valid_judge_dir, prompts_dir, change):
+    edit_meta(valid_judge_dir, **change)
+    errors = validate_judge_dir(valid_judge_dir, prompts_dir)
+    assert len(errors) == 1 and errors[0].startswith("meta.json") and "'none'" in errors[0], errors
+
+
+def test_cli_validate_accepts_a_system_folder(valid_judge_dir, prompts_dir, capsys):
+    lines = {id_: {"complexity": "low", "task": None, "needs_tools": None, "score": 0.25} for id_ in LABELS}
+    assert main(["validate", str(system_dir(valid_judge_dir, lines)), "--prompts", str(prompts_dir)]) == 0
+    assert capsys.readouterr().out.strip() == "ok"

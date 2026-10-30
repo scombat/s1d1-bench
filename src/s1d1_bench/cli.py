@@ -23,7 +23,7 @@ _HELP = {
     "pool": "build the prompt pool",
     "export": "export the prompts to judge",
     "judge": "run a local judge over the prompts",
-    "validate": "check a judge directory",
+    "validate": "check a judge or classifier directory",
     "agree": "measure how often judges agree, pair by pair",
     "draw": "draw the base prompts, stratified on a pre-sort judge file",
     "translate": "translate a prompts file into one language",
@@ -91,7 +91,7 @@ def _judge_arguments(sub: argparse.ArgumentParser) -> None:
 
 
 def _validate_arguments(sub: argparse.ArgumentParser) -> None:
-    sub.add_argument("judge_dir", type=Path, help="judge directory, judges/<name>")
+    sub.add_argument("judge_dir", type=Path, help="judge or classifier directory, judges/<name> or classifiers/<name>")
     sub.add_argument("--prompts", type=Path, default=Path("data/prompts"), help="directory of the prompts files")
 
 

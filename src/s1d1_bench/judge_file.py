@@ -1,4 +1,8 @@
-"""The judge directory (`judges/<name>/{meta.json,labels.jsonl}`): format, acceptance rule, `bench validate`."""
+"""The judge directory (`judges/<name>/{meta.json,labels.jsonl}`): format, acceptance rule, `bench validate`.
+
+A classifier directory (`classifiers/<name>/`) has the same format: `provider` is then "system", and a label may carry
+a `score` and a `needs_tools_probability`, or leave `task` and `needs_tools` null when the system does not predict them.
+"""
 
 import hashlib
 import json
@@ -24,11 +28,13 @@ META_KEYS = [
     "notes",
 ]
 OPTIONAL_META_KEYS = ["quantization", "mlx_lm_version", "max_tokens"]  # by `bench judge`, never required
-PROVIDERS = ["local", "chat", "api", "human"]
-INSTRUCTIONS = ["v7-single", "v7-batch"]
+PROVIDERS = ["local", "chat", "api", "human", "system"]
+INSTRUCTIONS = ["v7-single", "v7-batch", "none"]
+SYSTEM = "system"  # a classifier, not a judge: it reads no instructions ("none"), and may predict fewer fields
 LICENCE = "CC-BY-4.0"
 STRING_KEYS = ["judge", "model", "revision", "date", "author", "notes"]  # temperature and thinking: anything
 LABEL_KEYS = ["id", "complexity", "task", "needs_tools"]
+OPTIONAL_LABEL_KEYS = ["score", "needs_tools_probability"]  # absent or a number in [0, 1], in any directory
 MISSING_SHOWN = 5  # ids named in the "missing" summary
 
 
@@ -78,6 +84,12 @@ def _check_meta(meta: dict, prompts_dir: Path, errors: list[str]) -> Path | None
         errors.append(f"meta.json: provider {meta['provider']!r} not in {PROVIDERS}")
     if "instructions" in meta and meta["instructions"] not in INSTRUCTIONS:
         errors.append(f"meta.json: instructions {meta['instructions']!r} not in {INSTRUCTIONS}")
+    if meta.get("provider") in PROVIDERS and meta.get("instructions") in INSTRUCTIONS:
+        if (meta["provider"] == SYSTEM) != (meta["instructions"] == "none"):
+            errors.append(
+                f"meta.json: provider {meta['provider']!r} and instructions {meta['instructions']!r} do not go "
+                f"together: only provider {SYSTEM!r} has instructions 'none'"
+            )
     if "replayable" in meta and type(meta["replayable"]) is not bool:
         errors.append(f"meta.json: replayable must be true or false (a JSON boolean), got {meta['replayable']!r}")
     if "max_tokens" in meta and not (type(meta["max_tokens"]) is int and meta["max_tokens"] > 0):
@@ -97,13 +109,18 @@ def _check_meta(meta: dict, prompts_dir: Path, errors: list[str]) -> Path | None
     return known[sha]
 
 
-def _label_faults(row: object) -> list[str]:
-    """The faults of one parsed line, each naming its field (the `id` checks are made by the caller)."""
+def _is_unit_number(value: object) -> bool:
+    return type(value) in (int, float) and 0 <= value <= 1  # bool is an int and NaN fails the comparison
+
+
+def _label_faults(row: object, system: bool) -> list[str]:
+    """The faults of one parsed line, each naming its field (the `id` checks are made by the caller). `system` lets
+    `task` and `needs_tools` be null."""
     if not isinstance(row, dict):
         return ["not a JSON object"]
     faults = []
     missing = [k for k in LABEL_KEYS if k not in row]
-    extra = [k for k in row if k not in LABEL_KEYS]
+    extra = [k for k in row if k not in LABEL_KEYS and k not in OPTIONAL_LABEL_KEYS]
     if missing:
         faults.append("missing field " + ", ".join(repr(k) for k in missing))
     if extra:
@@ -113,14 +130,19 @@ def _label_faults(row: object) -> list[str]:
     if "complexity" in row and row["complexity"] is not None:
         if not (isinstance(row["complexity"], str) and row["complexity"] in LEVELS):
             faults.append(f"complexity {row['complexity']!r} not in {LEVELS} or null")
-    if "task" in row and not (isinstance(row["task"], str) and row["task"] in TASKS):
-        faults.append(f"task {row['task']!r} not in the {len(TASKS)} tasks of the rubric")
-    if "needs_tools" in row and type(row["needs_tools"]) is not bool:  # bool is an int: 1 and 0 must not pass
-        faults.append(f"needs_tools {row['needs_tools']!r} is not true or false (a JSON boolean)")
+    or_null = " or null" if system else ""
+    if "task" in row and not (isinstance(row["task"], str) and row["task"] in TASKS or system and row["task"] is None):
+        faults.append(f"task {row['task']!r} not in the {len(TASKS)} tasks of the rubric{or_null}")
+    # bool is an int: 1 and 0 must not pass
+    if "needs_tools" in row and not (type(row["needs_tools"]) is bool or system and row["needs_tools"] is None):
+        faults.append(f"needs_tools {row['needs_tools']!r} is not true or false (a JSON boolean){or_null}")
+    for key in OPTIONAL_LABEL_KEYS:
+        if key in row and not _is_unit_number(row[key]):
+            faults.append(f"{key} {row[key]!r} is not a number between 0 and 1")
     return faults
 
 
-def _check_labels(path: Path, expected: list[str] | None, errors: list[str]) -> None:
+def _check_labels(path: Path, expected: list[str] | None, system: bool, errors: list[str]) -> None:
     """Append one error per faulty line, then one summary for the ids never seen. `expected` is None when the
     prompts file is unknown: the ids are then not checked."""
     if not path.is_file():
@@ -138,7 +160,7 @@ def _check_labels(path: Path, expected: list[str] | None, errors: list[str]) -> 
                 except json.JSONDecodeError as exc:
                     errors.append(f"labels.jsonl:{number}: not valid JSON ({exc.msg})")
                     continue
-                faults = _label_faults(row)
+                faults = _label_faults(row, system)
                 row_id = row.get("id") if isinstance(row, dict) else None
                 if isinstance(row_id, str):
                     if row_id in first_line:
@@ -160,7 +182,8 @@ def _check_labels(path: Path, expected: list[str] | None, errors: list[str]) -> 
 
 
 def validate_judge_dir(judge_dir: Path | str, prompts_dir: Path | str) -> list[str]:
-    """The faults of a judge directory against the prompts files of `prompts_dir`; an empty list means accepted.
+    """The faults of a judge (or classifier) directory against the prompts files of `prompts_dir`; an empty list means
+    accepted.
 
     Each message starts with the file (`meta.json: ...`, `labels.jsonl:LINE: ...` or `prompts: ...`) and names the
     field at fault.
@@ -174,7 +197,7 @@ def validate_judge_dir(judge_dir: Path | str, prompts_dir: Path | str) -> list[s
     expected = None
     if prompts_file is not None:
         expected = [row["id"] for row in read_jsonl(prompts_file)]
-    _check_labels(judge_dir / "labels.jsonl", expected, errors)
+    _check_labels(judge_dir / "labels.jsonl", expected, meta is not None and meta.get("provider") == SYSTEM, errors)
     return errors
 
 
