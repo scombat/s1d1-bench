@@ -1,0 +1,122 @@
+{
+  "abstentions": {
+    "base-v1-gemma4-cap512": [],
+    "base-v1-gemma4-off": [],
+    "base-v1-gptoss-cap512": [
+      {
+        "id": "3ce175ed3ef6b933-zho",
+        "status": "json_error"
+      }
+    ],
+    "base-v1-qwen3-cap512": [],
+    "base-v1-qwen3-off": []
+  },
+  "classifiers": [
+    {
+      "date": "2026-10-30",
+      "model": "witness:constant-low",
+      "name": "constant-low",
+      "revision": "n/a"
+    },
+    {
+      "date": "2026-10-30",
+      "model": "convaiinnovations/laya",
+      "name": "laya-english",
+      "revision": "laya 0.4.15 convaiinnovations/laya@7b928d828b7b0e022f929d9bd2e44165aa270148"
+    },
+    {
+      "date": "2026-10-30",
+      "model": "convaiinnovations/laya/multilingual",
+      "name": "laya-multilingual",
+      "revision": "laya 0.4.15 convaiinnovations/laya@7b928d828b7b0e022f929d9bd2e44165aa270148"
+    },
+    {
+      "date": "2026-10-30",
+      "model": "witness:length",
+      "name": "length",
+      "revision": "n/a"
+    },
+    {
+      "date": "2026-10-30",
+      "model": "witness:random",
+      "name": "random",
+      "revision": "seed 0"
+    },
+    {
+      "date": "2026-10-30",
+      "model": "scombat/s1d1-router-6src-compact-onnx-int8",
+      "name": "s1d1-compact-int8",
+      "revision": "7e87870132a19d12b32dbad1f8233801b8145b9f"
+    },
+    {
+      "date": "2026-10-30",
+      "model": "scombat/s1d1-router",
+      "name": "s1d1-full-fp16",
+      "revision": "7fb9a4e3d03e3d942a98648268ff76c6152c18d6"
+    },
+    {
+      "date": "2026-10-30",
+      "model": "scombat/s1d1-router-6src-full-onnx-int8",
+      "name": "s1d1-full-int8",
+      "revision": "068d0d20d5901c2db6934c89fde48b87c973fed8"
+    },
+    {
+      "date": "2026-10-30",
+      "model": "scombat/s1d1-router-6src-small-onnx-int8",
+      "name": "s1d1-small-int8",
+      "revision": "33c7f34a30af04735390264824d6bfa8546abb7a"
+    },
+    {
+      "date": "2026-10-30",
+      "model": "scombat/s1d1-router-6src-tiny-onnx-int8",
+      "name": "s1d1-tiny-int8",
+      "revision": "dac13b5c0356864ea4501fa151d74dcd8b3ea22a"
+    }
+  ],
+  "date": "2026-10-30",
+  "gemma": [
+    "base-v1-gemma4-cap512"
+  ],
+  "judges": [
+    {
+      "date": "2026-10-30",
+      "model": "mlx-community/gemma-4-31b-it-8bit",
+      "name": "base-v1-gemma4-cap512",
+      "revision": "f5f3dc92ab4af76724c36c21eb6bedadb3a851be"
+    },
+    {
+      "date": "2026-10-30",
+      "model": "mlx-community/Qwen3.8-27B-8bit",
+      "name": "base-v1-qwen3-cap512",
+      "revision": "815b83c0df8ffd1d1b5244cf75fd6ef14fca9ef9"
+    },
+    {
+      "date": "2026-10-30",
+      "model": "mlx-community/gpt-oss-20b-MXFP4-Q8",
+      "name": "base-v1-gptoss-cap512",
+      "revision": "773a7da77e569019bb0fd17a554b263738d669a3"
+    },
+    {
+      "date": "2026-10-30",
+      "model": "mlx-community/gemma-4-31b-it-8bit",
+      "name": "base-v1-gemma4-off",
+      "revision": "f5f3dc92ab4af76724c36c21eb6bedadb3a851be"
+    },
+    {
+      "date": "2026-10-30",
+      "model": "mlx-community/Qwen3.8-27B-8bit",
+      "name": "base-v1-qwen3-off",
+      "revision": "815b83c0df8ffd1d1b5244cf75fd6ef14fca9ef9"
+    }
+  ],
+  "main": [
+    "base-v1-gemma4-cap512",
+    "base-v1-qwen3-cap512",
+    "base-v1-gptoss-cap512"
+  ],
+  "meta": "data/prompts/base-v1.meta.parquet",
+  "prompts": "data/prompts/base-v1.jsonl",
+  "prompts_sha256": "e6a6d4c12ef8b95caea942337a3a1e16ec1622cb4e75c8ee0b473ef609a32490",
+  "rows": 360,
+  "rules": "complexity: ordinal median (trivial<low<medium<high<expert) of the non-null votes once sorted: an odd count takes the middle vote, an even count the mean of the two middle tier indices (n/2-1 and n/2) rounded down (low+high -> medium, low+medium -> low; docs/34 §0.3); null when the null votes are strictly more than half (7 of 12 is undecidable, 6 of 12 is not). truth_all: the main judges' votes on the 4 language versions of the base key (3 judges = 12 votes), repeated on each version; truth_lang: their votes on the id. task, needs_tools: majority of the non-null votes, a tie going to the value voted first in priority order (--main order, then the ids of the base key in prompts file order). *_nogemma: the same without the main judges whose model contains 'gemma'. undecidable: truth_all.complexity is null. spread: max - min tier index over the main judges' non-null votes on the id. lang_disagreement: truth_lang.complexity and truth_all.complexity both non-null and different. An abstention (a judge's row with `abstained`: no answer) is a null vote on every field: out of every median, majority and spread, counted as a null toward undecidable."
+}
