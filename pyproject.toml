@@ -32,6 +32,7 @@ packages = ["src/s1d1_bench"]
 [tool.ruff]
 line-length = 120
 target-version = "py312"
+extend-exclude = ["src/s1d1_bench/vendor"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
