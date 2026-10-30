@@ -13,8 +13,9 @@ jobs:
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           python-version: "3.12"
-      # no `judge` group here: mlx-lm runs on Apple silicon only, the tests need neither a model nor the network
-      - run: uv sync --locked --group pool --group dev
+      # no `judge` group here: mlx-lm runs on Apple silicon only, the tests need neither a model nor the network;
+      # `report` brings matplotlib for the figure tests (and numpy, which metrics and report need)
+      - run: uv sync --locked --group pool --group report --group dev
       - run: uv run ruff check .
       - run: uv run pytest -m "not slow"
       # every committed judge and classifier directory (every folder of judges/ and classifiers/) must stay valid

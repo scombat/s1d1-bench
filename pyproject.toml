@@ -24,6 +24,7 @@ judge = ["mlx-lm"]
 s1d1 = ["onnxruntime", "tokenizers", "numpy", "huggingface_hub"]
 s1d1-torch = ["torch", "transformers"]
 laya = ["laya==0.4.15"]
+report = ["matplotlib"]
 dev = ["pytest", "ruff"]
 
 [tool.hatch.build.targets.wheel]
