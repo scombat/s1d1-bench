@@ -16,9 +16,11 @@ Three witnesses live here, systems that read no model and give the floor a real 
   null.
 
 The system adapters are dispatched from `run_classify_cmd` too: `s1d1` (the Hub router, see `s1d1_backend`), `laya`
-(Laya asked LiteLLM's tier question, see `laya_backend`) and `litellm-heuristic` (LiteLLM's own heuristic complexity
-scorer, vendored verbatim in `s1d1_bench.vendor.litellm_heuristic`: its four tiers map name to name onto low, medium,
-high, expert; its raw score, which is not on the v7 scale, stays in `decisions.jsonl` and never reaches `labels.jsonl`).
+(Laya asked LiteLLM's tier question, see `laya_backend`: its most probable tier maps name to name like LiteLLM's
+heuristic, and its expected level and four probabilities stay in `decisions.jsonl`, never in `labels.jsonl`) and
+`litellm-heuristic` (LiteLLM's own heuristic complexity scorer, vendored verbatim in
+`s1d1_bench.vendor.litellm_heuristic`: its four tiers map name to name onto low, medium, high, expert; its raw score,
+which is not on the v7 scale, stays in `decisions.jsonl` and never reaches `labels.jsonl`).
 """
 
 import datetime
@@ -236,18 +238,37 @@ def _laya(args, prompts: list[dict], digest: str) -> int:
         return _fail(
             f"{exc}. The laya adapter needs the laya dependency group: uv run --group laya bench classify laya ..."
         )
-    rows = [{"id": p["id"], **result} for p, result in zip(prompts, results, strict=True)]
+    tiers = [laya_backend.most_probable(r["probabilities"]) for r in results]
+    rows = [
+        {"id": p["id"], "complexity": TIER_TO_LEVEL[tier], "task": None, "needs_tools": None}
+        for p, tier in zip(prompts, tiers, strict=True)
+    ]
+    raw = [
+        {
+            "id": p["id"], "tier": tier, "score": laya_backend.expected_level(r["probabilities"]),
+            "probabilities": r["probabilities"],
+        }
+        for p, tier, r in zip(prompts, tiers, results, strict=True)
+    ]  # fmt: skip
     notes = (
         f"Replay: uv run --group laya bench classify laya --laya-model {args.laya_model} --revision {info['commit']} "
         f"(laya {info['laya_version']}, device {info['device']}). The question is LiteLLM's complexity router `tier` "
         "question, one choice question with its four criteria and its instructions, as docs/27 reads it: copied "
         "identically from bench/laya_scores.py of the research repo, read on 2026-10-30 (the LiteLLM file was read on "
-        f"2026-10-25). Laya runs locally, batches of {laya_backend.BATCH} prompts sorted by length. score = expected "
-        "level (SIMPLE 0 to REASONING 3 under the probabilities of Laya) / 3; tier = nearest anchor of the score "
-        "(an exact midpoint goes to the lower tier). task and needs_tools are null: Laya does not predict them. "
+        f"2026-10-25). Laya runs locally, batches of {laya_backend.BATCH} prompts sorted by length. tier = the most "
+        "probable of the four (an exact tie goes to the lowest name: SIMPLE < MEDIUM < COMPLEX < REASONING), "
+        "translated name to name: SIMPLE -> low, MEDIUM -> medium, COMPLEX -> high, REASONING -> expert (never "
+        "trivial). labels.jsonl has no score; decisions.jsonl holds, by id, the tier (LiteLLM's name), the expected "
+        "level on 0..3 (sum of i * p_i, not divided) as score, and the four "
+        "probabilities. The two folders laya-english and laya-multilingual (nearest anchor of the expected score) stay "
+        "in the repo but do not enter the results. "
+        "task and needs_tools are null: Laya does not predict them. "
         f"{info['truncated']} prompts truncated at the token budget of the checkpoint."
     )
-    return write_run(args, digest, rows, model=info["model"], revision=info["revision"], notes=notes)
+    return write_run(
+        args, digest, rows, model=info["model"], revision=info["revision"], notes=notes,
+        extra={"decisions.jsonl": raw},
+    )
 
 
 def _litellm_heuristic(args, prompts: list[dict], digest: str) -> int:
