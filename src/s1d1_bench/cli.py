@@ -18,6 +18,7 @@ COMMANDS: dict[str, tuple[str, str]] = {
     "witness": ("witness", "run_witness"),
     "check": ("check", "run_check"),
     "classify": ("classify", "run_classify_cmd"),
+    "run": ("run", "run_run_cmd"),
 }
 
 _HELP = {
@@ -31,6 +32,7 @@ _HELP = {
     "witness": "fetch the m-ArenaHard translations of the Arena-Hard prompts of a set",
     "check": "flag the translations of a set for a human review (structure, labels, same request, review sheet)",
     "classify": "write a classifier folder: a witness (random, length, constant) or a system (s1d1, laya)",
+    "run": "merge the judge and classifier folders of a set into one table, with the truths of the main judges",
 }
 
 
@@ -205,6 +207,22 @@ def _classify_arguments(sub: argparse.ArgumentParser) -> None:
     )
 
 
+def _run_arguments(sub: argparse.ArgumentParser) -> None:
+    sub.add_argument("--prompts", type=Path, required=True, help="prompts file of the set (.meta.parquet beside it)")
+    sub.add_argument(
+        "--judges", action="append", required=True, help="glob of judge folders, e.g. 'judges/base-v1-*'; repeatable"
+    )
+    sub.add_argument(
+        "--main", required=True, help="comma-separated judge folder names that make the truths, in priority order"
+    )
+    sub.add_argument(
+        "--classifiers", action="append", default=None, help="glob of classifier folders, e.g. 'classifiers/*'"
+    )
+    sub.add_argument(
+        "--out", type=Path, required=True, help="results table, results/<set>.parquet (+ <set>.run.json beside it)"
+    )
+
+
 # subcommand -> function adding its arguments to its parser
 _ARGUMENTS = {
     "pool": _pool_arguments,
@@ -217,6 +235,7 @@ _ARGUMENTS = {
     "witness": _witness_arguments,
     "check": _check_arguments,
     "classify": _classify_arguments,
+    "run": _run_arguments,
 }
 
 
