@@ -1,0 +1,18 @@
+{
+  "judge": "witness-qwen3-off-fra",
+  "model": "mlx-community/Qwen3.8-27B-8bit",
+  "provider": "local",
+  "revision": "815b83c0df8ffd1d1b5244cf75fd6ef14fca9ef9",
+  "date": "2026-10-29",
+  "temperature": 0,
+  "thinking": "off",
+  "instructions": "v7-single",
+  "prompts_sha256": "333f94fbdaa51b0523207c7c0633b7cff4e260602190d9237d82b647a4037e31",
+  "author": "scombat",
+  "replayable": true,
+  "licence": "CC-BY-4.0",
+  "notes": "qwen3: enable_thinking=False (the chat template prefills an empty think block): no reasoning. Same-task check on the m-ArenaHard (Google) witness translations. Not a bench judge.",
+  "quantization": "8bit-gs64",
+  "mlx_lm_version": "0.32.2",
+  "max_tokens": 1024
+}

@@ -2,7 +2,6 @@
 generation function (no model here), keep `labels.jsonl` and `log.jsonl` up to date line by line, resume."""
 
 import json
-import os
 import re
 import time
 from collections.abc import Callable
@@ -10,19 +9,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from s1d1_bench.rubric import LEVELS, TASKS, load_rubric
+from s1d1_bench.runfile import find_json_objects, read_done, repair_log, strip_reasoning, write_atomic
 
 INSTRUCTION = "Label the prompt between the <prompt> tags. Return the JSON label now."
 RETRY_SUFFIX = "\nOutput only the JSON object."
 LABEL_KEYS = ["complexity", "task", "needs_tools"]
 RAW_MAX_CHARS = 2000
 
-_THINK_BLOCK = re.compile(r"<think>.*?</think>", re.DOTALL)
-_HARMONY_ANALYSIS = re.compile(r"<\|channel\|>analysis<\|message\|>.*?<\|end\|>", re.DOTALL)
-_HARMONY_ANALYSIS_OPEN = "<|channel|>analysis<|message|>"
-_HARMONY_FINAL_HEADER = re.compile(r"(?:<\|start\|>assistant)?<\|channel\|>final<\|message\|>")
-_HARMONY_END = re.compile(r"<\|(?:return|end)\|>")
-_GEMMA_THOUGHT = re.compile(r"<\|channel>.*?<channel\|>", re.DOTALL)  # Gemma 4: <|channel>thought ... <channel|>
-_GEMMA_THOUGHT_OPEN = "<|channel>"
 _FENCE = re.compile(r"```[A-Za-z0-9_-]*")
 
 
@@ -47,20 +40,7 @@ def build_messages(prompt: str, retry: bool = False) -> list[dict]:
 
 
 def _strip_reasoning(text: str) -> str:
-    text = _THINK_BLOCK.sub(" ", text)
-    if "<think>" in text:  # never closed: everything after it is thinking
-        text = text.split("<think>", 1)[0]
-    elif "</think>" in text:  # the opening tag was in the chat template: the answer follows the last closing tag
-        text = text.rsplit("</think>", 1)[1]
-    text = _HARMONY_ANALYSIS.sub(" ", text)
-    if _HARMONY_ANALYSIS_OPEN in text:
-        text = text.split(_HARMONY_ANALYSIS_OPEN, 1)[0]
-    text = _GEMMA_THOUGHT.sub(" ", text)
-    if _GEMMA_THOUGHT_OPEN in text:
-        text = text.split(_GEMMA_THOUGHT_OPEN, 1)[0]
-    text = _HARMONY_FINAL_HEADER.sub(" ", text)
-    text = _HARMONY_END.sub(" ", text)
-    return _FENCE.sub(" ", text)
+    return _FENCE.sub(" ", strip_reasoning(text))
 
 
 def _valid_label(obj: dict) -> bool:
@@ -78,71 +58,11 @@ def parse_label(text: str) -> dict | None:
     """The label in a judge answer, or None. Reasoning blocks and code fences are ignored; the answer must hold
     exactly one JSON object, with exactly the three keys and in-vocabulary values."""
     text = _strip_reasoning(text)
-    decoder = json.JSONDecoder()
-    found: list[dict] = []
-    pos = text.find("{")
-    while pos != -1:
-        try:
-            obj, end = decoder.raw_decode(text, pos)
-        except json.JSONDecodeError:
-            pos = text.find("{", pos + 1)
-            continue
-        found.append(obj)
-        pos = text.find("{", end)
+    found = find_json_objects(text)
     if len(found) != 1 or not _valid_label(found[0]):
         return None
     obj = found[0]
     return {key: obj[key] for key in LABEL_KEYS}
-
-
-def _write_atomic(path: Path, rows: list[dict]) -> None:
-    tmp = path.with_name(path.name + ".tmp")
-    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
-        for row in rows:
-            f.write(json.dumps(row, ensure_ascii=False) + "\n")
-        f.flush()
-        os.fsync(f.fileno())
-    os.replace(tmp, path)
-
-
-def _read_done(path: Path) -> dict[str, dict]:
-    """The labels already written (id -> line). A last line that does not parse is a write cut short: it is
-    dropped. An unreadable line anywhere else is a damaged file and raises ValueError."""
-    done: dict[str, dict] = {}
-    if not path.is_file():
-        return done
-    with open(path, encoding="utf-8") as f:
-        lines = [line for line in f if line.rstrip("\r\n") != ""]
-    for number, line in enumerate(lines, start=1):
-        try:
-            row = json.loads(line)
-            if not isinstance(row, dict) or not isinstance(row.get("id"), str):
-                raise ValueError("not a label line")
-        except ValueError as exc:  # JSONDecodeError is a ValueError
-            if number == len(lines):
-                break
-            raise ValueError(f"{path}:{number}: unreadable line in the middle of the file ({exc})") from exc
-        done.setdefault(row["id"], row)
-    return done
-
-
-def _repair_log(path: Path) -> None:
-    """Drop a cut-short last line of the log (one written without its newline that does not parse), so the next
-    record is not glued onto it. A complete last line missing only its newline gets the newline."""
-    if not path.is_file():
-        return
-    text = path.read_text(encoding="utf-8")
-    if text == "" or text.endswith("\n"):
-        return
-    head, _, tail = text.rpartition("\n")
-    try:
-        json.loads(tail)
-        fixed = text + "\n"
-    except ValueError:
-        fixed = head + "\n" if head else ""
-    tmp = path.with_name(path.name + ".tmp")
-    tmp.write_text(fixed, encoding="utf-8", newline="\n")
-    os.replace(tmp, path)
 
 
 def _judge_one(prompt: str, generate: GenerateFn) -> tuple[str, dict | None, dict]:
@@ -196,14 +116,14 @@ def run_judge(prompts: list[dict], generate: GenerateFn, out_dir: Path, resume: 
                 "Use a new folder, or resume the run."
             )
     out_dir.mkdir(parents=True, exist_ok=True)
-    done = _read_done(labels_path) if resume else {}
+    done = read_done(labels_path) if resume else {}
     foreign = [i for i in done if i not in set(ids)]
     if foreign:  # the wrong prompts file: refuse before touching anything, never drop labels silently
         raise ValueError(f"{labels_path}: labelled id(s) not in the prompts: {', '.join(map(repr, foreign))}")
     if resume:
-        _repair_log(log_path)
+        repair_log(log_path)
     if done or labels_path.exists():
-        _write_atomic(labels_path, list(done.values()))  # drops a cut-short last line, restores the newline
+        write_atomic(labels_path, list(done.values()))  # drops a cut-short last line, restores the newline
     counts: dict[str, int] = {}
     with (
         open(labels_path, "a", encoding="utf-8", newline="\n") as labels_f,
@@ -222,7 +142,7 @@ def run_judge(prompts: list[dict], generate: GenerateFn, out_dir: Path, resume: 
                 labels_f.write(json.dumps(row, ensure_ascii=False) + "\n")
                 labels_f.flush()
                 done[item["id"]] = row
-    _write_atomic(labels_path, [done[i] for i in ids if i in done])
+    write_atomic(labels_path, [done[i] for i in ids if i in done])
     return counts
 
 
@@ -233,12 +153,14 @@ _COMMIT = re.compile(r"[0-9a-f]{40}")
 _LOCAL_PATH = re.compile(r"(?<![\w.])(?:~/|/(?:Users|home|private|tmp|var|Volumes|mnt|opt)/)")
 
 
-def _resume_conflicts(old: dict, new: dict) -> list[str]:
-    return [f"{key} {old.get(key)!r} (meta.json) != {new[key]!r}" for key in RESUME_KEYS if key in new
+def resume_conflicts(old: dict, new: dict, keys: list[str]) -> list[str]:
+    """The `keys` present in `new` whose value differs from the recorded meta `old`, one message each."""
+    return [f"{key} {old.get(key)!r} (meta.json) != {new[key]!r}" for key in keys if key in new
             and old.get(key) != new[key]]
 
 
-def _local_path_keys(meta: dict) -> list[str]:
+def local_path_keys(meta: dict) -> list[str]:
+    """The keys of `meta` whose string value holds a local path (meta files are published: never one)."""
     home = str(Path.home())
     return [k for k, v in meta.items() if isinstance(v, str) and (home in v or _LOCAL_PATH.search(v))]
 
@@ -288,7 +210,7 @@ def run_judge_cmd(args) -> int:
     old = json.loads(meta_path.read_text(encoding="utf-8")) if args.resume and meta_path.is_file() else None
     if old is not None:  # what can be checked before loading the model
         early = {"thinking": args.thinking, "prompts_sha256": digest, "max_tokens": args.max_tokens}
-        conflicts = _resume_conflicts(old, early)
+        conflicts = resume_conflicts(old, early, RESUME_KEYS)
         if conflicts:
             return fail(f"{meta_path}: cannot resume a run with other settings: {'; '.join(conflicts)}")
 
@@ -322,11 +244,11 @@ def run_judge_cmd(args) -> int:
         "mlx_lm_version": backend["mlx_lm_version"],
         "max_tokens": args.max_tokens,
     }
-    leaks = _local_path_keys(meta)
+    leaks = local_path_keys(meta)
     if leaks:
         return fail(f"meta.json would hold a local path in {', '.join(leaks)}: meta.json is published, remove it")
     if old is not None:
-        conflicts = _resume_conflicts(old, meta)
+        conflicts = resume_conflicts(old, meta, RESUME_KEYS)
         if conflicts:
             return fail(f"{meta_path}: cannot resume a run with other settings: {'; '.join(conflicts)}")
     else:  # written before the first generation, so that a resumed run keeps it

@@ -1,0 +1,18 @@
+{
+  "judge": "check-qwen3-off-zho",
+  "model": "mlx-community/Qwen3.8-27B-8bit",
+  "provider": "local",
+  "revision": "815b83c0df8ffd1d1b5244cf75fd6ef14fca9ef9",
+  "date": "2026-10-30",
+  "temperature": 0,
+  "thinking": "off",
+  "instructions": "v7-single",
+  "prompts_sha256": "1bd6fefdf5e6ea34eb743dd6572c4b25c9048d6607edb5feb685e6f906530212",
+  "author": "scombat",
+  "replayable": true,
+  "licence": "CC-BY-4.0",
+  "notes": "qwen3: enable_thinking=False (the chat template prefills an empty think block): no reasoning. Bench judge on the zho set of base-v1; also the same-task check of the translation (docs/33 § 3.3).",
+  "quantization": "8bit-gs64",
+  "mlx_lm_version": "0.32.2",
+  "max_tokens": 1024
+}

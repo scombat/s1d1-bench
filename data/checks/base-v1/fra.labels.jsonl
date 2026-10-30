@@ -1,0 +1,15 @@
+{"id": "05bab3e1cc64bd00-fra", "base_key": "05bab3e1cc64bd00", "lang": "fra", "check": "labels", "rule": "needs_tools", "detail": "eng=true tr=false", "lifted": false}
+{"id": "0d6af8a8a2e072a6-fra", "base_key": "0d6af8a8a2e072a6", "lang": "fra", "check": "labels", "rule": "needs_tools", "detail": "eng=true tr=false", "lifted": false}
+{"id": "3f542e8df9a624c4-fra", "base_key": "3f542e8df9a624c4", "lang": "fra", "check": "labels", "rule": "task", "detail": "eng=classification tr=role_playing witness=classification", "lifted": false}
+{"id": "5649f92a19700204-fra", "base_key": "5649f92a19700204", "lang": "fra", "check": "labels", "rule": "task", "detail": "eng=reasoning tr=information_seeking", "lifted": false}
+{"id": "7180ab512da7263a-fra", "base_key": "7180ab512da7263a", "lang": "fra", "check": "labels", "rule": "task", "detail": "eng=writing tr=information_seeking", "lifted": false}
+{"id": "7ef9a2da3786930d-fra", "base_key": "7ef9a2da3786930d", "lang": "fra", "check": "labels", "rule": "task", "detail": "eng=data_analysis tr=information_seeking witness=math", "lifted": false}
+{"id": "7ef9a2da3786930d-fra", "base_key": "7ef9a2da3786930d", "lang": "fra", "check": "labels", "rule": "needs_tools", "detail": "eng=true tr=false witness=false", "lifted": true}
+{"id": "8c161a5eba50a639-fra", "base_key": "8c161a5eba50a639", "lang": "fra", "check": "labels", "rule": "needs_tools", "detail": "eng=true tr=false", "lifted": false}
+{"id": "984977c869981dfe-fra", "base_key": "984977c869981dfe", "lang": "fra", "check": "labels", "rule": "task", "detail": "eng=reasoning tr=information_seeking", "lifted": false}
+{"id": "baeba6101b4316a8-fra", "base_key": "baeba6101b4316a8", "lang": "fra", "check": "labels", "rule": "task", "detail": "eng=completion tr=writing", "lifted": false}
+{"id": "c1c19511ec96d66f-fra", "base_key": "c1c19511ec96d66f", "lang": "fra", "check": "labels", "rule": "task", "detail": "eng=brainstorming tr=information_seeking", "lifted": false}
+{"id": "d50168e5362628b5-fra", "base_key": "d50168e5362628b5", "lang": "fra", "check": "labels", "rule": "task", "detail": "eng=planning tr=brainstorming witness=brainstorming", "lifted": true}
+{"id": "d756a9b1ff9e2bff-fra", "base_key": "d756a9b1ff9e2bff", "lang": "fra", "check": "labels", "rule": "task", "detail": "eng=other tr=information_seeking", "lifted": false}
+{"id": "e33b2fefb6a1da52-fra", "base_key": "e33b2fefb6a1da52", "lang": "fra", "check": "labels", "rule": "task", "detail": "eng=planning tr=brainstorming witness=brainstorming", "lifted": true}
+{"id": "e3d93822b841edca-fra", "base_key": "e3d93822b841edca", "lang": "fra", "check": "labels", "rule": "task", "detail": "eng=other tr=role_playing", "lifted": false}

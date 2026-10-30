@@ -10,4 +10,6 @@ paths = [
   '''^data/pool/candidates-eng\.jsonl$''',
   '''^data/prompts/[^/]+\.jsonl$''',
   '''^data/prompts/[^/]+\.lots/''',
+  '''^data/translations/[^/]+/[^/]+\.jsonl$''',
+  '''^data/checks/[^/]+/[^/]+\.jsonl$''',
 ]

@@ -1,0 +1,18 @@
+{"id": "05bab3e1cc64bd00-rus", "base_key": "05bab3e1cc64bd00", "lang": "rus", "check": "labels", "rule": "needs_tools", "detail": "eng=true tr=false", "lifted": false}
+{"id": "0d6af8a8a2e072a6-rus", "base_key": "0d6af8a8a2e072a6", "lang": "rus", "check": "labels", "rule": "needs_tools", "detail": "eng=true tr=false", "lifted": false}
+{"id": "1838bc7ccbe31bce-rus", "base_key": "1838bc7ccbe31bce", "lang": "rus", "check": "labels", "rule": "task", "detail": "eng=data_analysis tr=classification witness=classification", "lifted": true}
+{"id": "212d98bb321a83dd-rus", "base_key": "212d98bb321a83dd", "lang": "rus", "check": "labels", "rule": "task", "detail": "eng=summarization tr=information_seeking", "lifted": false}
+{"id": "2bbd145263ec23e4-rus", "base_key": "2bbd145263ec23e4", "lang": "rus", "check": "labels", "rule": "task", "detail": "eng=summarization tr=information_seeking", "lifted": false}
+{"id": "2bbd145263ec23e4-rus", "base_key": "2bbd145263ec23e4", "lang": "rus", "check": "labels", "rule": "needs_tools", "detail": "eng=true tr=false", "lifted": false}
+{"id": "3f542e8df9a624c4-rus", "base_key": "3f542e8df9a624c4", "lang": "rus", "check": "labels", "rule": "task", "detail": "eng=classification tr=role_playing witness=classification", "lifted": false}
+{"id": "7ef9a2da3786930d-rus", "base_key": "7ef9a2da3786930d", "lang": "rus", "check": "labels", "rule": "task", "detail": "eng=data_analysis tr=information_seeking witness=information_seeking", "lifted": true}
+{"id": "984977c869981dfe-rus", "base_key": "984977c869981dfe", "lang": "rus", "check": "labels", "rule": "task", "detail": "eng=reasoning tr=information_seeking", "lifted": false}
+{"id": "a17fe8e97531047b-rus", "base_key": "a17fe8e97531047b", "lang": "rus", "check": "labels", "rule": "task", "detail": "eng=extraction tr=information_seeking", "lifted": false}
+{"id": "baeba6101b4316a8-rus", "base_key": "baeba6101b4316a8", "lang": "rus", "check": "labels", "rule": "task", "detail": "eng=completion tr=writing", "lifted": false}
+{"id": "c1c19511ec96d66f-rus", "base_key": "c1c19511ec96d66f", "lang": "rus", "check": "labels", "rule": "task", "detail": "eng=brainstorming tr=information_seeking", "lifted": false}
+{"id": "c8931cad47554d9e-rus", "base_key": "c8931cad47554d9e", "lang": "rus", "check": "labels", "rule": "task", "detail": "eng=summarization tr=writing", "lifted": false}
+{"id": "c8fa588ef977c084-rus", "base_key": "c8fa588ef977c084", "lang": "rus", "check": "labels", "rule": "task", "detail": "eng=role_playing tr=chat", "lifted": false}
+{"id": "d50168e5362628b5-rus", "base_key": "d50168e5362628b5", "lang": "rus", "check": "labels", "rule": "task", "detail": "eng=planning tr=brainstorming witness=brainstorming", "lifted": true}
+{"id": "e3d93822b841edca-rus", "base_key": "e3d93822b841edca", "lang": "rus", "check": "labels", "rule": "task", "detail": "eng=other tr=role_playing", "lifted": false}
+{"id": "e944f9b1b3bbc893-rus", "base_key": "e944f9b1b3bbc893", "lang": "rus", "check": "labels", "rule": "task", "detail": "eng=advice_seeking tr=brainstorming", "lifted": false}
+{"id": "e944f9b1b3bbc893-rus", "base_key": "e944f9b1b3bbc893", "lang": "rus", "check": "labels", "rule": "needs_tools", "detail": "eng=true tr=false", "lifted": false}
