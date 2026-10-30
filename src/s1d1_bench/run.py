@@ -8,6 +8,9 @@ lower one, and low/high gives medium; null when the null votes are strictly more
 the rubric: same labels), `truth_lang` the votes on the id alone; each also without the Gemma judges. An abstention
 (a judge's `abstained` row) is a null vote on every field. The table and its `<out stem>.run.json` record are derived
 data, rewritten at every call (docs/34, decision 6).
+
+A classifier folder that has a `decisions.jsonl` (its raw output, e.g. a score outside [0, 1]) also gives the columns
+`<name>.raw_score` and `<name>.raw_tier`, read as they are; `run.json` then marks the classifier `raw_decisions: true`.
 """
 
 import datetime
@@ -31,6 +34,7 @@ from s1d1_bench.rubric import LEVELS
 META_COLUMNS = ["id", "base_key", "lang", "origin", "source", "corrected"]
 TRUTHS = ["truth_all", "truth_lang", "truth_all_nogemma", "truth_lang_nogemma"]
 FIELDS = ["complexity", "task", "needs_tools"]
+DECISIONS = "decisions.jsonl"  # a classifier's raw output: id, tier (a string), score (any number, even negative)
 GEMMA = "gemma"  # a main judge whose meta.json `model` holds this (any case) is left out of the *_nogemma truths
 RULES = (
     "complexity: ordinal median (trivial<low<medium<high<expert) of the non-null votes once sorted: an odd count "
@@ -195,6 +199,35 @@ def load_folder(path: Path | str, prompts_sha: str, ids: list[str]) -> tuple[str
     return name, meta, labels
 
 
+def read_decisions(path: Path | str, ids: list[str]) -> dict[str, dict]:
+    """`id` -> {"tier", "score"} from a classifier's `decisions.jsonl`, the values untouched (a score may be negative).
+    Refused (ValueError naming the file) when a row has no id, a string `tier` or a numeric `score`, when an id appears
+    twice, when an id of `ids` has no row or a row has an id not in `ids`."""
+    decisions: dict[str, dict] = {}
+    try:
+        rows = read_jsonl(path)
+    except (ValueError, UnicodeDecodeError) as exc:
+        raise ValueError(f"{path}: cannot read it ({exc!r})") from exc
+    for number, row in enumerate(rows, start=1):
+        i = row.get("id") if isinstance(row, dict) else None
+        if not isinstance(i, str):
+            raise ValueError(f"{path}: row {number} has no string 'id'")
+        score = row.get("score")
+        if not isinstance(row.get("tier"), str) or isinstance(score, bool) or not isinstance(score, int | float):
+            raise ValueError(f"{path}: id {i!r}: needs a string 'tier' and a numeric 'score'")
+        if i in decisions:
+            raise ValueError(f"{path}: duplicate id {i!r}")
+        decisions[i] = {"tier": row["tier"], "score": float(score)}
+    missing = [i for i in ids if i not in decisions]
+    if missing:
+        raise ValueError(f"{path}: no decision for id {missing[0]!r} ({len(missing)} id(s) missing)")
+    wanted = set(ids)
+    unknown = [i for i in decisions if i not in wanted]
+    if unknown:
+        raise ValueError(f"{path}: decision for id {unknown[0]!r}, which is not in the prompts file")
+    return decisions
+
+
 def _column(name: str, values: list, kind: pa.DataType, columns: dict[str, pa.Array]) -> None:
     if name in columns:
         raise ValueError(f"two columns named {name!r}: two folders share a name")
@@ -202,12 +235,18 @@ def _column(name: str, values: list, kind: pa.DataType, columns: dict[str, pa.Ar
 
 
 def build_results(
-    meta_rows: list[dict], judges: dict[str, dict[str, dict]], classifiers: dict[str, dict[str, dict]], truths: dict
+    meta_rows: list[dict],
+    judges: dict[str, dict[str, dict]],
+    classifiers: dict[str, dict[str, dict]],
+    truths: dict,
+    decisions: dict[str, dict[str, dict]] | None = None,
 ) -> pa.Table:
     """One row per entry of `meta_rows` (prompts file order): the meta columns, the truths, then one column per folder
     and output, the judges then the classifiers in the order of the dicts. Every judge has a `<name>.abstained` bool
     column (true on its abstention rows); a classifier's `score` and `needs_tools_probability` columns are there only
-    when at least one of its labels has the value."""
+    when at least one of its labels has the value. `decisions` (classifier name -> id -> {"tier", "score"}, from
+    `read_decisions`) adds, after the other columns of the classifiers it names, `<name>.raw_score` (float64) and
+    `<name>.raw_tier` (string)."""
     columns: dict[str, pa.Array] = {}
     ids = [row["id"] for row in meta_rows]
     for name in META_COLUMNS:
@@ -228,6 +267,10 @@ def build_results(
                 values = [labels[i].get(key) for i in ids]
                 if any(v is not None for v in values):
                     _column(f"{name}.{key}", values, pa.float64(), columns)
+            if not judge and name in (decisions or {}):
+                raw = decisions[name]
+                _column(f"{name}.raw_score", [raw[i]["score"] for i in ids], pa.float64(), columns)
+                _column(f"{name}.raw_tier", [raw[i]["tier"] for i in ids], pa.string(), columns)
     return pa.table(columns)
 
 
@@ -268,7 +311,15 @@ def _folders(patterns: list[str] | None, option: str) -> list[Path]:
     return found
 
 
-def _load_all(dirs: list[Path], digest: str, ids: list[str], metas: dict[str, dict]) -> dict[str, dict[str, dict]]:
+def _load_all(
+    dirs: list[Path],
+    digest: str,
+    ids: list[str],
+    metas: dict[str, dict],
+    decisions: dict[str, dict[str, dict]] | None = None,
+) -> dict[str, dict[str, dict]]:
+    """The labels of each folder by name; when `decisions` is given, the `decisions.jsonl` of the system folders that
+    have one is read into it, by name."""
     labels_by_name: dict[str, dict[str, dict]] = {}
     for folder in dirs:
         name, meta, labels = load_folder(folder, digest, ids)
@@ -276,6 +327,8 @@ def _load_all(dirs: list[Path], digest: str, ids: list[str], metas: dict[str, di
             raise ValueError(f"two folders are named {name!r} (the column names would clash)")
         metas[name] = meta
         labels_by_name[name] = labels
+        if decisions is not None and meta.get("provider") == SYSTEM and (Path(folder) / DECISIONS).is_file():
+            decisions[name] = read_decisions(Path(folder) / DECISIONS, ids)
     return labels_by_name
 
 
@@ -297,7 +350,8 @@ def _run(args) -> int:
         raise ValueError(f"--main {args.main!r}: give distinct judge folder names, comma-separated")
     metas: dict[str, dict] = {}
     judges = _load_all(_folders(args.judges, "--judges"), digest, ids, metas)
-    classifiers = _load_all(_folders(args.classifiers, "--classifiers"), digest, ids, metas)
+    raw_decisions: dict[str, dict[str, dict]] = {}
+    classifiers = _load_all(_folders(args.classifiers, "--classifiers"), digest, ids, metas, raw_decisions)
     for name in main:
         if name not in judges:
             raise ValueError(f"--main {name!r} is not among the judge folders loaded ({', '.join(judges) or 'none'})")
@@ -306,11 +360,13 @@ def _run(args) -> int:
     judge_order = main + sorted(name for name in judges if name not in main)
     classifier_order = sorted(classifiers)
     table = build_results(
-        meta_rows, {n: judges[n] for n in judge_order}, {n: classifiers[n] for n in classifier_order}, truth
-    )
+        meta_rows, {n: judges[n] for n in judge_order}, {n: classifiers[n] for n in classifier_order}, truth,
+        raw_decisions,
+    )  # fmt: skip
 
     def entry(name: str) -> dict:
-        return {"name": name, **{k: metas[name].get(k) for k in ("model", "revision", "date")}}
+        found = {"name": name, **{k: metas[name].get(k) for k in ("model", "revision", "date")}}
+        return {**found, "raw_decisions": True} if name in raw_decisions else found
 
     def abstained(name: str) -> list[dict]:
         """The abstentions of a judge folder, in prompts file order."""
@@ -341,9 +397,9 @@ def _run(args) -> int:
     n_abstained = sum(len(rows) for rows in record["abstentions"].values())
     print(
         f"{out}: {table.num_rows} rows, {len(judges)} judges ({len(gemma)} Gemma in --main), {len(classifiers)} "
-        f"classifiers; abstentions {n_abstained}, undecidable {sum(truth[i]['undecidable'] for i in ids)}, language "
-        f"disagreements {sum(truth[i]['lang_disagreement'] for i in ids)}, mean spread {mean_spread}; record in "
-        f"{run_json}"
+        f"classifiers ({len(raw_decisions)} with raw decisions); abstentions {n_abstained}, undecidable "
+        f"{sum(truth[i]['undecidable'] for i in ids)}, language disagreements "
+        f"{sum(truth[i]['lang_disagreement'] for i in ids)}, mean spread {mean_spread}; record in {run_json}"
     )
     plain = truths({name: judges[name] for name in main}, main, meta_rows, gemma, median=plain_lower_median)
     first_id = {}  # base key -> its first id: truth_all is the same on every id of a key
