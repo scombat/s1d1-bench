@@ -110,3 +110,20 @@ Only what is needed to import and run the copied code without `litellm`. Each ch
 Each copied range can be compared with the upstream text (`gh api -H "Accept: application/vnd.github.raw"
 "repos/BerriAI/litellm/contents/litellm/router_strategy/complexity_router/<file>?ref=v1.106.6"`): apart from the
 changes above, `scorer.py` contains it line for line.
+
+## Identity proof
+
+`tests/fixtures/litellm_heuristic/v1.106.6.jsonl` (368 rows: the 360 prompts of `data/prompts/base-v1.jsonl` and the
+eight prompts of `tests/fixtures/litellm_heuristic/edge.jsonl`) holds what the real package returns for them. It was
+made once, in a throwaway environment, by `tests/fixtures/litellm_heuristic/make_fixture.py`, which calls
+`ComplexityRouter._score_and_classify(prompt, None)` of the real `litellm.router_strategy.complexity_router`:
+
+```
+uv run --no-project --with litellm==1.106.6 python tests/fixtures/litellm_heuristic/make_fixture.py \
+    data/prompts/base-v1.jsonl tests/fixtures/litellm_heuristic/edge.jsonl \
+    > tests/fixtures/litellm_heuristic/v1.106.6.jsonl
+```
+
+The script printed `litellm 1.106.6` on stderr (the version imported, from `importlib.metadata`). `litellm` is not in
+`pyproject.toml` or `uv.lock`. `test_the_vendored_scorer_reproduces_the_real_package` checks that the vendored scorer
+returns the same tier, score (`==`, not approximately), signals and cause on every row.

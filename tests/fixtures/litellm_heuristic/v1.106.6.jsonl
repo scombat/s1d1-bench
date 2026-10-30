@@ -1,0 +1,368 @@
+{"id": "634638dbcf710d07-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "dff3a71af8b7ad08-eng", "tier": "SIMPLE", "score": -0.1, "signals": ["short (10 tokens)"], "cause": "heuristic_scorer"}
+{"id": "cfae448b364f0ee7-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "915439339b6f5df7-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (9 tokens)"], "cause": "heuristic_scorer"}
+{"id": "984977c869981dfe-eng", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "d50168e5362628b5-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "b95b44ab9478da78-fra", "tier": "SIMPLE", "score": -0.1, "signals": ["short (5 tokens)"], "cause": "heuristic_scorer"}
+{"id": "c42d59de0ccacbaf-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "f577665b0660a238-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (2 tokens)"], "cause": "heuristic_scorer"}
+{"id": "4930873de93f0233-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "4930873de93f0233-fra", "tier": "SIMPLE", "score": 0.115, "signals": ["long (566 tokens)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "ee7c601fb399580f-rus", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "eaa58b6e7985ae82-rus", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "e2a06fc58c1c4d59-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (8 tokens)"], "cause": "heuristic_scorer"}
+{"id": "1838bc7ccbe31bce-rus", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "c13fad5029d32ee6-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "2c89e7c0cef84abd-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "f792a90b8343a121-fra", "tier": "SIMPLE", "score": -0.1, "signals": ["short (8 tokens)"], "cause": "heuristic_scorer"}
+{"id": "ce98ec525470ad48-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "3a8cfac3789a62f1-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "e33b2fefb6a1da52-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (7 tokens)"], "cause": "heuristic_scorer"}
+{"id": "a130c6ea53a902d2-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "3f2b5dc0588d12e0-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "36c29280ca25d905-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "f61b1eac812bcd9f-eng", "tier": "SIMPLE", "score": -0.1, "signals": ["short (5 tokens)"], "cause": "heuristic_scorer"}
+{"id": "99ffc444a29d0a5d-fra", "tier": "SIMPLE", "score": -0.09000000000000001, "signals": ["short (11 tokens)", "10 questions"], "cause": "heuristic_scorer"}
+{"id": "2bbd145263ec23e4-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "3e893d41daf6c8e5-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "c8931cad47554d9e-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "86811c719f4f32da-eng", "tier": "MEDIUM", "score": 0.15, "signals": ["code (python)"], "cause": "heuristic_scorer"}
+{"id": "e3d93822b841edca-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "1a8c036081a4d1ff-eng", "tier": "SIMPLE", "score": -1.3877787807814457e-17, "signals": ["short (13 tokens)", "code (python)", "simple (hello)"], "cause": "heuristic_scorer"}
+{"id": "ce98ec525470ad48-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "a17fe8e97531047b-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "ee7c601fb399580f-fra", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "9b4d1c67e687db74-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "9502863b1de1ca21-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (3 tokens)"], "cause": "heuristic_scorer"}
+{"id": "976852f28de3d18b-fra", "tier": "SIMPLE", "score": 0.05, "signals": ["long (424 tokens)", "simple (simple)"], "cause": "heuristic_scorer"}
+{"id": "6e7d994aa2a97e2d-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "6633824d10f9c6ca-rus", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "0c829b1d1e01ce98-fra", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "f792a90b8343a121-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (2 tokens)"], "cause": "heuristic_scorer"}
+{"id": "057ae32a943e952c-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "7915924b01f364ce-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (4 tokens)"], "cause": "heuristic_scorer"}
+{"id": "445c95d7f7615499-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "b7fed5cb6ec22d9f-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "27375c7c51aff034-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "167e908a99a5efc5-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "64ca9045d1ff6687-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "99ffc444a29d0a5d-rus", "tier": "SIMPLE", "score": -0.09000000000000001, "signals": ["short (12 tokens)", "10 questions"], "cause": "heuristic_scorer"}
+{"id": "445c95d7f7615499-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "aecaf7ffb68dfaec-fra", "tier": "SIMPLE", "score": 0.115, "signals": ["long (663 tokens)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "445c95d7f7615499-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (4 tokens)"], "cause": "heuristic_scorer"}
+{"id": "3a8cfac3789a62f1-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "e944f9b1b3bbc893-rus", "tier": "SIMPLE", "score": -0.1, "signals": ["short (9 tokens)"], "cause": "heuristic_scorer"}
+{"id": "3f2b5dc0588d12e0-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "3a8cfac3789a62f1-eng", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "634638dbcf710d07-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "290054e2e28827cc-rus", "tier": "MEDIUM", "score": 0.15, "signals": ["code (sql)"], "cause": "heuristic_scorer"}
+{"id": "99ffc444a29d0a5d-zho", "tier": "SIMPLE", "score": -0.09000000000000001, "signals": ["short (7 tokens)", "10 questions"], "cause": "heuristic_scorer"}
+{"id": "f577665b0660a238-rus", "tier": "SIMPLE", "score": -0.1, "signals": ["short (4 tokens)"], "cause": "heuristic_scorer"}
+{"id": "ffe2d47a0e1337e1-eng", "tier": "SIMPLE", "score": 0.115, "signals": ["long (414 tokens)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "37c9e9ab7852f809-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "f577665b0660a238-eng", "tier": "SIMPLE", "score": -0.15000000000000002, "signals": ["short (7 tokens)", "simple (what is)"], "cause": "heuristic_scorer"}
+{"id": "2add77797edca382-eng", "tier": "SIMPLE", "score": -0.15000000000000002, "signals": ["short (5 tokens)", "simple (hey)"], "cause": "heuristic_scorer"}
+{"id": "c1c19511ec96d66f-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "c1b0cc268c6f4a3e-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (2 tokens)"], "cause": "heuristic_scorer"}
+{"id": "cfae448b364f0ee7-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "1a8c036081a4d1ff-rus", "tier": "SIMPLE", "score": 0.09999999999999999, "signals": ["code (python)", "simple (hello)"], "cause": "heuristic_scorer"}
+{"id": "b7fed5cb6ec22d9f-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (8 tokens)"], "cause": "heuristic_scorer"}
+{"id": "f61b1eac812bcd9f-rus", "tier": "SIMPLE", "score": -0.1, "signals": ["short (5 tokens)"], "cause": "heuristic_scorer"}
+{"id": "eb50da7f71f99591-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "0c829b1d1e01ce98-eng", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "b96d0705e267fafb-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "baeba6101b4316a8-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "9abe2d760044d6ed-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "1838bc7ccbe31bce-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "a17fe8e97531047b-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "634638dbcf710d07-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "c42d59de0ccacbaf-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "52af72f21cf65e35-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "057ae32a943e952c-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "d756a9b1ff9e2bff-fra", "tier": "SIMPLE", "score": -0.1, "signals": ["short (12 tokens)"], "cause": "heuristic_scorer"}
+{"id": "eb3d0a335d372b07-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "e3d93822b841edca-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (11 tokens)"], "cause": "heuristic_scorer"}
+{"id": "2c89e7c0cef84abd-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "1838bc7ccbe31bce-eng", "tier": "MEDIUM", "score": 0.16499999999999998, "signals": ["code (error)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "c8fa588ef977c084-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "a98bc09f95f4204f-fra", "tier": "SIMPLE", "score": 0.125, "signals": ["long (460 tokens)", "multi-step", "5 questions"], "cause": "heuristic_scorer"}
+{"id": "c42d59de0ccacbaf-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "c1c19511ec96d66f-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "8c161a5eba50a639-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (14 tokens)"], "cause": "heuristic_scorer"}
+{"id": "deceb9dbf43c77c9-eng", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "52af72f21cf65e35-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "b96d0705e267fafb-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "c13fad5029d32ee6-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "7180ab512da7263a-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "c1c19511ec96d66f-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (5 tokens)"], "cause": "heuristic_scorer"}
+{"id": "2bbd145263ec23e4-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (6 tokens)"], "cause": "heuristic_scorer"}
+{"id": "7ef9a2da3786930d-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "64ca9045d1ff6687-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "9abe2d760044d6ed-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "99ffc444a29d0a5d-eng", "tier": "SIMPLE", "score": -0.09000000000000001, "signals": ["short (12 tokens)", "10 questions"], "cause": "heuristic_scorer"}
+{"id": "0a5825c01c07dcf2-eng", "tier": "SIMPLE", "score": -0.15000000000000002, "signals": ["short (2 tokens)", "simple (what is)"], "cause": "heuristic_scorer"}
+{"id": "deceb9dbf43c77c9-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "167e908a99a5efc5-fra", "tier": "SIMPLE", "score": -0.1, "signals": ["short (14 tokens)"], "cause": "heuristic_scorer"}
+{"id": "d40e4882e7f7fe7f-zho", "tier": "MEDIUM", "score": 0.315, "signals": ["code (const, return)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "591df8610c4c0186-fra", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "3ce175ed3ef6b933-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "3f542e8df9a624c4-rus", "tier": "SIMPLE", "score": 0.115, "signals": ["long (682 tokens)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "5649f92a19700204-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "5649f92a19700204-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "b95b44ab9478da78-rus", "tier": "SIMPLE", "score": -0.1, "signals": ["short (5 tokens)"], "cause": "heuristic_scorer"}
+{"id": "ffe2d47a0e1337e1-rus", "tier": "SIMPLE", "score": 0.115, "signals": ["long (456 tokens)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "976852f28de3d18b-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "fdf1ac96b7525832-rus", "tier": "SIMPLE", "score": 0.115, "signals": ["long (920 tokens)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "9b4d1c67e687db74-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "984977c869981dfe-fra", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "e33b2fefb6a1da52-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "3ce175ed3ef6b933-rus", "tier": "SIMPLE", "score": -0.1, "signals": ["short (13 tokens)"], "cause": "heuristic_scorer"}
+{"id": "52af72f21cf65e35-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "6e7d994aa2a97e2d-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "b95b44ab9478da78-eng", "tier": "SIMPLE", "score": -0.1, "signals": ["short (4 tokens)"], "cause": "heuristic_scorer"}
+{"id": "290054e2e28827cc-fra", "tier": "MEDIUM", "score": 0.15, "signals": ["code (sql)"], "cause": "heuristic_scorer"}
+{"id": "3a8cfac3789a62f1-fra", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "18443ed0f794acf1-eng", "tier": "MEDIUM", "score": 0.16499999999999998, "signals": ["code (error)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "dff3a71af8b7ad08-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (3 tokens)"], "cause": "heuristic_scorer"}
+{"id": "915439339b6f5df7-eng", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "7ef9a2da3786930d-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "a130c6ea53a902d2-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "e7f0af72d0d0850e-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "d50168e5362628b5-fra", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "4930873de93f0233-rus", "tier": "SIMPLE", "score": 0.115, "signals": ["long (494 tokens)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "a982e7d5513ddc67-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (12 tokens)"], "cause": "heuristic_scorer"}
+{"id": "aecaf7ffb68dfaec-eng", "tier": "SIMPLE", "score": 0.115, "signals": ["long (551 tokens)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "19fe52c75a0571ec-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "7cb601680dac7892-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "36c29280ca25d905-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "3e893d41daf6c8e5-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "d40e4882e7f7fe7f-fra", "tier": "MEDIUM", "score": 0.315, "signals": ["code (const, return)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "2add77797edca382-fra", "tier": "SIMPLE", "score": -0.1, "signals": ["short (6 tokens)"], "cause": "heuristic_scorer"}
+{"id": "19fe52c75a0571ec-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "f792a90b8343a121-eng", "tier": "SIMPLE", "score": -0.15000000000000002, "signals": ["short (8 tokens)", "simple (how much)"], "cause": "heuristic_scorer"}
+{"id": "9af7884bcfeb25c1-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "e2a06fc58c1c4d59-rus", "tier": "SIMPLE", "score": -0.1, "signals": ["short (14 tokens)"], "cause": "heuristic_scorer"}
+{"id": "b96d0705e267fafb-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "ffe2d47a0e1337e1-fra", "tier": "SIMPLE", "score": 0.115, "signals": ["long (513 tokens)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "5649f92a19700204-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "7ef9a2da3786930d-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (12 tokens)"], "cause": "heuristic_scorer"}
+{"id": "7180ab512da7263a-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "1a8c036081a4d1ff-zho", "tier": "SIMPLE", "score": -1.3877787807814457e-17, "signals": ["short (8 tokens)", "code (python)", "simple (hello)"], "cause": "heuristic_scorer"}
+{"id": "8c161a5eba50a639-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "3f542e8df9a624c4-zho", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "a98bc09f95f4204f-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "37c9e9ab7852f809-zho", "tier": "MEDIUM", "score": 0.15, "signals": ["code (response)"], "cause": "heuristic_scorer"}
+{"id": "64ca9045d1ff6687-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "9502863b1de1ca21-eng", "tier": "SIMPLE", "score": -0.1, "signals": ["short (12 tokens)"], "cause": "heuristic_scorer"}
+{"id": "d756a9b1ff9e2bff-eng", "tier": "SIMPLE", "score": -0.1, "signals": ["short (8 tokens)"], "cause": "heuristic_scorer"}
+{"id": "9af7884bcfeb25c1-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "057ae32a943e952c-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (10 tokens)"], "cause": "heuristic_scorer"}
+{"id": "212d98bb321a83dd-eng", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "e33b2fefb6a1da52-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "976852f28de3d18b-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "c8931cad47554d9e-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (7 tokens)"], "cause": "heuristic_scorer"}
+{"id": "2bbd145263ec23e4-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "6633824d10f9c6ca-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "3ce175ed3ef6b933-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (6 tokens)"], "cause": "heuristic_scorer"}
+{"id": "ce98ec525470ad48-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "1f80abd87bd8de31-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "0c829b1d1e01ce98-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "27375c7c51aff034-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "baeba6101b4316a8-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "72d0d07726a4628c-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "c8fa588ef977c084-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "3e893d41daf6c8e5-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (10 tokens)"], "cause": "heuristic_scorer"}
+{"id": "9abe2d760044d6ed-eng", "tier": "MEDIUM", "score": 0.15, "signals": ["code (let)"], "cause": "heuristic_scorer"}
+{"id": "eb50da7f71f99591-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "a687f79634387c61-fra", "tier": "SIMPLE", "score": -0.1, "signals": ["short (9 tokens)"], "cause": "heuristic_scorer"}
+{"id": "9abe2d760044d6ed-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "7cb601680dac7892-eng", "tier": "SIMPLE", "score": -0.15000000000000002, "signals": ["short (11 tokens)", "simple (how many)"], "cause": "heuristic_scorer"}
+{"id": "0a5825c01c07dcf2-rus", "tier": "SIMPLE", "score": -0.1, "signals": ["short (3 tokens)"], "cause": "heuristic_scorer"}
+{"id": "5649f92a19700204-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "f61b1eac812bcd9f-fra", "tier": "SIMPLE", "score": -0.1, "signals": ["short (7 tokens)"], "cause": "heuristic_scorer"}
+{"id": "9af7884bcfeb25c1-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (5 tokens)"], "cause": "heuristic_scorer"}
+{"id": "d50168e5362628b5-eng", "tier": "SIMPLE", "score": 0.11499999999999999, "signals": ["code (implement)", "simple (what is)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "f8064d15fe5698af-eng", "tier": "SIMPLE", "score": -0.15000000000000002, "signals": ["short (4 tokens)", "simple (what is)"], "cause": "heuristic_scorer"}
+{"id": "3e893d41daf6c8e5-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "37c9e9ab7852f809-fra", "tier": "MEDIUM", "score": 0.16499999999999998, "signals": ["code (response)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "8c161a5eba50a639-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "eb50da7f71f99591-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "fdf1ac96b7525832-zho", "tier": "SIMPLE", "score": 0.1, "signals": ["long (401 tokens)"], "cause": "heuristic_scorer"}
+{"id": "0d6af8a8a2e072a6-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "ce98ec525470ad48-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "b95b44ab9478da78-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (2 tokens)"], "cause": "heuristic_scorer"}
+{"id": "f577665b0660a238-fra", "tier": "SIMPLE", "score": -0.1, "signals": ["short (7 tokens)"], "cause": "heuristic_scorer"}
+{"id": "50a5f1bde7146a87-eng", "tier": "COMPLEX", "score": 0.415, "signals": ["long (629 tokens)", "code (return, database, query)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "6e7d994aa2a97e2d-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "fdf1ac96b7525832-fra", "tier": "SIMPLE", "score": 0.065, "signals": ["long (977 tokens)", "simple (simple)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "9502863b1de1ca21-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "b96d0705e267fafb-eng", "tier": "MEDIUM", "score": 0.15, "signals": ["code (let)"], "cause": "heuristic_scorer"}
+{"id": "984977c869981dfe-rus", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "27375c7c51aff034-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "e33b2fefb6a1da52-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "a98bc09f95f4204f-eng", "tier": "SIMPLE", "score": 0.075, "signals": ["long (415 tokens)", "simple (what is)", "multi-step", "5 questions"], "cause": "heuristic_scorer"}
+{"id": "f8064d15fe5698af-rus", "tier": "SIMPLE", "score": -0.1, "signals": ["short (3 tokens)"], "cause": "heuristic_scorer"}
+{"id": "e944f9b1b3bbc893-fra", "tier": "SIMPLE", "score": -0.1, "signals": ["short (10 tokens)"], "cause": "heuristic_scorer"}
+{"id": "2370e0473fe2f515-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "05bab3e1cc64bd00-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "a982e7d5513ddc67-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "0a5825c01c07dcf2-fra", "tier": "SIMPLE", "score": -0.1, "signals": ["short (4 tokens)"], "cause": "heuristic_scorer"}
+{"id": "c13fad5029d32ee6-fra", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "d21923f0102d403e-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (14 tokens)"], "cause": "heuristic_scorer"}
+{"id": "167e908a99a5efc5-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (4 tokens)"], "cause": "heuristic_scorer"}
+{"id": "445c95d7f7615499-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "18443ed0f794acf1-rus", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "ee7c601fb399580f-eng", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "a687f79634387c61-eng", "tier": "SIMPLE", "score": -0.1, "signals": ["short (6 tokens)"], "cause": "heuristic_scorer"}
+{"id": "fdf1ac96b7525832-eng", "tier": "SIMPLE", "score": 0.065, "signals": ["long (864 tokens)", "simple (simple)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "dff3a71af8b7ad08-fra", "tier": "SIMPLE", "score": -0.1, "signals": ["short (13 tokens)"], "cause": "heuristic_scorer"}
+{"id": "eaa58b6e7985ae82-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "eaa58b6e7985ae82-eng", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "05bab3e1cc64bd00-rus", "tier": "SIMPLE", "score": -0.1, "signals": ["short (14 tokens)"], "cause": "heuristic_scorer"}
+{"id": "0d6af8a8a2e072a6-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "9502863b1de1ca21-rus", "tier": "SIMPLE", "score": -0.1, "signals": ["short (9 tokens)"], "cause": "heuristic_scorer"}
+{"id": "deceb9dbf43c77c9-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "6e7d994aa2a97e2d-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "deceb9dbf43c77c9-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "72d0d07726a4628c-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "a17fe8e97531047b-fra", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "0a5825c01c07dcf2-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (1 tokens)"], "cause": "heuristic_scorer"}
+{"id": "cfae448b364f0ee7-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "976852f28de3d18b-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "a982e7d5513ddc67-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "ee7c601fb399580f-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "c8fa588ef977c084-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (7 tokens)"], "cause": "heuristic_scorer"}
+{"id": "1838bc7ccbe31bce-fra", "tier": "SIMPLE", "score": 0.115, "signals": ["long (410 tokens)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "0c829b1d1e01ce98-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "a17fe8e97531047b-eng", "tier": "SIMPLE", "score": -0.035, "signals": ["simple (where is)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "50a5f1bde7146a87-fra", "tier": "SIMPLE", "score": 0.115, "signals": ["long (760 tokens)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "f8064d15fe5698af-fra", "tier": "SIMPLE", "score": -0.1, "signals": ["short (5 tokens)"], "cause": "heuristic_scorer"}
+{"id": "1f80abd87bd8de31-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (8 tokens)"], "cause": "heuristic_scorer"}
+{"id": "9b4d1c67e687db74-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (10 tokens)"], "cause": "heuristic_scorer"}
+{"id": "d21923f0102d403e-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "290054e2e28827cc-eng", "tier": "MEDIUM", "score": 0.3, "signals": ["code (sql, schema)"], "cause": "heuristic_scorer"}
+{"id": "978b2a7fb0d54649-eng", "tier": "SIMPLE", "score": -0.1, "signals": ["short (11 tokens)"], "cause": "heuristic_scorer"}
+{"id": "18443ed0f794acf1-fra", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "2c89e7c0cef84abd-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "984977c869981dfe-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "05bab3e1cc64bd00-eng", "tier": "SIMPLE", "score": -0.1, "signals": ["short (13 tokens)"], "cause": "heuristic_scorer"}
+{"id": "2add77797edca382-rus", "tier": "SIMPLE", "score": -0.1, "signals": ["short (7 tokens)"], "cause": "heuristic_scorer"}
+{"id": "f61b1eac812bcd9f-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (2 tokens)"], "cause": "heuristic_scorer"}
+{"id": "a982e7d5513ddc67-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "3ce175ed3ef6b933-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "eb50da7f71f99591-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "7915924b01f364ce-rus", "tier": "SIMPLE", "score": -0.1, "signals": ["short (13 tokens)"], "cause": "heuristic_scorer"}
+{"id": "c1b0cc268c6f4a3e-fra", "tier": "SIMPLE", "score": -0.1, "signals": ["short (6 tokens)"], "cause": "heuristic_scorer"}
+{"id": "290054e2e28827cc-zho", "tier": "SIMPLE", "score": 0.04999999999999999, "signals": ["short (9 tokens)", "code (sql)"], "cause": "heuristic_scorer"}
+{"id": "e3d93822b841edca-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "1f80abd87bd8de31-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "978b2a7fb0d54649-rus", "tier": "SIMPLE", "score": -0.1, "signals": ["short (11 tokens)"], "cause": "heuristic_scorer"}
+{"id": "e7f0af72d0d0850e-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "b7fed5cb6ec22d9f-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "7180ab512da7263a-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "a687f79634387c61-rus", "tier": "SIMPLE", "score": -0.1, "signals": ["short (7 tokens)"], "cause": "heuristic_scorer"}
+{"id": "50a5f1bde7146a87-rus", "tier": "SIMPLE", "score": 0.115, "signals": ["long (640 tokens)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "591df8610c4c0186-eng", "tier": "MEDIUM", "score": 0.16499999999999998, "signals": ["code (error)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "7180ab512da7263a-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "9b4d1c67e687db74-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "e2a06fc58c1c4d59-eng", "tier": "SIMPLE", "score": -0.05, "signals": ["simple (who is)"], "cause": "heuristic_scorer"}
+{"id": "0d6af8a8a2e072a6-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (9 tokens)"], "cause": "heuristic_scorer"}
+{"id": "37c9e9ab7852f809-eng", "tier": "MEDIUM", "score": 0.315, "signals": ["code (request, response)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "2bbd145263ec23e4-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "212d98bb321a83dd-fra", "tier": "MEDIUM", "score": 0.16499999999999998, "signals": ["code (vue)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "19fe52c75a0571ec-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (12 tokens)"], "cause": "heuristic_scorer"}
+{"id": "baeba6101b4316a8-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (14 tokens)"], "cause": "heuristic_scorer"}
+{"id": "eaa58b6e7985ae82-fra", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "0d6af8a8a2e072a6-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "3f2b5dc0588d12e0-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "3f542e8df9a624c4-eng", "tier": "MEDIUM", "score": 0.265, "signals": ["long (626 tokens)", "code (let)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "3f2b5dc0588d12e0-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "7915924b01f364ce-eng", "tier": "SIMPLE", "score": -0.1, "signals": ["short (10 tokens)"], "cause": "heuristic_scorer"}
+{"id": "591df8610c4c0186-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "86811c719f4f32da-rus", "tier": "MEDIUM", "score": 0.15, "signals": ["code (python)"], "cause": "heuristic_scorer"}
+{"id": "ffe2d47a0e1337e1-zho", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "e2a06fc58c1c4d59-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "aecaf7ffb68dfaec-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "72d0d07726a4628c-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "d756a9b1ff9e2bff-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (3 tokens)"], "cause": "heuristic_scorer"}
+{"id": "eb3d0a335d372b07-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "d21923f0102d403e-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "eb3d0a335d372b07-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "e944f9b1b3bbc893-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (3 tokens)"], "cause": "heuristic_scorer"}
+{"id": "2add77797edca382-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (3 tokens)"], "cause": "heuristic_scorer"}
+{"id": "7915924b01f364ce-fra", "tier": "SIMPLE", "score": -0.1, "signals": ["short (11 tokens)"], "cause": "heuristic_scorer"}
+{"id": "eb3d0a335d372b07-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "7cb601680dac7892-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "27375c7c51aff034-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (7 tokens)"], "cause": "heuristic_scorer"}
+{"id": "c1b0cc268c6f4a3e-rus", "tier": "SIMPLE", "score": -0.1, "signals": ["short (5 tokens)"], "cause": "heuristic_scorer"}
+{"id": "c8931cad47554d9e-eng", "tier": "SIMPLE", "score": -0.05, "signals": ["simple (hey)"], "cause": "heuristic_scorer"}
+{"id": "86811c719f4f32da-zho", "tier": "MEDIUM", "score": 0.15, "signals": ["code (python)"], "cause": "heuristic_scorer"}
+{"id": "1f80abd87bd8de31-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "212d98bb321a83dd-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "b7fed5cb6ec22d9f-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "d21923f0102d403e-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "36c29280ca25d905-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "591df8610c4c0186-rus", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "52af72f21cf65e35-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "d756a9b1ff9e2bff-rus", "tier": "SIMPLE", "score": -0.1, "signals": ["short (10 tokens)"], "cause": "heuristic_scorer"}
+{"id": "3f542e8df9a624c4-fra", "tier": "SIMPLE", "score": 0.115, "signals": ["long (708 tokens)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "19fe52c75a0571ec-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "8c161a5eba50a639-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "634638dbcf710d07-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "915439339b6f5df7-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "c1c19511ec96d66f-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "e7f0af72d0d0850e-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "057ae32a943e952c-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "a130c6ea53a902d2-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "212d98bb321a83dd-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "05bab3e1cc64bd00-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (5 tokens)"], "cause": "heuristic_scorer"}
+{"id": "d40e4882e7f7fe7f-eng", "tier": "MEDIUM", "score": 0.315, "signals": ["code (const, return)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "18443ed0f794acf1-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "6633824d10f9c6ca-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "c8fa588ef977c084-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "aecaf7ffb68dfaec-rus", "tier": "SIMPLE", "score": 0.115, "signals": ["long (576 tokens)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "f8064d15fe5698af-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (1 tokens)"], "cause": "heuristic_scorer"}
+{"id": "d40e4882e7f7fe7f-rus", "tier": "MEDIUM", "score": 0.315, "signals": ["code (const, return)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "4930873de93f0233-eng", "tier": "SIMPLE", "score": 0.115, "signals": ["long (503 tokens)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "e7f0af72d0d0850e-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "86811c719f4f32da-fra", "tier": "MEDIUM", "score": 0.15, "signals": ["code (python)"], "cause": "heuristic_scorer"}
+{"id": "a98bc09f95f4204f-rus", "tier": "SIMPLE", "score": 0.11, "signals": ["long (453 tokens)", "5 questions"], "cause": "heuristic_scorer"}
+{"id": "978b2a7fb0d54649-fra", "tier": "SIMPLE", "score": -0.1, "signals": ["short (13 tokens)"], "cause": "heuristic_scorer"}
+{"id": "2370e0473fe2f515-zho", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "d50168e5362628b5-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "baeba6101b4316a8-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "915439339b6f5df7-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "1a8c036081a4d1ff-fra", "tier": "SIMPLE", "score": 0.09999999999999999, "signals": ["code (python)", "simple (hello)"], "cause": "heuristic_scorer"}
+{"id": "2370e0473fe2f515-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "7ef9a2da3786930d-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "36c29280ca25d905-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (4 tokens)"], "cause": "heuristic_scorer"}
+{"id": "e3d93822b841edca-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "cfae448b364f0ee7-eng", "tier": "SIMPLE", "score": -0.05, "signals": ["simple (hello)"], "cause": "heuristic_scorer"}
+{"id": "64ca9045d1ff6687-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "e944f9b1b3bbc893-eng", "tier": "SIMPLE", "score": -0.1, "signals": ["short (9 tokens)"], "cause": "heuristic_scorer"}
+{"id": "2370e0473fe2f515-eng", "tier": "MEDIUM", "score": 0.15, "signals": ["code (class)"], "cause": "heuristic_scorer"}
+{"id": "f792a90b8343a121-rus", "tier": "SIMPLE", "score": -0.1, "signals": ["short (9 tokens)"], "cause": "heuristic_scorer"}
+{"id": "72d0d07726a4628c-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "2c89e7c0cef84abd-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (10 tokens)"], "cause": "heuristic_scorer"}
+{"id": "c42d59de0ccacbaf-rus", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "50a5f1bde7146a87-zho", "tier": "SIMPLE", "score": 0.015, "signals": ["multi-step"], "cause": "heuristic_scorer"}
+{"id": "dff3a71af8b7ad08-rus", "tier": "SIMPLE", "score": -0.1, "signals": ["short (9 tokens)"], "cause": "heuristic_scorer"}
+{"id": "978b2a7fb0d54649-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (5 tokens)"], "cause": "heuristic_scorer"}
+{"id": "c13fad5029d32ee6-eng", "tier": "MEDIUM", "score": 0.265, "signals": ["code (let, algorithm)", "simple (what is)", "multi-step"], "cause": "heuristic_scorer"}
+{"id": "7cb601680dac7892-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (4 tokens)"], "cause": "heuristic_scorer"}
+{"id": "a130c6ea53a902d2-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (5 tokens)"], "cause": "heuristic_scorer"}
+{"id": "c1b0cc268c6f4a3e-eng", "tier": "SIMPLE", "score": -0.1, "signals": ["short (6 tokens)"], "cause": "heuristic_scorer"}
+{"id": "c8931cad47554d9e-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "6633824d10f9c6ca-eng", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "167e908a99a5efc5-eng", "tier": "SIMPLE", "score": -0.15000000000000002, "signals": ["short (13 tokens)", "simple (who is)"], "cause": "heuristic_scorer"}
+{"id": "a687f79634387c61-zho", "tier": "SIMPLE", "score": -0.1, "signals": ["short (2 tokens)"], "cause": "heuristic_scorer"}
+{"id": "9af7884bcfeb25c1-fra", "tier": "SIMPLE", "score": 0.0, "signals": [], "cause": "heuristic_scorer"}
+{"id": "edge-01", "tier": "SIMPLE", "score": -0.1, "signals": ["short (0 tokens)"], "cause": "heuristic_scorer"}
+{"id": "edge-02", "tier": "SIMPLE", "score": -0.15000000000000002, "signals": ["short (0 tokens)", "simple (hi)"], "cause": "heuristic_scorer"}
+{"id": "edge-03", "tier": "SIMPLE", "score": -0.15000000000000002, "signals": ["short (1 tokens)", "simple (thanks)"], "cause": "heuristic_scorer"}
+{"id": "edge-04", "tier": "SIMPLE", "score": 0.1, "signals": ["long (443 tokens)"], "cause": "heuristic_scorer"}
+{"id": "edge-05", "tier": "SIMPLE", "score": 0.09999999999999999, "signals": ["short (8 tokens)", "reasoning (step by step, show your work)", "simple (hi)"], "cause": "heuristic_scorer"}
+{"id": "edge-06", "tier": "REASONING", "score": 0.4, "signals": ["code (python)", "reasoning (step by step, show your work)"], "cause": "reasoning_override"}
+{"id": "edge-07", "tier": "SIMPLE", "score": -0.07500000000000001, "signals": ["short (9 tokens)", "multi-step", "4 questions"], "cause": "heuristic_scorer"}
+{"id": "edge-08", "tier": "SIMPLE", "score": -0.1, "signals": ["short (4 tokens)"], "cause": "heuristic_scorer"}

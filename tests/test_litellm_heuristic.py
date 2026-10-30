@@ -1,9 +1,20 @@
 """The vendored LiteLLM heuristic scorer (v1.106.6): its defaults and the few behaviours the bench relies on."""
 
+import json
+from pathlib import Path
+
 import pytest
 
 from s1d1_bench.vendor.litellm_heuristic import COMMIT, TAG, Decision, classify
 from s1d1_bench.vendor.litellm_heuristic import scorer as litellm_scorer
+
+ROOT = Path(__file__).resolve().parent.parent
+FIXTURE_DIR = ROOT / "tests" / "fixtures" / "litellm_heuristic"
+BASE_PROMPTS = ROOT / "data" / "prompts" / "base-v1.jsonl"
+
+
+def _read_jsonl(path):
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
 def test_the_pin_is_the_documented_tag_and_commit():
@@ -88,3 +99,23 @@ def test_a_cjk_keyword_matches_as_a_substring_and_a_latin_one_needs_boundaries()
     assert scorer._keyword_matches("the api is down", "api")
     assert not scorer._keyword_matches("the capital is paris", "api")
     assert "code (" not in "".join(classify("the capital is paris").signals)
+
+
+def test_the_vendored_scorer_reproduces_the_real_package():
+    # v1.106.6.jsonl was made once by the real litellm package (make_fixture.py, see NOTICE.md) on base-v1 and the
+    # eight edge prompts. Strict equality: the copy runs the same arithmetic in the same order, so even the float
+    # score must be identical, not merely close.
+    prompts = {row["id"]: row["prompt"] for row in _read_jsonl(BASE_PROMPTS) + _read_jsonl(FIXTURE_DIR / "edge.jsonl")}
+    expected = _read_jsonl(FIXTURE_DIR / "v1.106.6.jsonl")
+    assert len(expected) == 368
+    assert [row["id"] for row in expected] == list(prompts)
+    for row in expected:
+        decision = classify(prompts[row["id"]])
+        actual = {
+            "tier": decision.tier,
+            "score": decision.score,
+            "signals": list(decision.signals),
+            "cause": decision.cause,
+        }
+        for field, value in actual.items():
+            assert value == row[field], f"{row['id']}: {field} differs: vendored {value!r}, litellm {row[field]!r}"
