@@ -27,8 +27,9 @@ notation v7 (palier de complexité, score, tâche, `needs_tools`).
 - `bench witness` : récupère les traductions m-ArenaHard (Google) des prompts Arena-Hard d'un jeu, comme témoins.
 - `bench check` : signale les traductions à relire (`structure`, `labels`, `request`) et écrit la feuille de relecture (`review`).
 - `bench classify` : fait classer les prompts par un classifieur et écrit un dossier `classifiers/<nom>` au format d'un juge,
-  plus le score quand il y en a un. Cinq adaptateurs : trois témoins (`random`, `length`, `constant`) et deux systèmes à
-  l'essai (`s1d1`, poids du Hub ; `laya`).
+  plus le score quand il est sur l'échelle v7. Six adaptateurs : trois témoins (`random`, `length`, `constant`) et trois
+  systèmes à l'essai (`s1d1`, poids du Hub ; `laya` ; `litellm-heuristic`, le scorer à règles de LiteLLM, sans modèle), ce
+  dernier gardant ses décisions brutes à part dans `decisions.jsonl`.
 - `bench run` : réunit les dossiers de juges et de classifieurs d'un jeu en un tableau, une ligne par id, avec les vérités
   des juges principaux (`results/<jeu>.parquet` et `<jeu>.run.json`).
 
@@ -261,7 +262,7 @@ des deux juges s'est abstenu (colonne `abstained`).
 
 ## Les juges du rapport et les classifieurs
 
-Le rapport de `base-v1` s'appuie sur cinq séries de juges et dix classifieurs, tous sur `data/prompts/base-v1.jsonl` (360
+Le rapport de `base-v1` s'appuie sur cinq séries de juges et onze classifieurs, tous sur `data/prompts/base-v1.jsonl` (360
 lignes, SHA-256 `e6a6d4c12ef8b95caea942337a3a1e16ec1622cb4e75c8ee0b473ef609a32490`). Les juges ont tourné le 2026-10-30
 sur un Mac M4 Max 128 Go, avec `mlx-lm` 0.32.2, un modèle à la fois, température 0, `--max-tokens 1024`, consigne
 `v7-single`, révisions de [judges/MODELS.md](judges/MODELS.md).
@@ -293,7 +294,7 @@ abstentions), et `bench validate` affiche `ok (1 abstention)`. Ce qu'une abstent
 [Les vérités](#les-vérités) et dans [judges/README.md](judges/README.md) ; la section n'y revient pas. Dans les accords
 ci-dessous, la colonne `abstained` compte les ids laissés hors de la paire.
 
-### Les dix classifieurs
+### Les onze classifieurs
 
 | dossier | ce que c'est | révision | durée |
 |---|---|---|---|
@@ -307,6 +308,7 @@ ci-dessous, la colonne `abstained` compte les ids laissés hors de la paire.
 | `classifiers/s1d1-tiny-int8` | `scombat/s1d1-router-6src-tiny-onnx-int8`, ONNX int8, CPU | tête du Hub `dac13b5` | 6,7 s |
 | `classifiers/laya-english` | Laya 0.4.15, point de contrôle english, mps | `convaiinnovations/laya@7b928d82…` | 13,1 s |
 | `classifiers/laya-multilingual` | Laya 0.4.15, point de contrôle multilingual, mps | `convaiinnovations/laya@7b928d82…` | 9,0 s |
+| `classifiers/litellm-heuristic` | scorer heuristique intégré de LiteLLM (`classifier_type: heuristic`, configuration par défaut), code copié tel quel au tag v1.106.6, sans modèle | tag `v1.106.6`, commit `61c6ab78…` | moins d'une seconde |
 
 Les durées des classifieurs sont celles du classement des 360 prompts, avec le petit téléchargement du Hub, les poids étant
 déjà en cache. Trois révisions de s1d1 (`small`, `compact`, `full` int8) sont épinglées à la révision de la carte du dépôt.
@@ -315,6 +317,17 @@ l'exécution, après avoir vérifié (lecture seule, sans jeton) que les fichier
 commit qui les a modifiés ; la vérification est écrite dans le champ `notes` du `meta.json` de chaque dossier. Pour le
 fp16, `config.json` et `s1d1_router.py` ont changé après l'ajout des poids : « sans changement » vaut pour les fichiers de poids, et la tête du dépôt
 fournit le `config.json` et le routeur utilisés. Laya est épinglé à `convaiinnovations/laya@7b928d82…` (le hachage entier est dans `meta.json`).
+
+**Le scorer de LiteLLM.** `classifiers/litellm-heuristic` n'a ni modèle ni réseau : le banc embarque le code du scorer
+heuristique de LiteLLM, copié tel quel au tag `v1.106.6` (commit `61c6ab78393ef45683dd7d963d2a315bd845e20b`) dans
+`src/s1d1_bench/vendor/litellm_heuristic/`, sans installer le paquet `litellm`. Le dossier `NOTICE.md` à côté du code dit
+d'où il vient, quels blocs sont repris et comment ; la licence de ce code est celle de LiteLLM, MIT (`LICENSE`, copié
+avec lui). Chaque prompt est classé seul, sans consigne système, avec la configuration par défaut de LiteLLM ; les
+paliers se traduisent nom à nom (`SIMPLE` en `low`, `MEDIUM` en `medium`, `COMPLEX` en `high`, `REASONING` en `expert`),
+et `task` et `needs_tools` restent `null`. Son score n'est pas sur l'échelle v7 (il peut être négatif) : `labels.jsonl` n'a
+donc pas de `score`, et la décision brute du scorer (palier, score, signaux, cause) est dans `decisions.jsonl`, à côté de
+`labels.jsonl`. `bench run` la lit dans les colonnes `litellm-heuristic.raw_score` et `litellm-heuristic.raw_tier`, et
+marque `"raw_decisions": true` dans l'entrée du classifieur de `run.json`. Le score brut ne sert qu'aux mesures de rang.
 
 **Révisions du Hub pour les dépôts int8.** Pour `small`, `compact` et `full`, la tête actuelle du Hub n'est pas la révision de
 la carte : les commits qui les séparent ne touchent que des métadonnées (`README.md`, `eval.json`, `footprint.json`,
@@ -370,6 +383,11 @@ autre nom.
   ```
 
   `--laya-model multilingual` et `--out classifiers/laya-multilingual` pour l'autre point de contrôle.
+- **Le scorer de LiteLLM** (sans modèle, sans groupe, sans réseau) :
+
+  ```
+  uv run bench classify litellm-heuristic --prompts data/prompts/base-v1.jsonl --out classifiers/litellm-heuristic --author <nom>
+  ```
 - **Le tableau** :
 
   ```
@@ -399,9 +417,11 @@ est vrai pour 52 ids. Une médiane basse simple, à la place de la règle R5, ch
 
 ### Ce que `results/` est, et n'est pas
 
-`results/base-v1.parquet` (360 lignes, 85 colonnes) et `results/base-v1.run.json` (les dossiers chargés, leurs révisions,
+`results/base-v1.parquet` (360 lignes, 90 colonnes) et `results/base-v1.run.json` (les dossiers chargés, leurs révisions,
 les abstentions, les règles) sont **dérivés** des dossiers `judges/` et `classifiers/` : ils se régénèrent à chaque
-`bench run`. Ce n'est pas un enregistrement immuable, à la différence des dossiers de
+`bench run` ; les colonnes d'un classifieur sont `<nom>.complexity`, `<nom>.task`, `<nom>.needs_tools`, `<nom>.score` quand son
+`labels.jsonl` en a un et, quand il a un `decisions.jsonl`, `<nom>.raw_score` et `<nom>.raw_tier` (`litellm-heuristic` a
+ces deux-là et pas de `score` : cinq colonnes). Ce n'est pas un enregistrement immuable, à la différence des dossiers de
 juges et de classifieurs, qu'on ajoute et qu'on ne réécrit pas : ce qui se rejoue, ce sont les entrées. Ce n'est pas non
 plus un rapport : aucune métrique, aucune figure ne s'y trouve, elles viennent dans la PR suivante.
 
@@ -448,6 +468,7 @@ classifieur par rapport à un autre.
 | `onnxruntime`, `tokenizers`, `numpy`, `huggingface_hub` | `s1d1` | classifieur s1d1 en ONNX int8 (CPU) |
 | `torch`, `transformers` | `s1d1-torch` | classifieur s1d1 en PyTorch fp16 |
 | `laya` (0.4.15) | `laya` | classifieur Laya |
+| aucune | aucun | classifieur `litellm-heuristic` : code de LiteLLM copié dans le dépôt, sans le paquet `litellm` |
 | `pytest` | `dev` | tests, sans réseau et sans modèle |
 | `ruff` | `dev` | lint et tri des imports |
 

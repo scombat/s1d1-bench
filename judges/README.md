@@ -81,7 +81,12 @@ historique (judges/MODELS.md, judges/TRIAL.md) et n'est pas reconstruit.
 - `task` et `needs_tools` peuvent être `null` pour ce que le classifieur ne prédit pas (Laya et les témoins `length` et
   `constant` ne prédisent ni l'un ni l'autre) ;
 - une ligne `abstained` est refusée : un classifieur ne s'abstient jamais ;
-- pas de `log.jsonl`.
+- pas de `log.jsonl` ;
+- `decisions.jsonl` est un fichier facultatif du dossier : les décisions brutes d'un adaptateur, une ligne par id, avec
+  `id`, `tier`, `score`, `signals` et `cause`. `bench validate` l'ignore ; `bench run` le lit (colonnes
+  `<nom>.raw_score` et `<nom>.raw_tier`) et le refuse s'il manque un id, s'il en a un inconnu ou un doublon ;
+- `score` est absent de `labels.jsonl` quand le score propre du classifieur n'est pas sur l'échelle v7 : c'est le cas de
+  `litellm-heuristic`, dont le score (qui peut être négatif) n'est que dans `decisions.jsonl`, pour les mesures de rang.
 
 ## Un fichier accepté ne change plus
 
