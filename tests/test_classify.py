@@ -291,10 +291,14 @@ def test_litellm_heuristic_adapter_writes_name_to_name_tiers_and_raw_decisions(l
     assert [d["id"] for d in decisions] == [p["id"] for p in LITELLM_PROMPTS]
     thanks, proof = decisions
     assert (thanks["tier"], thanks["cause"]) == ("SIMPLE", "heuristic_scorer")
-    assert thanks["score"] == pytest.approx(-0.15)  # raw, negative, never clamped or rescaled
+    from s1d1_bench.vendor.litellm_heuristic import classify
+
+    assert thanks["score"] == classify("thanks").score  # exact: never rounded, clamped or rescaled
+    assert thanks["score"] == pytest.approx(-0.15) and thanks["score"] < 0  # scale sanity check
     assert thanks["signals"] == ["short (1 tokens)", "simple (thanks)"]
     assert (proof["tier"], proof["cause"]) == ("REASONING", "reasoning_override")
     assert isinstance(proof["signals"], list) and proof["score"] > 0
+    assert proof["score"] == classify(LITELLM_PROMPTS[1]["prompt"]).score
     assert set(thanks) == set(proof) == {"id", "tier", "score", "signals", "cause"}
 
 

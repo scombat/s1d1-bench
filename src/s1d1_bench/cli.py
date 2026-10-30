@@ -31,7 +31,9 @@ _HELP = {
     "translate": "translate a prompts file into one language",
     "witness": "fetch the m-ArenaHard translations of the Arena-Hard prompts of a set",
     "check": "flag the translations of a set for a human review (structure, labels, same request, review sheet)",
-    "classify": "write a classifier folder: a witness (random, length, constant) or a system (s1d1, laya)",
+    "classify": (
+        "write a classifier folder: a witness (random, length, constant) or a system (s1d1, laya, litellm-heuristic)"
+    ),
     "run": "merge the judge and classifier folders of a set into one table, with the truths of the main judges",
 }
 
