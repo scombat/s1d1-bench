@@ -11,15 +11,15 @@ Un objet JSON avec ces 13 clés, toutes obligatoires :
 |---|---|
 | `judge` | nom libre du juge |
 | `model` | identifiant exact du modèle |
-| `provider` | `local`, `chat`, `api` ou `human` |
+| `provider` | `local`, `chat`, `api`, `human` ou `system` (un classifieur, voir plus bas) |
 | `revision` | commit ou version si connue, sinon `"unknown"` |
 | `date` | date du jugement, `AAAA-MM-JJ` |
 | `temperature` | si connue, sinon `"unknown"` (toute valeur acceptée) |
 | `thinking` | si connu, sinon `"unknown"` (toute valeur acceptée) |
-| `instructions` | `v7-single` ou `v7-batch` (la consigne de `consigne/`) |
+| `instructions` | `v7-single` ou `v7-batch` (la consigne de `consigne/`), ou `none` pour `system` et pour lui seul |
 | `prompts_sha256` | empreinte du fichier de prompts jugé : le contenu de `data/prompts/<jeu>.sha256` |
 | `author` | qui verse le fichier |
-| `replayable` | booléen JSON : `true` seulement pour `local` à température 0 et révision figée |
+| `replayable` | booléen JSON : pour `local`, `true` seulement à température 0 et révision figée ; les classifieurs du banc (`system`) sont `true` |
 | `licence` | exactement `CC-BY-4.0` : un fichier sous une autre licence ne peut pas être fusionné |
 | `notes` | texte libre (pour une correction humaine : ce qui a été corrigé) |
 
@@ -28,7 +28,8 @@ Seules trois clés de plus sont tolérées, écrites par `bench judge` : `quanti
 
 ## `labels.jsonl`
 
-Une ligne par prompt du fichier de prompts désigné par `prompts_sha256`, un objet JSON avec exactement quatre champs :
+Une ligne par prompt du fichier de prompts désigné par `prompts_sha256`, un objet JSON avec quatre champs (et, pour un
+classifieur ou un juge qui les rend, deux champs facultatifs : `score` et `needs_tools_probability`) :
 
 ```json
 {"id": "bad9ea434b83cd45-eng", "complexity": "trivial", "task": "information_seeking", "needs_tools": false}
@@ -37,15 +38,20 @@ Une ligne par prompt du fichier de prompts désigné par `prompts_sha256`, un ob
 - `id` : une chaîne, l'`id` d'une ligne du fichier de prompts ; tous présents, aucun en trop, aucun en double.
 - `complexity` : `trivial`, `low`, `medium`, `high`, `expert`, ou `null` (le JSON `null`, pas la chaîne) si le prompt ne
   peut pas être jugé.
-- `task` : l'une des 19 tâches de la grille v7 (`information_seeking`, `reasoning`, ..., `chat`, `other`).
-- `needs_tools` : `true` ou `false`, un vrai booléen JSON (ni `"true"`, ni `1`).
+- `task` : l'une des 19 tâches de la grille v7 (`information_seeking`, `reasoning`, ..., `chat`, `other`) ; `null` n'est
+  accepté que pour `provider: system`.
+- `needs_tools` : `true` ou `false`, un vrai booléen JSON (ni `"true"`, ni `1`) ; `null` n'est accepté que pour
+  `provider: system`.
+- `score` et `needs_tools_probability` (facultatifs, dans n'importe quel dossier) : absents, ou un nombre de 0 à 1 (ni
+  booléen, ni chaîne).
 
 Aucun contrôle de qualité du contenu : un juge médiocre se voit dans son accord avec les autres.
 
 ### Les abstentions
 
-Quand le modèle ne rend pas d'étiquette lisible après la relance (état final `json_error` ou `truncated` dans
-`log.jsonl`, par exemple un refus), `bench judge` écrit une ligne d'abstention plutôt que rien :
+Quand le modèle ne rend pas d'étiquette lisible (état final `json_error` ou `truncated` dans `log.jsonl`, par exemple
+un refus ; la relance n'a lieu que pour une réponse illisible qui n'a pas été coupée par `--max-tokens` : `json_error` est
+l'état après cette relance, `truncated` celui d'une réponse coupée, sans relance), `bench judge` écrit une ligne d'abstention plutôt que rien :
 
 ```json
 {"id": "3ce175ed3ef6b933-zho", "complexity": null, "task": null, "needs_tools": null, "abstained": "json_error"}
@@ -63,6 +69,19 @@ reçoit par un simple `--resume` avec le même modèle et les mêmes réglages.
 `judges/trial-gptoss-off` (essai de 50 prompts, gpt-oss sans réflexion : sur un prompt, `"task": "design"`, hors
 grille, à l'essai comme à la relance) date d'avant cette règle : l'utilisateur l'a retiré du dépôt, il reste comme
 historique (judges/MODELS.md, judges/TRIAL.md) et n'est pas reconstruit.
+
+## Les dossiers de classifieurs
+
+`classifiers/<nom>/` est un dossier de juge pour un classifieur (`bench classify`) : les mêmes deux fichiers, `meta.json` et
+`labels.jsonl`, validés par le même `bench validate`. Différences :
+
+- `provider` est `system`, et `instructions` est `none` ; `bench validate` exige les deux ensemble (ni l'un sans l'autre) ;
+  `bench classify` écrit en plus `thinking: none` ;
+- `score` et `needs_tools_probability` sont facultatifs, absents ou dans [0, 1] ;
+- `task` et `needs_tools` peuvent être `null` pour ce que le classifieur ne prédit pas (Laya et les témoins `length` et
+  `constant` ne prédisent ni l'un ni l'autre) ;
+- une ligne `abstained` est refusée : un classifieur ne s'abstient jamais ;
+- pas de `log.jsonl`.
 
 ## Un fichier accepté ne change plus
 

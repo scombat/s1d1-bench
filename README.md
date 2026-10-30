@@ -445,7 +445,7 @@ classifieur par rapport à un autre.
 | `datasets` | `pool` | lecture des jeux publics dont le jeu de prompts est tiré |
 | `huggingface_hub` | `pool` | accès en lecture seule aux jeux publics du Hub, sans jeton |
 | `mlx-lm` | `judge` | exécution locale des juges sur Apple silicon |
-| `onnxruntime`, `tokenizers`, `numpy` | `s1d1` | classifieur s1d1 en ONNX int8 (CPU) |
+| `onnxruntime`, `tokenizers`, `numpy`, `huggingface_hub` | `s1d1` | classifieur s1d1 en ONNX int8 (CPU) |
 | `torch`, `transformers` | `s1d1-torch` | classifieur s1d1 en PyTorch fp16 |
 | `laya` (0.4.15) | `laya` | classifieur Laya |
 | `pytest` | `dev` | tests, sans réseau et sans modèle |
