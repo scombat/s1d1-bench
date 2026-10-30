@@ -9,7 +9,7 @@ import pytest
 
 from s1d1_bench.cli import main
 from s1d1_bench.jsonl import write_jsonl
-from s1d1_bench.run import build_results, load_folder, lower_median, majority, truths
+from s1d1_bench.run import build_results, load_folder, lower_median, majority, plain_lower_median, truths
 
 LANGS = ["eng", "fra", "rus", "zho"]
 KEYS = ["k1", "k2"]
@@ -86,7 +86,7 @@ def by_lang(levels: dict[str, str | None], **kw) -> dict[str, dict]:
 def test_lower_median_six_six_takes_the_lower():
     assert lower_median(["medium", "low"] * 6) == "low"
     assert lower_median(["high", "medium", "high"]) == "high"
-    assert lower_median(["expert", "trivial"]) == "trivial"  # two votes: the lower one
+    assert lower_median(["expert", "trivial"]) == "medium"  # two votes: their mean rounded down (docs/34)
     assert lower_median(["low", "medium", "medium", "high"]) == "medium"
     # through the truths: j-a low everywhere, j-b medium everywhere, j-c low in eng/fra and medium in rus/zho
     labels = {
@@ -107,7 +107,7 @@ def test_undecidable_when_nulls_are_majority():
     assert lower_median([None] * 7 + ["high"] * 5) is None
     assert lower_median([None] * 6 + ["high"] * 6) == "high"  # half is not a majority
     assert lower_median([None, None, "low"]) is None
-    assert lower_median([None, "low", "expert"]) == "low"
+    assert lower_median([None, "low", "expert"]) == "medium"  # two votes: (1 + 4) // 2
     assert lower_median([]) is None
     # k1: 7 of its 12 votes are null (j-a: 4, j-b: 3); k2: 3 of 12
     labels = {
@@ -130,6 +130,60 @@ def test_undecidable_when_nulls_are_majority():
     assert table.num_rows == len(IDS)
     row = table.to_pylist()[IDS.index("k1-eng")]
     assert row["undecidable"] is True and row["truth_all.complexity"] is None
+
+
+def test_even_count_takes_the_mean_of_the_two_middle_votes_rounded_down():
+    assert lower_median(["low", "high"]) == "medium"  # docs/34: two judges, mean rounded down
+    assert lower_median(["medium", "low"]) == "low"  # adjacent: the lower one
+    assert lower_median(["low"] * 6 + ["high"] * 6) == "medium"
+    assert lower_median(["low"] * 6 + ["medium"] * 6) == "low"
+    assert lower_median(["trivial", "high"]) == "low"  # (0 + 3) // 2
+    assert lower_median(["low", "expert"]) == "medium"  # (1 + 4) // 2
+    assert lower_median(["trivial", "low", "high", "expert"]) == "medium"  # the two middle: low, high
+    assert lower_median([None, "low", "high"]) == "medium"  # two non-null votes, one null of three
+    # odd counts: the middle vote, unchanged
+    assert lower_median(["low", "high", "high"]) == "high"
+    assert lower_median(["low", "low", "expert"]) == "low"
+    assert lower_median(["trivial", "medium", "expert"]) == "medium"
+    assert lower_median(["low", "high", "expert", None, None]) == "high"
+    # the plain lower median, kept for the diagnostic of `bench run`
+    assert plain_lower_median(["low", "high"]) == "low"
+    assert plain_lower_median(["low"] * 6 + ["high"] * 6) == "low"
+    assert plain_lower_median([None] * 7 + ["high"] * 5) is None
+    # through the truths: j-a low, j-b high, j-c low in eng/fra and high in rus/zho: 6 low / 6 high on each key
+    labels = {
+        "j-a": every("low"),
+        "j-b": every("high"),
+        "j-c": by_lang({"eng": "low", "fra": "low", "rus": "high", "zho": "high"}),
+    }
+    result = truths(labels, MAIN, meta_rows())
+    plain = truths(labels, MAIN, meta_rows(), median=plain_lower_median)
+    for i in IDS:
+        assert result[i]["truth_all"]["complexity"] == "medium"
+        assert plain[i]["truth_all"]["complexity"] == "low"
+        assert result[i]["spread"] == 2
+    assert result["k1-eng"]["truth_lang"]["complexity"] == "low"  # low, high, low: odd, the middle
+    assert result["k1-eng"]["truth_lang_nogemma"]["complexity"] == "low"  # no Gemma given: same as truth_lang
+    nogemma = truths(labels, MAIN, meta_rows(), gemma={"j-c"})
+    assert nogemma["k1-eng"]["truth_lang_nogemma"]["complexity"] == "medium"  # low, high: two votes
+
+
+def test_run_prints_how_many_keys_the_plain_lower_median_would_change(tmp_path, capsys):
+    prompts = write_set(tmp_path)
+    good = sha(prompts)
+    write_folder(tmp_path / "judges" / "j-b", every("high"), good, model=GEMMA_MODEL)
+    write_folder(tmp_path / "judges" / "j-a", every("low"), good)
+    write_folder(tmp_path / "judges" / "j-c", by_lang({"eng": "low", "fra": "low", "rus": "high", "zho": "high"}), good)
+    argv = ["run", "--prompts", str(prompts), "--judges", str(tmp_path / "judges" / "*"), "--main", "j-b,j-a,j-c"]
+    assert main(argv + ["--out", str(tmp_path / "results" / "set.parquet")]) == 0
+    out = capsys.readouterr().out.splitlines()
+    # 6 low / 6 high with Gemma (medium, plain low); without j-b: low x6, high x2 (low either way)
+    assert out[-1] == (
+        "plain lower median instead (diagnostic): truth_all.complexity would differ on 2 of 2 base keys, "
+        "truth_all_nogemma.complexity on 0 of 2"
+    )
+    table = pq.read_table(tmp_path / "results" / "set.parquet")
+    assert set(table.column("truth_all.complexity").to_pylist()) == {"medium"}
 
 
 def test_all_null_votes_give_no_spread():
@@ -325,7 +379,8 @@ def test_columns_and_row_count(tmp_path):
     assert schema.field("laya.score").type == pa.float64()
     rows = table.to_pylist()
     assert {r["truth_all.complexity"] for r in rows} == {"medium"}  # low, medium, high ×4
-    assert {r["truth_all_nogemma.complexity"] for r in rows} == {"low"}  # j-b is Gemma
+    assert {r["truth_all_nogemma.complexity"] for r in rows} == {"medium"}  # j-b is Gemma: low x4, high x4
+    assert {r["truth_lang_nogemma.complexity"] for r in rows} == {"medium"}  # low, high
     assert {r["spread"] for r in rows} == {2}
     assert {r["truth_all.needs_tools"] for r in rows} == {False}
     assert rows[0]["laya.task"] is None and rows[0]["laya.needs_tools"] is None and rows[0]["laya.score"] == 0.5
@@ -346,7 +401,7 @@ def test_run_json_records_the_inputs(tmp_path):
     assert [j["name"] for j in record["judges"]] == ["j-b", "j-a", "j-c", "j-off"]
     assert record["judges"][0] == {"name": "j-b", "model": GEMMA_MODEL, "revision": "rev-j-b", "date": "2026-10-29"}
     assert [c["name"] for c in record["classifiers"]] == ["laya", "random", "s1d1-small-int8"]
-    assert "lower" in record["rules"] and "null" in record["rules"]
+    assert "rounded down" in record["rules"] and "null" in record["rules"]
     text = (tmp_path / "results" / "set.run.json").read_text(encoding="utf-8")
     assert text == json.dumps(record, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
 

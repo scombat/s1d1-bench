@@ -13,7 +13,7 @@ import json
 import os
 import sys
 from collections import Counter
-from collections.abc import Collection
+from collections.abc import Callable, Collection
 from pathlib import Path
 
 import pyarrow as pa
@@ -29,26 +29,48 @@ TRUTHS = ["truth_all", "truth_lang", "truth_all_nogemma", "truth_lang_nogemma"]
 FIELDS = ["complexity", "task", "needs_tools"]
 GEMMA = "gemma"  # a main judge whose meta.json `model` holds this (any case) is left out of the *_nogemma truths
 RULES = (
-    "complexity: lower ordinal median (trivial<low<medium<high<expert) of the non-null votes, the vote at index "
-    "(n-1)//2 once sorted; null when the null votes are strictly more than half (7 of 12 is undecidable, 6 of 12 is "
-    "not). truth_all: the main judges' votes on the 4 language versions of the base key (3 judges = 12 votes), "
-    "repeated on each version; truth_lang: their votes on the id. task, needs_tools: majority of the non-null votes, "
-    "a tie going to the value voted first in priority order (--main order, then the ids of the base key in prompts "
-    "file order). *_nogemma: the same without the main judges whose model contains 'gemma'. undecidable: "
-    "truth_all.complexity is null. spread: max - min tier index over the main judges' non-null votes on the id. "
-    "lang_disagreement: truth_lang.complexity and truth_all.complexity both non-null and different."
+    "complexity: ordinal median (trivial<low<medium<high<expert) of the non-null votes once sorted: an odd count "
+    "takes the middle vote, an even count the mean of the two middle tier indices (n/2-1 and n/2) rounded down "
+    "(low+high -> medium, low+medium -> low; docs/34 decision 3); null when the null votes are strictly more than "
+    "half (7 of 12 is undecidable, 6 of 12 is not). truth_all: the main judges' votes on the 4 language versions of"
+    " the base key (3 judges = 12 votes), repeated on each version; truth_lang: their votes on the id. task, "
+    "needs_tools: majority of the non-null votes, a tie going to the value voted first in priority order (--main "
+    "order, then the ids of the base key in prompts file order). *_nogemma: the same without the main judges whose "
+    "model contains 'gemma'. undecidable: truth_all.complexity is null. spread: max - min tier index over the main "
+    "judges' non-null votes on the id. lang_disagreement: truth_lang.complexity and truth_all.complexity both non-"
+    "null and different."
 )
 _TYPES = {"complexity": pa.string(), "task": pa.string(), "needs_tools": pa.bool_()}
 
 
-def lower_median(levels: list[str | None]) -> str | None:
-    """The lower ordinal median of the non-null levels; None when the nulls are strictly more than half of the votes
+def _sorted_votes(levels: list[str | None]) -> list[int] | None:
+    """The tier indices of the non-null votes, sorted; None when the nulls are strictly more than half of the votes
     (or there is no vote at all)."""
-    votes = sorted((v for v in levels if v is not None), key=LEVELS.index)
-    nulls = len(levels) - len(votes)
-    if not votes or 2 * nulls > len(levels):
+    ranks = sorted(LEVELS.index(v) for v in levels if v is not None)
+    nulls = len(levels) - len(ranks)
+    if not ranks or 2 * nulls > len(levels):
         return None
-    return votes[(len(votes) - 1) // 2]
+    return ranks
+
+
+def lower_median(levels: list[str | None]) -> str | None:
+    """The ordinal median of the non-null levels, rounded down: the middle vote of an odd count, the mean of the two
+    middle tier indices rounded down for an even count (docs/34 decision 3: low and high give medium; two adjacent
+    tiers give the lower one). None when the nulls are strictly more than half of the votes."""
+    ranks = _sorted_votes(levels)
+    if ranks is None:
+        return None
+    n = len(ranks)
+    if n % 2:
+        return LEVELS[ranks[n // 2]]
+    return LEVELS[(ranks[n // 2 - 1] + ranks[n // 2]) // 2]
+
+
+def plain_lower_median(levels: list[str | None]) -> str | None:
+    """The lower of the two middle votes for an even count (the middle vote for an odd one), same null rule. Not a
+    truth: `bench run` only counts the base keys where it would change `truth_all`."""
+    ranks = _sorted_votes(levels)
+    return None if ranks is None else LEVELS[ranks[(len(ranks) - 1) // 2]]
 
 
 def majority(values: list, order: list[str]):
@@ -66,24 +88,29 @@ def majority(values: list, order: list[str]):
     return next(v for v in values if v is not None and counts[v] == best)
 
 
-def _truth(votes: list[tuple[str, dict]]) -> dict:
+def _truth(votes: list[tuple[str, dict]], median: Callable[[list[str | None]], str | None]) -> dict:
     """`votes`: (voter, labels) in priority order."""
     voters = [voter for voter, _ in votes]
     return {
-        "complexity": lower_median([labels["complexity"] for _, labels in votes]),
+        "complexity": median([labels["complexity"] for _, labels in votes]),
         "task": majority([labels["task"] for _, labels in votes], voters),
         "needs_tools": majority([labels["needs_tools"] for _, labels in votes], voters),
     }
 
 
 def truths(
-    labels_by_judge: dict[str, dict[str, dict]], main: list[str], meta_rows: list[dict], gemma: Collection[str] = ()
+    labels_by_judge: dict[str, dict[str, dict]],
+    main: list[str],
+    meta_rows: list[dict],
+    gemma: Collection[str] = (),
+    median: Callable[[list[str | None]], str | None] = lower_median,
 ) -> dict[str, dict]:
     """id -> truth_all, truth_lang, truth_all_nogemma, truth_lang_nogemma (each complexity, task, needs_tools),
     undecidable, spread, lang_disagreement.
 
     Only the judges of `main` vote, in that priority order; those in `gemma` are left out of the *_nogemma truths.
     `meta_rows` (id, base_key, lang) in prompts file order: it gives the ids of each base key and their order.
+    `median` makes every complexity truth (`plain_lower_median` only for the diagnostic of `bench run`).
     """
     ids_of_key: dict[str, list[str]] = {}
     for row in meta_rows:
@@ -92,7 +119,7 @@ def truths(
     by_key: dict[str, dict] = {}
     for key, ids in ids_of_key.items():
         by_key[key] = {
-            suffix: _truth([(f"{j}/{i}", labels_by_judge[j][i]) for j in names for i in ids])
+            suffix: _truth([(f"{j}/{i}", labels_by_judge[j][i]) for j in names for i in ids], median)
             for suffix, names in judges.items()
         }
     result: dict[str, dict] = {}
@@ -101,7 +128,7 @@ def truths(
         entry = {}
         for suffix, names in judges.items():
             entry[f"truth_all{suffix}"] = by_key[row["base_key"]][suffix]
-            entry[f"truth_lang{suffix}"] = _truth([(j, labels_by_judge[j][i]) for j in names])
+            entry[f"truth_lang{suffix}"] = _truth([(j, labels_by_judge[j][i]) for j in names], median)
         levels = [labels_by_judge[j][i]["complexity"] for j in main]
         ranks = [LEVELS.index(level) for level in levels if level is not None]
         lang_level, all_level = entry["truth_lang"]["complexity"], entry["truth_all"]["complexity"]
@@ -292,6 +319,18 @@ def _run(args) -> int:
         f"{out}: {table.num_rows} rows, {len(judges)} judges ({len(gemma)} Gemma in --main), {len(classifiers)} "
         f"classifiers; undecidable {sum(truth[i]['undecidable'] for i in ids)}, language disagreements "
         f"{sum(truth[i]['lang_disagreement'] for i in ids)}, mean spread {mean_spread}; record in {run_json}"
+    )
+    plain = truths({name: judges[name] for name in main}, main, meta_rows, gemma, median=plain_lower_median)
+    first_id = {}  # base key -> its first id: truth_all is the same on every id of a key
+    for row in meta_rows:
+        first_id.setdefault(row["base_key"], row["id"])
+
+    def changed(column: str) -> int:
+        return sum(truth[i][column]["complexity"] != plain[i][column]["complexity"] for i in first_id.values())
+
+    print(
+        f"plain lower median instead (diagnostic): truth_all.complexity would differ on {changed('truth_all')} of "
+        f"{len(first_id)} base keys, truth_all_nogemma.complexity on {changed('truth_all_nogemma')} of {len(first_id)}"
     )
     return 0
 
