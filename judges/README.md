@@ -72,6 +72,26 @@ Un fichier accepté ne change plus. Une correction est un nouveau dossier `judge
 Les dossiers `check-*` sont des juges du banc sur un sous-ensemble du jeu (les 90 prompts de base, dans une langue) ;
 les dossiers `witness-*` (traductions témoins) et `presort-*` (pré-tri) n'en sont pas.
 
+## Les dossiers `base-v1-*`
+
+Les cinq juges du rapport de `base-v1`, tous sur `data/prompts/base-v1.jsonl` (360 prompts, quatre langues) avec la consigne
+`v7-single`, `--max-tokens 1024` et la température 0. Leurs `notes` disent le rôle ; la lecture d'ensemble (durées, répartition des
+paliers, accords deux à deux, commandes pour les refaire) est dans la section « Les juges du rapport et les classifieurs » du
+[README](../README.md).
+
+| dossier | modèle | réflexion | rôle |
+|---|---|---|---|
+| `base-v1-gemma4-cap512` | `mlx-community/gemma-4-31b-it-8bit` | `cap:512` | médiane principale |
+| `base-v1-qwen3-cap512` | `mlx-community/Qwen3.8-27B-8bit` | `cap:512` | médiane principale |
+| `base-v1-gptoss-cap512` | `mlx-community/gpt-oss-20b-MXFP4-Q8` | `cap:512` | médiane principale ; une abstention |
+| `base-v1-gemma4-off` | `mlx-community/gemma-4-31b-it-8bit` | `off` | paire « effet de la réflexion » avec `gemma4-cap512`, hors médiane principale |
+| `base-v1-qwen3-off` | `mlx-community/Qwen3.8-27B-8bit` | `off` | paire « effet de la réflexion » avec `qwen3-cap512`, hors médiane principale |
+
+`base-v1-gptoss-cap512` est le dossier du schéma d'abstention : 360 lignes, dont 359 étiquettes et une ligne `"abstained": "json_error"` pour l'id
+`3ce175ed3ef6b933-zho` (un refus sur le prompt chinois de synthèse de l'acide chlorhydrique) ; `bench validate` affiche
+`ok (1 abstention)`. Les quatre autres dossiers ont 360 étiquettes, sans abstention. Gemma 4 `cap512` a un palier `null` pour un id : c'est la
+sortie du juge, pas une abstention.
+
 ## Vérifier un dossier
 
 ```

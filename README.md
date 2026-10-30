@@ -26,6 +26,11 @@ notation v7 (palier de complexité, score, tâche, `needs_tools`).
 - `bench translate` : traduit un fichier de prompts dans une langue (fra, rus, zho) avec un modèle local (MLX).
 - `bench witness` : récupère les traductions m-ArenaHard (Google) des prompts Arena-Hard d'un jeu, comme témoins.
 - `bench check` : signale les traductions à relire (`structure`, `labels`, `request`) et écrit la feuille de relecture (`review`).
+- `bench classify` : fait classer les prompts par un classifieur et écrit un dossier `classifiers/<nom>` au format d'un juge,
+  plus le score quand il y en a un. Cinq adaptateurs : trois témoins (`random`, `length`, `constant`) et deux systèmes à
+  l'essai (`s1d1`, poids du Hub ; `laya`).
+- `bench run` : réunit les dossiers de juges et de classifieurs d'un jeu en un tableau, une ligne par id, avec les vérités
+  des juges principaux (`results/<jeu>.parquet` et `<jeu>.run.json`).
 
 Installation : `uv sync --group pool --group dev` (sur Apple silicon, pour faire tourner un juge :
 `uv sync --group pool --group judge --group dev`), puis `uv run bench --help`.
@@ -254,6 +259,184 @@ compté comme un `null` vers `undecidable`. `bench run` l'écrit dans la colonne
 `run.json` ; un id sans aucune ligne reste refusé, jamais rempli. `bench agree` laisse hors de la paire un id où l'un
 des deux juges s'est abstenu (colonne `abstained`).
 
+## Les juges du rapport et les classifieurs
+
+Le rapport de `base-v1` s'appuie sur cinq séries de juges et dix classifieurs, tous sur `data/prompts/base-v1.jsonl` (360
+lignes, SHA-256 `e6a6d4c12ef8b95caea942337a3a1e16ec1622cb4e75c8ee0b473ef609a32490`). Les juges ont tourné le 2026-10-30
+sur un Mac M4 Max 128 Go, avec `mlx-lm` 0.32.2, un modèle à la fois, température 0, `--max-tokens 1024`, consigne
+`v7-single`, révisions de [judges/MODELS.md](judges/MODELS.md).
+
+### Les cinq juges
+
+| dossier | réglage | durée | rôle |
+|---|---|---|---|
+| `judges/base-v1-gemma4-cap512` | Gemma 4 31B, raisonnement plafonné à 512 | 4 h 28 min (4,48 h) | médiane principale |
+| `judges/base-v1-qwen3-cap512` | Qwen3.8 27B, raisonnement plafonné à 512 | 3 h 02 min (3,04 h) | médiane principale |
+| `judges/base-v1-gptoss-cap512` | gpt-oss-20b, raisonnement plafonné à 512 | 11 min 36 s (0,19 h) | médiane principale |
+| `judges/base-v1-gemma4-off` | Gemma 4 31B, sans raisonnement | 1 h 18 min (1,30 h) | effet de la réflexion, hors médiane |
+| `judges/base-v1-qwen3-off` | Qwen3.8 27B, sans raisonnement | 56 min 41 s (0,94 h) | effet de la réflexion, hors médiane |
+
+Les durées vont du début à la fin de chaque série, soit 9 h 57 min 38 s au total (le plan en prévoyait 8,4 h) ; celle de
+gpt-oss ne compte pas les 9 s de la reprise qui a écrit l'abstention. La première série (`qwen3-off`) a tourné seule sur la
+machine ; les autres ont tourné pendant que des sous-agents de relecture et des essais légers s'en servaient aussi : les
+durées ne se comparent donc pas à la seconde près. Les trois juges `cap512` forment la
+médiane principale : Gemma 4 est le réglage du juge de l'entraînement, et docs/32 demande au moins trois juges locaux, gpt-oss
+étant le troisième modèle qui lit le JSON sur les 50 prompts de l'essai (docs/34 décision 2). Les deux dossiers `off` mesurent
+l'effet « réflexion » sur les 360 prompts ; ils figurent dans le tableau des juges mais pas dans la médiane principale,
+parce que deux réglages d'un même modèle ne sont pas deux juges indépendants.
+
+**Le cas d'abstention vient en premier.** `judges/base-v1-gptoss-cap512` compte 359 étiquettes et une abstention : gpt-oss
+refuse l'id `3ce175ed3ef6b933-zho` (le prompt chinois de synthèse de l'acide chlorhydrique) et rend un JSON illisible
+(`json_error`). Ce n'est pas une étiquette inventée : le dossier porte, pour cet id, une ligne `"abstained": "json_error"`
+aux trois champs `null` (la ligne a été écrite par un simple `--resume` avec les mêmes réglages, après la règle des
+abstentions), et `bench validate` affiche `ok (1 abstention)`. Ce qu'une abstention est et vaut pour les vérités est dit dans
+[Les vérités](#les-vérités) et dans [judges/README.md](judges/README.md) ; la section n'y revient pas. Dans les accords
+ci-dessous, la colonne `abstained` compte les ids laissés hors de la paire.
+
+### Les dix classifieurs
+
+| dossier | ce que c'est | révision | durée |
+|---|---|---|---|
+| `classifiers/random` | témoin : tirage uniforme, graine 0, 10 tirages (`labels.jsonl` = tirage 0, `draws.jsonl` = les dix) | graine 0 | n/a |
+| `classifiers/length` | témoin : déciles de la longueur en caractères, par langue, correspondance 2/3/3/1/1 | sans objet | n/a |
+| `classifiers/constant-low` | témoin : `low` partout, score 0,25 | sans objet | n/a |
+| `classifiers/s1d1-full-fp16` | `scombat/s1d1-router`, PyTorch fp16, mps | tête du Hub `7fb9a4e` | 7,9 s |
+| `classifiers/s1d1-full-int8` | `scombat/s1d1-router-6src-full-onnx-int8`, ONNX int8, CPU | carte `068d0d2` | 35,6 s |
+| `classifiers/s1d1-compact-int8` | `scombat/s1d1-router-6src-compact-onnx-int8`, ONNX int8, CPU | carte `7e87870` | 28,5 s |
+| `classifiers/s1d1-small-int8` | `scombat/s1d1-router-6src-small-onnx-int8`, ONNX int8, CPU | carte `33c7f34` | 12,2 s |
+| `classifiers/s1d1-tiny-int8` | `scombat/s1d1-router-6src-tiny-onnx-int8`, ONNX int8, CPU | tête du Hub `dac13b5` | 6,7 s |
+| `classifiers/laya-english` | Laya 0.4.15, point de contrôle english, mps | `convaiinnovations/laya@7b928d82…` | 13,1 s |
+| `classifiers/laya-multilingual` | Laya 0.4.15, point de contrôle multilingual, mps | `convaiinnovations/laya@7b928d82…` | 9,0 s |
+
+Les durées des classifieurs sont celles du classement des 360 prompts, avec le petit téléchargement du Hub, les poids étant
+déjà en cache. Trois révisions de s1d1 (`small`, `compact`, `full` int8) sont épinglées à la révision de la carte du dépôt.
+Pour `tiny` en int8 et pour le modèle fp16, la carte ne donne pas de révision : le banc prend la tête du Hub au moment de
+l'exécution, après avoir vérifié (lecture seule, sans jeton) que les fichiers de poids n'ont pas changé depuis le dernier
+commit qui les a modifiés ; la vérification est écrite dans le champ `notes` du `meta.json` de chaque dossier. Pour le
+fp16, `config.json` et `s1d1_router.py` ont changé après l'ajout des poids : « sans changement » vaut pour les fichiers de poids, et la tête du dépôt
+fournit le `config.json` et le routeur utilisés. Laya est épinglé à `convaiinnovations/laya@7b928d82…` (le hachage entier est dans `meta.json`).
+
+**Révisions du Hub pour les dépôts int8.** Pour `small`, `compact` et `full`, la tête actuelle du Hub n'est pas la révision de
+la carte : les commits qui les séparent ne touchent que des métadonnées (`README.md`, `eval.json`, `footprint.json`,
+`variant.json`, où seuls `sigma` et sa date changent) ; les fichiers `*.onnx` et `*.npy` ont le même SHA-256 LFS à la tête
+et à la révision de la carte. Les dossiers gardent la révision de la carte, la tête et cette vérification étant
+dans leurs `notes`.
+
+### Rejouer
+
+Toutes les commandes se lancent depuis la racine du dépôt, les modèles de juges étant déjà dans `~/mlx-models/` (voir
+l'étape 4 de « Reproduire l'essai »). Un dossier existant n'est jamais réécrit : pour refaire une série, la sortir sous un
+autre nom.
+
+- **Un juge** (Apple silicon, groupe `judge`) :
+
+  ```
+  uv run --group judge bench judge --model mlx-community/gemma-4-31b-it-8bit --prompts data/prompts/base-v1.jsonl \
+      --out judges/base-v1-gemma4-cap512 --author <nom> --thinking cap:512 --max-tokens 1024
+  ```
+
+  À répéter pour `mlx-community/Qwen3.8-27B-8bit` (`qwen3`) et `mlx-community/gpt-oss-20b-MXFP4-Q8` (`gptoss`) en
+  `cap:512`, et pour Gemma et Qwen en `--thinking off` (`base-v1-gemma4-off`, `base-v1-qwen3-off`). Le `meta.json` de
+  chaque dossier dit la révision, le réglage de la réflexion et le rôle du dossier.
+- **Les témoins**, sans groupe particulier :
+
+  ```
+  uv run bench classify random --seed 0 --draws 10 --prompts data/prompts/base-v1.jsonl --out classifiers/random --author <nom>
+  uv run bench classify length --prompts data/prompts/base-v1.jsonl --out classifiers/length --author <nom>
+  uv run bench classify constant --level low --prompts data/prompts/base-v1.jsonl --out classifiers/constant-low --author <nom>
+  ```
+- **s1d1 en ONNX int8** (CPU, groupe `s1d1`), avec la révision de la carte :
+
+  ```
+  uv run --group s1d1 bench classify s1d1 --model scombat/s1d1-router-6src-small-onnx-int8 --revision 33c7f34a30af04735390264824d6bfa8546abb7a \
+      --backend onnx --prompts data/prompts/base-v1.jsonl --out classifiers/s1d1-small-int8 --author <nom>
+  ```
+
+  `compact` (`7e87870132a19d12b32dbad1f8233801b8145b9f`) et `full` (`068d0d20d5901c2db6934c89fde48b87c973fed8`) de la même
+  façon ; `tiny` (`dac13b5c0356864ea4501fa151d74dcd8b3ea22a`, la tête du Hub) aussi, avec son identifiant
+  `scombat/s1d1-router-6src-tiny-onnx-int8`.
+- **s1d1 en fp16** (PyTorch, groupes `s1d1-torch` et `s1d1`) :
+
+  ```
+  uv run --group s1d1 --group s1d1-torch bench classify s1d1 --model scombat/s1d1-router \
+      --revision 7fb9a4e3d03e3d942a98648268ff76c6152c18d6 --backend torch --prompts data/prompts/base-v1.jsonl \
+      --out classifiers/s1d1-full-fp16 --author <nom>
+  ```
+- **Laya** (groupe `laya`, à part) :
+
+  ```
+  uv run --group laya bench classify laya --laya-model english --revision 7b928d828b7b0e022f929d9bd2e44165aa270148 \
+      --prompts data/prompts/base-v1.jsonl --out classifiers/laya-english --author <nom>
+  ```
+
+  `--laya-model multilingual` et `--out classifiers/laya-multilingual` pour l'autre point de contrôle.
+- **Le tableau** :
+
+  ```
+  uv run bench run --prompts data/prompts/base-v1.jsonl --judges 'judges/base-v1-*' \
+      --main base-v1-gemma4-cap512,base-v1-qwen3-cap512,base-v1-gptoss-cap512 --classifiers 'classifiers/*' \
+      --out results/base-v1.parquet
+  ```
+- **Vérifier** les dossiers déposés, comme le fait la CI (`.github/workflows/ci.yml`) :
+
+  ```
+  for d in judges/*/ classifiers/*/; do uv run bench validate "$d"; done
+  ```
+
+Attention : `uv sync --group <g>` rend l'environnement exact et retire les groupes qu'il ne nomme pas ; synchroniser le
+groupe `judge` puis le groupe `laya` désinstalle le premier. Pour une commande, `uv run --group <g> ...` ; pour un
+environnement complet, `uv sync --all-groups` (qui comprend `mlx-lm`, donc Apple silicon seulement).
+
+### Les règles de vérité
+
+Les vérités (médiane toutes langues sur 12 votes, médiane par langue sur 3 votes, règle R5, indécidables, vote majoritaire
+de `task` et de `needs_tools`, abstentions) sont celles de [Les vérités](#les-vérités) ; elles ne sont pas répétées
+ici. Le comptage de `bench run` sur `base-v1`, avec les trois juges principaux : 1 abstention, aucun id indécidable ;
+33 ids sur 360 ont un désaccord de langue (24 des 90 prompts de base), écart moyen 0,675 (écart 0 pour 140 ids, 1 pour 197,
+2 pour 23) ; `truth_all.complexity` donne trivial 68, low 116, medium 116, high 52, expert 8, et `truth_all.needs_tools`
+est vrai pour 52 ids. Une médiane basse simple, à la place de la règle R5, changerait `truth_all` pour 0 des 90 clés de base, et
+`truth_all_nogemma` pour 1.
+
+### Ce que `results/` est, et n'est pas
+
+`results/base-v1.parquet` (360 lignes, 85 colonnes) et `results/base-v1.run.json` (les dossiers chargés, leurs révisions,
+les abstentions, les règles) sont **dérivés** des dossiers `judges/` et `classifiers/` : ils se régénèrent à chaque
+`bench run`. Ce n'est pas un enregistrement immuable, à la différence des dossiers de
+juges et de classifieurs, qu'on ajoute et qu'on ne réécrit pas : ce qui se rejoue, ce sont les entrées. Ce n'est pas non
+plus un rapport : aucune métrique, aucune figure ne s'y trouve, elles viennent dans la PR suivante.
+
+### Les comptes des juges
+
+Répartition des paliers de chaque juge (`needs_tools` : nombre d'ids étiquetés vrais ; `null` : paliers laissés sans
+étiquette, l'abstention de gpt-oss et un palier `null` de Gemma `cap512`, sortie du juge) :
+
+| juge | trivial | low | medium | high | expert | null | needs_tools vrai |
+|---|---|---|---|---|---|---|---|
+| base-v1-gemma4-cap512 | 51 | 135 | 105 | 58 | 10 | 1 | 61 |
+| base-v1-gemma4-off | 59 | 130 | 105 | 43 | 23 | 0 | 57 |
+| base-v1-gptoss-cap512 | 81 | 122 | 143 | 13 | 0 | 1 | 40 |
+| base-v1-qwen3-cap512 | 85 | 79 | 106 | 71 | 19 | 0 | 59 |
+| base-v1-qwen3-off | 70 | 85 | 92 | 91 | 22 | 0 | 69 |
+
+Accord deux à deux (`bench agree judges/base-v1-*`) :
+
+| juge A | juge B | n | abstained | palier exact | palier ±1 | task | needs_tools |
+|---|---|---|---|---|---|---|---|
+| base-v1-gemma4-cap512 | base-v1-gemma4-off | 360 | 0 | 81,4 % | 99,4 % | 85,6 % | 97,2 % |
+| base-v1-gemma4-cap512 | base-v1-gptoss-cap512 | 359 | 1 | 56,3 % | 96,4 % | 56,5 % | 91,4 % |
+| base-v1-gemma4-cap512 | base-v1-qwen3-cap512 | 360 | 0 | 70,3 % | 99,7 % | 83,1 % | 93,9 % |
+| base-v1-gemma4-cap512 | base-v1-qwen3-off | 360 | 0 | 65,8 % | 99,7 % | 80,3 % | 94,4 % |
+| base-v1-gemma4-off | base-v1-gptoss-cap512 | 359 | 1 | 55,4 % | 94,7 % | 49,3 % | 91,9 % |
+| base-v1-gemma4-off | base-v1-qwen3-cap512 | 360 | 0 | 72,2 % | 99,7 % | 80,3 % | 95,6 % |
+| base-v1-gemma4-off | base-v1-qwen3-off | 360 | 0 | 67,8 % | 99,7 % | 83,3 % | 95,0 % |
+| base-v1-gptoss-cap512 | base-v1-qwen3-cap512 | 359 | 1 | 47,1 % | 93,9 % | 59,6 % | 91,9 % |
+| base-v1-gptoss-cap512 | base-v1-qwen3-off | 359 | 1 | 46,5 % | 91,4 % | 53,5 % | 90,8 % |
+| base-v1-qwen3-cap512 | base-v1-qwen3-off | 360 | 0 | 77,8 % | 100,0 % | 84,7 % | 95,6 % |
+
+Ces deux tableaux sont des comptes, donnés une fois ici. Le texte de l'interprétation est laissé au rapport (PR B), qui
+ajoutera les intervalles de confiance et les métriques d'accord ; rien n'est dit ici de la valeur d'un juge ou d'un
+classifieur par rapport à un autre.
+
 ## Dépendances
 
 | Dépendance | Groupe | Raison |
@@ -262,6 +445,9 @@ des deux juges s'est abstenu (colonne `abstained`).
 | `datasets` | `pool` | lecture des jeux publics dont le jeu de prompts est tiré |
 | `huggingface_hub` | `pool` | accès en lecture seule aux jeux publics du Hub, sans jeton |
 | `mlx-lm` | `judge` | exécution locale des juges sur Apple silicon |
+| `onnxruntime`, `tokenizers`, `numpy` | `s1d1` | classifieur s1d1 en ONNX int8 (CPU) |
+| `torch`, `transformers` | `s1d1-torch` | classifieur s1d1 en PyTorch fp16 |
+| `laya` (0.4.15) | `laya` | classifieur Laya |
 | `pytest` | `dev` | tests, sans réseau et sans modèle |
 | `ruff` | `dev` | lint et tri des imports |
 
@@ -273,5 +459,5 @@ des deux juges s'est abstenu (colonne `abstained`).
   par ligne dans la colonne `licence` de `pool.parquet` et de `<jeu>.meta.parquet`. Le détail est dans
   [data/README.md](data/README.md).
 - [CC-BY-4.0](data/LICENSE) (`data/LICENSE`) : les prompts écrits à la main et leurs traductions, les fichiers de juges
-  (`judges/`), les vérifications (`data/checks/`), la liste d'exclusion et les statistiques. Les traductions des prompts
+  (`judges/`), les fichiers de classifieurs (`classifiers/`), les résultats (`results/`), les vérifications (`data/checks/`), la liste d'exclusion et les statistiques. Les traductions des prompts
   d'un jeu public sont des œuvres dérivées et gardent la licence de la ligne (colonne `licence` de `meta.parquet`).
