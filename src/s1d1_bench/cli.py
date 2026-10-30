@@ -197,7 +197,7 @@ def _classify_arguments(sub: argparse.ArgumentParser) -> None:
     sub.add_argument("--level", choices=LEVELS, default="low", help="constant: the tier given to every prompt")
     sub.add_argument("--model", default=None, help="s1d1: Hub repo id of the weights")
     sub.add_argument("--revision", default=None, help="s1d1: Hub revision of the weights (default: the current one)")
-    sub.add_argument("--backend", default="auto", help="s1d1: torch, onnx or auto")
+    sub.add_argument("--backend", default="auto", help="s1d1: auto (variant.json of the repo), onnx, torch or mlx")
     sub.add_argument(
         "--laya-model", choices=["english", "multilingual"], default=None, help="laya: the checkpoint to question"
     )

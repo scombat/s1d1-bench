@@ -21,6 +21,8 @@ bench = "s1d1_bench.cli:main"
 [dependency-groups]
 pool = ["datasets", "huggingface_hub"]
 judge = ["mlx-lm"]
+s1d1 = ["onnxruntime", "tokenizers", "numpy", "huggingface_hub"]
+s1d1-torch = ["torch", "transformers"]
 dev = ["pytest", "ruff"]
 
 [tool.hatch.build.targets.wheel]

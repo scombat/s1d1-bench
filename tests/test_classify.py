@@ -178,10 +178,9 @@ def test_parser_declares_every_option_of_the_brief(prompts_file, tmp_path):
         build_parser().parse_args(["classify", "bogus", "--prompts", "p", "--out", "o", "--author", "a"])
 
 
-@pytest.mark.parametrize("adapter", ["s1d1", "laya"])
-def test_model_adapters_are_not_implemented_yet(adapter, prompts_file, tmp_path, capsys):
+def test_laya_is_not_implemented_yet(prompts_file, tmp_path, capsys):
     out = tmp_path / "out"
-    assert _classify(adapter, prompts_file, out) == 2
+    assert _classify("laya", prompts_file, out) == 2
     assert "not implemented yet" in capsys.readouterr().err
     assert not out.exists()
 

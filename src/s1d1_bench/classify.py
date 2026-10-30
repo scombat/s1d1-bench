@@ -15,7 +15,8 @@ Three witnesses live here, systems that read no model and give the floor a real 
 - `constant`: one tier for every prompt (`--level`, low by default), `score` = its anchor, `task` and `needs_tools`
   null.
 
-The model adapters (`s1d1`, `laya`) are dispatched from `run_classify_cmd` too; they are not written yet.
+The model adapters are dispatched from `run_classify_cmd` too: `s1d1` (the Hub router, see `s1d1_backend`); `laya` is
+not written yet.
 """
 
 import datetime
@@ -121,6 +122,7 @@ def write_run(
     revision: str,
     notes: str,
     extra: dict[str, list[dict]] | None = None,
+    quantization: str | None = None,
 ) -> int:
     """Write the classifier folder `args.out` (meta.json, then labels.jsonl, then the `extra` jsonl files) and say so.
     Shared by every adapter. Returns the exit code; nothing is left behind on failure."""
@@ -137,6 +139,8 @@ def write_run(
         "licence": LICENCE,
         "notes": " ".join(part for part in (notes, args.notes) if part),
     }
+    if quantization is not None:
+        meta["quantization"] = quantization  # optional key of meta.json, written after the required ones
     leaks = local_path_keys(meta)
     if leaks:
         return _fail(f"meta.json would hold a local path in {', '.join(leaks)}: meta.json is published, remove it")
@@ -189,12 +193,40 @@ def _constant(args, prompts: list[dict], digest: str) -> int:
     )
 
 
-# adapter -> function (args, prompts, sha256 of the prompts file) -> exit code. `s1d1` and `laya` are added by the
-# tasks that write them: until then they are absent and the command says so.
+def _s1d1(args, prompts: list[dict], digest: str) -> int:
+    if not args.model:
+        return _fail("the s1d1 adapter needs --model, the Hub repo id of the weights (scombat/s1d1-router...)")
+    try:
+        from s1d1_bench import s1d1_backend
+
+        classify, info = s1d1_backend.make_s1d1_classifier(args.model, args.revision, args.backend)
+        results = classify([p["prompt"] for p in prompts])
+    except ImportError as exc:  # a dependency group is not installed: nothing was written
+        return _fail(
+            f"{exc}. The s1d1 adapter needs the s1d1 dependency group (onnx, mlx backends) or s1d1-torch (torch): "
+            "uv run --group s1d1 bench classify s1d1 ..., or --group s1d1-torch --group s1d1."
+        )
+    rows = [{"id": p["id"], **result} for p, result in zip(prompts, results, strict=True)]
+    notes = (
+        f"Replay: bench classify s1d1 --model {info['model']} --revision {info['revision']} --backend {args.backend}. "
+        f"s1d1_router.py of scombat/s1d1-router@{info['router_revision']}, backend {info['backend']}, device "
+        f"{info['device']}, precision {info['quantization']}. Prompts sorted by length in characters, batches of at "
+        f"most {s1d1_backend.BATCH_PROMPTS} prompts or about {s1d1_backend.BATCH_TOKENS} tokens, truncated at the "
+        "router's MAX_LENGTH; tier = complexity_tier of decode() (capped at high), score = complexity_score."
+    )
+    return write_run(
+        args, digest, rows, model=info["model"], revision=info["revision"], notes=notes,
+        quantization=info["quantization"],
+    )
+
+
+# adapter -> function (args, prompts, sha256 of the prompts file) -> exit code. `laya` is added by the task that
+# writes it: until then it is absent and the command says so.
 ADAPTERS: dict[str, Callable[[object, list[dict], str], int]] = {
     "random": _random,
     "length": _length,
     "constant": _constant,
+    "s1d1": _s1d1,
 }
 
 
