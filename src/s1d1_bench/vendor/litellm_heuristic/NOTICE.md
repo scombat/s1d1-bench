@@ -63,8 +63,8 @@ Only what is needed to import and run the copied code without `litellm`. Each ch
    ComplexityRouterConfig()` and the `default_model` override), lines 1403-1426 (JEV client, affinity hash,
    `classifier_fallback` check), lines 1444-1462 (escalation keywords, reminder markers, the semantic route layer, as
    far as the multi-step comment at 1463) and lines 1471-1530 (adaptive router, savings baseline, classifier prompts
-   and response format, circuit breaker, tier success predictor, the debug log). The two comment lines 1463-1464
-   above the regexes are not copied either.
+   and response format, circuit breaker, tier success predictor, the debug log). The comment line 1427 above the
+   keyword assignments and the two comment lines 1463-1464 above the regexes are not copied either.
 4. **`self.config`.** In `ComplexityRouter`, `self.config` is a pydantic `ComplexityRouterConfig()` (line 1397,
    no override). In `HeuristicScorer.__init__` it is `self.config = _DefaultConfig()`, a plain object defined just above
    the class. Its attributes are the fields the copied code reads, each with the default of the same field in

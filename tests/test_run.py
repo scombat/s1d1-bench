@@ -636,3 +636,15 @@ def test_run_refuses_a_decision_without_a_tier_or_a_score(tmp_path, capsys):
     err = capsys.readouterr().err
     assert "laya" in err and "decisions.jsonl" in err and "score" in err
     assert not (tmp_path / "results").exists()
+
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf")])
+def test_run_refuses_a_non_finite_raw_score(tmp_path, capsys, bad):
+    prompts = full_tree(tmp_path)
+    rows = [raw_row(i) for i in IDS]
+    rows[3]["score"] = bad  # json.dumps writes NaN / Infinity / -Infinity, which json.loads reads back
+    write_decisions(tmp_path / "classifiers" / "laya", rows)
+    assert run_cli(tmp_path, prompts) == 1
+    err = capsys.readouterr().err
+    assert "laya" in err and repr(IDS[3]) in err and "finite" in err
+    assert not (tmp_path / "results").exists()

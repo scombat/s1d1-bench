@@ -17,6 +17,7 @@ import datetime
 import glob
 import hashlib
 import json
+import math
 import os
 import sys
 from collections import Counter
@@ -201,8 +202,8 @@ def load_folder(path: Path | str, prompts_sha: str, ids: list[str]) -> tuple[str
 
 def read_decisions(path: Path | str, ids: list[str]) -> dict[str, dict]:
     """`id` -> {"tier", "score"} from a classifier's `decisions.jsonl`, the values untouched (a score may be negative).
-    Refused (ValueError naming the file) when a row has no id, a string `tier` or a numeric `score`, when an id appears
-    twice, when an id of `ids` has no row or a row has an id not in `ids`."""
+    Refused (ValueError naming the file) when a row has no id, a string `tier` or a finite numeric `score`, when an id
+    appears twice, when an id of `ids` has no row or a row has an id not in `ids`."""
     decisions: dict[str, dict] = {}
     try:
         rows = read_jsonl(path)
@@ -215,6 +216,8 @@ def read_decisions(path: Path | str, ids: list[str]) -> dict[str, dict]:
         score = row.get("score")
         if not isinstance(row.get("tier"), str) or isinstance(score, bool) or not isinstance(score, int | float):
             raise ValueError(f"{path}: id {i!r}: needs a string 'tier' and a numeric 'score'")
+        if not math.isfinite(score):
+            raise ValueError(f"{path}: id {i!r}: 'score' must be a finite number, not {score!r}")
         if i in decisions:
             raise ValueError(f"{path}: duplicate id {i!r}")
         decisions[i] = {"tier": row["tier"], "score": float(score)}

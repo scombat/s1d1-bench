@@ -320,7 +320,7 @@ fournit le `config.json` et le routeur utilisés. Laya est épinglé à `convaii
 
 **Le scorer de LiteLLM.** `classifiers/litellm-heuristic` n'a ni modèle ni réseau : le banc embarque le code du scorer
 heuristique de LiteLLM, copié tel quel au tag `v1.106.6` (commit `61c6ab78393ef45683dd7d963d2a315bd845e20b`) dans
-`src/s1d1_bench/vendor/litellm_heuristic/`, sans installer le paquet `litellm`. Le dossier `NOTICE.md` à côté du code dit
+`src/s1d1_bench/vendor/litellm_heuristic/`, sans installer le paquet `litellm`. Le fichier `NOTICE.md` à côté du code dit
 d'où il vient, quels blocs sont repris et comment ; la licence de ce code est celle de LiteLLM, MIT (`LICENSE`, copié
 avec lui). Chaque prompt est classé seul, sans consigne système, avec la configuration par défaut de LiteLLM ; les
 paliers se traduisent nom à nom (`SIMPLE` en `low`, `MEDIUM` en `medium`, `COMPLEX` en `high`, `REASONING` en `expert`),
