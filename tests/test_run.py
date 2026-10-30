@@ -9,7 +9,7 @@ import pytest
 
 from s1d1_bench.cli import main
 from s1d1_bench.jsonl import write_jsonl
-from s1d1_bench.run import build_results, load_folder, lower_median, majority, plain_lower_median, truths
+from s1d1_bench.run import build_results, even_floor_median, load_folder, majority, plain_lower_median, truths
 
 LANGS = ["eng", "fra", "rus", "zho"]
 KEYS = ["k1", "k2"]
@@ -85,14 +85,14 @@ def by_lang(levels: dict[str, str | None], **kw) -> dict[str, dict]:
     return {i: L(levels[i.split("-")[1]], **kw) for i in IDS}
 
 
-# --- lower_median, majority -------------------------------------------------------------------------------------------
+# --- even_floor_median, majority --------------------------------------------------------------------------------------
 
 
-def test_lower_median_six_six_takes_the_lower():
-    assert lower_median(["medium", "low"] * 6) == "low"
-    assert lower_median(["high", "medium", "high"]) == "high"
-    assert lower_median(["expert", "trivial"]) == "medium"  # two votes: their mean rounded down (docs/34)
-    assert lower_median(["low", "medium", "medium", "high"]) == "medium"
+def test_even_floor_median_six_six_takes_the_lower():
+    assert even_floor_median(["medium", "low"] * 6) == "low"
+    assert even_floor_median(["high", "medium", "high"]) == "high"
+    assert even_floor_median(["expert", "trivial"]) == "medium"  # two votes: their mean rounded down (docs/34)
+    assert even_floor_median(["low", "medium", "medium", "high"]) == "medium"
     # through the truths: j-a low everywhere, j-b medium everywhere, j-c low in eng/fra and medium in rus/zho
     labels = {
         "j-a": every("low"),
@@ -109,11 +109,11 @@ def test_lower_median_six_six_takes_the_lower():
 
 
 def test_undecidable_when_nulls_are_majority():
-    assert lower_median([None] * 7 + ["high"] * 5) is None
-    assert lower_median([None] * 6 + ["high"] * 6) == "high"  # half is not a majority
-    assert lower_median([None, None, "low"]) is None
-    assert lower_median([None, "low", "expert"]) == "medium"  # two votes: (1 + 4) // 2
-    assert lower_median([]) is None
+    assert even_floor_median([None] * 7 + ["high"] * 5) is None
+    assert even_floor_median([None] * 6 + ["high"] * 6) == "high"  # half is not a majority
+    assert even_floor_median([None, None, "low"]) is None
+    assert even_floor_median([None, "low", "expert"]) == "medium"  # two votes: (1 + 4) // 2
+    assert even_floor_median([]) is None
     # k1: 7 of its 12 votes are null (j-a: 4, j-b: 3); k2: 3 of 12
     labels = {
         "j-a": by_lang({"eng": None, "fra": None, "rus": None, "zho": None}),
@@ -138,19 +138,19 @@ def test_undecidable_when_nulls_are_majority():
 
 
 def test_even_count_takes_the_mean_of_the_two_middle_votes_rounded_down():
-    assert lower_median(["low", "high"]) == "medium"  # docs/34: two judges, mean rounded down
-    assert lower_median(["medium", "low"]) == "low"  # adjacent: the lower one
-    assert lower_median(["low"] * 6 + ["high"] * 6) == "medium"
-    assert lower_median(["low"] * 6 + ["medium"] * 6) == "low"
-    assert lower_median(["trivial", "high"]) == "low"  # (0 + 3) // 2
-    assert lower_median(["low", "expert"]) == "medium"  # (1 + 4) // 2
-    assert lower_median(["trivial", "low", "high", "expert"]) == "medium"  # the two middle: low, high
-    assert lower_median([None, "low", "high"]) == "medium"  # two non-null votes, one null of three
+    assert even_floor_median(["low", "high"]) == "medium"  # docs/34: two judges, mean rounded down
+    assert even_floor_median(["medium", "low"]) == "low"  # adjacent: the lower one
+    assert even_floor_median(["low"] * 6 + ["high"] * 6) == "medium"
+    assert even_floor_median(["low"] * 6 + ["medium"] * 6) == "low"
+    assert even_floor_median(["trivial", "high"]) == "low"  # (0 + 3) // 2
+    assert even_floor_median(["low", "expert"]) == "medium"  # (1 + 4) // 2
+    assert even_floor_median(["trivial", "low", "high", "expert"]) == "medium"  # the two middle: low, high
+    assert even_floor_median([None, "low", "high"]) == "medium"  # two non-null votes, one null of three
     # odd counts: the middle vote, unchanged
-    assert lower_median(["low", "high", "high"]) == "high"
-    assert lower_median(["low", "low", "expert"]) == "low"
-    assert lower_median(["trivial", "medium", "expert"]) == "medium"
-    assert lower_median(["low", "high", "expert", None, None]) == "high"
+    assert even_floor_median(["low", "high", "high"]) == "high"
+    assert even_floor_median(["low", "low", "expert"]) == "low"
+    assert even_floor_median(["trivial", "medium", "expert"]) == "medium"
+    assert even_floor_median(["low", "high", "expert", None, None]) == "high"
     # the plain lower median, kept for the diagnostic of `bench run`
     assert plain_lower_median(["low", "high"]) == "low"
     assert plain_lower_median(["low"] * 6 + ["high"] * 6) == "low"
