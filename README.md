@@ -98,7 +98,10 @@ bounds of 0.2 ([the mapping](#the-routellm-routers-and-the-4-billion-llm)): its 
 0.303 in the other three languages (point values, the CIs overlap), and the paired gap `s1d1-full-int8` −
 `routellm-bert` is 0.528 [0.388, 0.668]. `llm4b-gemma4-e4b-off` is a small LLM that reads the v7 instructions like
 the judges, without reasoning; its QWK, computed on 356 ids (4 abstentions), is close to that of `s1d1-full-int8`, and
-the 2 σ rule does not separate them (paired gap 0.018 [−0.067, 0.105]). It answers in 1.1 s per prompt on the GPU and
+the 2 σ rule does not separate them (paired gap 0.018 [−0.067, 0.105]). This model is of the Gemma 4 family, which is
+both one of the three judges and the labeller of the training data of s1d1; against the two other judges only
+(`truth_all_nogemma`), it is at 0.713 [0.628, 0.774] and `s1d1-full-int8` at 0.785 [0.713, 0.834]
+(`report/base-v1/tables/agreement_nogemma.csv`). It answers in 1.1 s per prompt on the GPU and
 weighs 8.9 GB on disk, `routellm-bert` 16.3 ms on the CPU for 1.1 GB.
 
 The judges are the measuring instrument, not competitors: no table ranks a candidate against a judge, except the

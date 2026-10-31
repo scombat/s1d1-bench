@@ -139,6 +139,18 @@ def _readme_quote(section: str) -> str:
     return _squash("\n".join(quote))
 
 
+def test_readme_results_quote_the_4b_model_without_gemma():
+    """The 4B model is of the family of a main judge: the README gives it, and s1d1-full-int8, against the median of the
+    two other judges (`truth_all_nogemma`), as `agreement_nogemma.csv` has them."""
+    results = " ".join(_readme_section(RESULTS_TITLE).split())
+    rows = _csv_rows("agreement_nogemma.csv", "name")
+    for name in ("llm4b-gemma4-e4b-off", "s1d1-full-int8"):
+        row = rows[name]
+        qwk = f"{_english(row['qwk'])} [{_english(row['qwk_lo'])}, {_english(row['qwk_hi'])}]"
+        assert qwk in results, name
+    assert "(`truth_all_nogemma`)" in results and "agreement_nogemma.csv" in results
+
+
 def test_readme_results_match_the_report():
     """The README quotes the sentence of docs/32 § 5 in English: same numbers, in the same order, as the report's."""
     results = _readme_section(RESULTS_TITLE)
