@@ -300,9 +300,10 @@ les deux réglages d'un même modèle, sans réflexion et réflexion plafonnée 
 
 _QWK contre truth_all (360 ids) contre la latence médiane par prompt (lot de 1, échelle logarithmique) ; juges principaux : QWK contre les deux autres._ Données : [`figures/quality-vs-latency.csv`](figures/quality-vs-latency.csv).
 
-Latence médiane par prompt, lot de 1, après chauffe, sur le même Mac : s1d1 int8 et LiteLLM sur le CPU, s1d1 fp16 et
-Laya sur le GPU (MPS), les juges sur le GPU (MLX) ; la latence d'un juge comprend la lecture de la consigne v7 (environ
-1 900 jetons) et sa réponse, raisonnement compris. En ordonnée, le QWK contre `truth_all` ; pour un juge principal, son
+Latence médiane par prompt, lot de 1, sur le même Mac (classifieurs : après chauffe ; juges : leurs journaux, une
+consigne et un prompt à la fois) : s1d1 int8 et LiteLLM sur le CPU, s1d1 fp16 et Laya sur le GPU (MPS), les juges sur
+le GPU (MLX) ; la latence d'un juge comprend la lecture de la consigne v7 (environ 1 900 jetons), puis son raisonnement
+(réflexion plafonnée à 512 jetons) et sa réponse. En ordonnée, le QWK contre `truth_all` ; pour un juge principal, son
 QWK contre la médiane des deux autres (le plafond, 8 votes), le chiffre des lignes du plafond des barres. L'IC de
 `s1d1-full-int8` contient la moyenne du plafond ;
 `s1d1-full-int8` répond par prompt en 9,1 ms sur le CPU.

@@ -1005,7 +1005,8 @@ def _quality_vs_latency(computed: dict[str, pa.Table], sigma: float, mpl):
     title(
         ax,
         "Agreement with the judges against latency",
-        f"median latency per prompt, {batch}, {machine}; judges read a 1,900-token instruction\n"
+        f"median latency per prompt, {batch}, {machine}\n"
+        "judges read a ~1,900-token instruction, then reason (thinking capped at 512 tokens) and answer\n"
         f"QWK against truth_all, {n_ids}; whiskers: 95% CI over the {n_base}",
     )
     fig.tight_layout()

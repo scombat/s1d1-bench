@@ -172,6 +172,15 @@ def test_readme_results_latency_and_weights_match_the_profile():
     assert f"répond en {_ms(float(full['latency_p50_ms']))} par prompt sur le CPU" in results
     assert f"`s1d1-full-int8` pèse {_mb(float(full['weights_mb']))}" in results
     assert "À QWK de l'ordre de celui d'un juge" not in results
+    # the tail of s1d1-full-int8, without a cause, and the judges' latency with and without reasoning
+    tail = f"Au 95e centile, `s1d1-full-int8` met {_ms(float(full['latency_p95_ms']))} (la cause de cette\nqueue n'est"
+    assert tail in results
+    off = [r for r in profile if r["name"].endswith("-off")]
+    assert {r["name"] for r in off} == {"base-v1-gemma4-off", "base-v1-qwen3-off"}
+    assert "puis en raisonnant (réflexion plafonnée à 512 jetons)" in results
+    no_reasoning = _span([float(r["latency_p50_ms"]) for r in off], _ms)
+    assert f"sans réflexion, gemma4 et qwen3 mettent\n{no_reasoning}." in results
+    assert "au repos" not in _readme_section("Le rapport")  # the profile records no load of the machine
 
 
 def test_readme_results_by_language_match_the_report():

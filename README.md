@@ -42,8 +42,10 @@ La phrase de docs/32 § 5, remplie avec les chiffres du rapport de `base-v1` (36
 
 `s1d1-full-int8`, dont l'IC contient la moyenne du plafond (un juge principal y est placé à son QWK contre les deux
 autres), répond en 9,1 ms par prompt sur le CPU du Mac (latence médiane, lot de 1) ; les quatre variantes int8 de s1d1,
-chacune à son propre QWK, répondent en 1,6 à 9,1 ms. Un juge principal met 1,8 à 42,8 s sur le GPU du même Mac (MLX), en
-lisant une consigne d'environ 1 900 jetons. s1d1 fp16 et Laya tournent sur le GPU (MPS), LiteLLM sur le CPU. Les
+chacune à son propre QWK, répondent en 1,6 à 9,1 ms. Au 95e centile, `s1d1-full-int8` met 76,8 ms (la cause de cette
+queue n'est pas mesurée). Un juge principal met 1,8 à 42,8 s sur le GPU du même Mac (MLX), en lisant une consigne
+d'environ 1 900 jetons puis en raisonnant (réflexion plafonnée à 512 jetons) ; sans réflexion, gemma4 et qwen3 mettent
+9,2 à 12,6 s. s1d1 fp16 et Laya tournent sur le GPU (MPS), LiteLLM sur le CPU. Les
 témoins ne sont pas des modèles et ne sont pas dans la figure. Sur disque, `s1d1-full-int8` pèse 310 Mo (les cinq
 variantes de s1d1 : 25 à 615 Mo), un juge principal 12,1 à 33,8 Go (figure `quality-vs-footprint` du rapport). Mesures
 de `bench profile` sur un M4 Max, voir [Le profil](#le-profil).
@@ -644,7 +646,7 @@ modèle sur le seul prompt. La mémoire de crête comprend l'interpréteur, les 
 tokenizers) et le chargement du modèle : ce n'est pas la taille du modèle seul ; sur MPS, la mémoire tenue par le pilote
 du GPU peut y manquer ; pour les juges, elle n'est pas mesurable après coup (`null`). Les latences bougent d'une
 exécution à l'autre : le fichier est une mesure, pas un calcul, et ne se refait pas à l'octet près. Il a été mesuré une
-fois, sur un M4 Max au repos, en une minute (58 s pour les huit classifieurs et les cinq juges).
+fois, sur un M4 Max, en une minute (58 s pour les huit classifieurs et les cinq juges).
 
 ## Dépendances
 
