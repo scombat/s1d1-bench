@@ -20,6 +20,10 @@ latencies move a little from one run to the next: it is a measurement, not a com
 - Weights: the size on disk of the weight files (`WEIGHT_SUFFIXES`) of the pinned snapshot in the local Hub cache,
   folder only (Laya's english head is the root of its repo, its multilingual head the `multilingual` subfolder);
   LiteLLM's heuristic has none (0).
+- Routers of RouteLLM (`routellm/...` models) are reloaded by the routellm adapter, on the CPU, like the others.
+- A candidate in the judge format (`provider: local` in its `meta.json`: a small LLM that reads the v7 instruction
+  through `bench judge`) is profiled like a judge, from its `log.jsonl` and its weights in `<models-dir>`, but its row
+  says `kind: classifier`: it is a candidate of the report, not an instrument.
 - Judges: their latency comes from their `log.jsonl` (`wall_s` of the calls that ended `ok`, one prompt per call by
   construction, each reading the v7 instruction of about 1 900 tokens before the prompt, on the GPU through MLX) and
   their weights from `<models-dir>/<org>--<name>`; their peak RSS cannot be measured after the fact (null).
@@ -187,6 +191,11 @@ def classifier_spec(meta: dict) -> dict | None:
         if not (laya_model and commit):
             raise ValueError(f"{model}: meta.json does not give the Laya checkpoint and its commit")
         return {"adapter": "laya", "laya_model": laya_model, "commit": commit}
+    if model.startswith("routellm/"):
+        router = _found(r"--routellm-router (\w+)", notes)
+        if not (router and re.fullmatch(FULL_SHA, revision)):
+            raise ValueError(f"{model}: meta.json does not give the RouteLLM router and a full revision")
+        return {"adapter": "routellm", "router": router, "revision": revision}
     raise ValueError(f"no adapter for the model {model!r}")
 
 
@@ -238,6 +247,15 @@ def _load(spec: dict) -> tuple[Callable[[list[str]], list], dict]:
         facts = {
             "device": info["device"], "quantization": f"laya {info['laya_version']}",
             "work": "one predict_batch request: tokenisation, forward pass, reading of the tier answer",
+        }  # fmt: skip
+    elif spec["adapter"] == "routellm":
+        from s1d1_bench import routellm_backend
+
+        classify, info = routellm_backend.make_routellm_classifier(spec["router"], spec["revision"])
+        folder = _local_snapshot(routellm_backend.ROUTERS[spec["router"]], info["revision"])
+        facts = {
+            "device": info["device"], "quantization": info["precision"],
+            "work": "tokenisation, forward pass, softmax of the three logits",
         }  # fmt: skip
     else:
         raise ValueError(f"unknown adapter {spec['adapter']!r}")
@@ -310,7 +328,7 @@ def classifier_row(name: str, meta: dict, result: dict, warmup: int) -> dict:
     }
 
 
-def judge_row(entry: dict, folder: Path, models_dir: Path) -> dict:
+def judge_row(entry: dict, folder: Path, models_dir: Path, kind: str = "judge") -> dict:
     stats = profile_judge(folder)
     meta_path = folder / "meta.json"
     meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.is_file() else {}
@@ -333,7 +351,7 @@ def judge_row(entry: dict, folder: Path, models_dir: Path) -> dict:
     )
     return {
         "name": entry["name"],
-        "kind": "judge",
+        "kind": kind,
         "model": entry["model"],
         "revision": entry["revision"],
         "device": "gpu-mlx",
@@ -379,6 +397,12 @@ def run_profile_cmd(args) -> int:
             failed = True
             continue
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        if meta.get("provider") == "local":  # a candidate in the judge format: profiled like a judge, kept a candidate
+            if only is not None and name not in only:
+                skipped.append({"name": name, "reason": "not selected by --only"})
+                continue
+            rows.append(judge_row(entry, meta_path.parent, Path(args.models_dir).expanduser(), kind="classifier"))
+            continue
         try:
             spec = classifier_spec(meta)
         except ValueError as exc:

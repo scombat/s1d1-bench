@@ -38,7 +38,8 @@ _HELP = {
     "witness": "fetch the m-ArenaHard translations of the Arena-Hard prompts of a set",
     "check": "flag the translations of a set for a human review (structure, labels, same request, review sheet)",
     "classify": (
-        "write a classifier folder: a witness (random, length, constant) or a system (s1d1, laya, litellm-heuristic)"
+        "write a classifier folder: a witness (random, length, constant) "
+        "or a system (s1d1, laya, litellm-heuristic, routellm)"
     ),
     "run": "merge the judge and classifier folders of a set into one table, with the truths of the main judges",
     "report": "write the report of a results table: tables (CSV), figures (SVG + CSV) and index.md from a template",
@@ -205,8 +206,8 @@ def _classify_arguments(sub: argparse.ArgumentParser) -> None:
 
     sub.add_argument(
         "adapter",
-        choices=["random", "length", "constant", "s1d1", "laya", "litellm-heuristic"],
-        help="random, length, constant: the witnesses; s1d1, laya, litellm-heuristic: the systems under test",
+        choices=["random", "length", "constant", "s1d1", "laya", "litellm-heuristic", "routellm"],
+        help="random, length, constant: the witnesses; s1d1, laya, litellm-heuristic, routellm: the systems under test",
     )
     sub.add_argument("--prompts", type=Path, required=True, help="prompts to classify (jsonl of id, prompt)")
     sub.add_argument(
@@ -219,7 +220,7 @@ def _classify_arguments(sub: argparse.ArgumentParser) -> None:
     sub.add_argument("--level", choices=LEVELS, default="low", help="constant: the tier given to every prompt")
     sub.add_argument("--model", default=None, help="s1d1: Hub repo id of the weights")
     sub.add_argument(
-        "--revision", default=None, help="s1d1, laya: Hub revision of the weights (default: the current one)"
+        "--revision", default=None, help="s1d1, laya, routellm: Hub revision of the weights (default: the current one)"
     )
     sub.add_argument(
         "--router-revision",
@@ -229,6 +230,12 @@ def _classify_arguments(sub: argparse.ArgumentParser) -> None:
     sub.add_argument("--backend", default="auto", help="s1d1: auto (variant.json of the repo), onnx or torch")
     sub.add_argument(
         "--laya-model", choices=["english", "multilingual"], default=None, help="laya: the checkpoint to question"
+    )
+    sub.add_argument(
+        "--routellm-router",
+        choices=["bert", "mf"],
+        default=None,
+        help="routellm: the router to run (mf is refused: it needs OpenAI embeddings)",
     )
 
 

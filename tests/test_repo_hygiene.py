@@ -139,6 +139,18 @@ def _readme_quote(section: str) -> str:
     return _squash("\n".join(quote))
 
 
+def test_readme_results_quote_the_4b_model_without_gemma():
+    """The 4B model is of the family of a main judge: the README gives it, and s1d1-full-int8, against the median of the
+    two other judges (`truth_all_nogemma`), as `agreement_nogemma.csv` has them."""
+    results = " ".join(_readme_section(RESULTS_TITLE).split())
+    rows = _csv_rows("agreement_nogemma.csv", "name")
+    for name in ("llm4b-gemma4-e4b-off", "s1d1-full-int8"):
+        row = rows[name]
+        qwk = f"{_english(row['qwk'])} [{_english(row['qwk_lo'])}, {_english(row['qwk_hi'])}]"
+        assert qwk in results, name
+    assert "(`truth_all_nogemma`)" in results and "agreement_nogemma.csv" in results
+
+
 def test_readme_results_match_the_report():
     """The README quotes the sentence of docs/32 § 5 in English: same numbers, in the same order, as the report's."""
     results = _readme_section(RESULTS_TITLE)
@@ -148,7 +160,10 @@ def test_readme_results_match_the_report():
     assert sentence.count("\N{MINUS SIGN}") == _report_sentence().count("\N{MINUS SIGN}")
 
     candidates = _csv_rows("agreement_all.csv", "name")
-    shown = ("s1d1-full-int8", "s1d1-small-int8", "length", "laya-english-tier", "laya-multilingual-tier")
+    shown = (
+        "s1d1-full-int8", "s1d1-small-int8", "length", "laya-english-tier", "laya-multilingual-tier",
+        "routellm-bert", "llm4b-gemma4-e4b-off",
+    )  # fmt: skip
     for name in (*shown, "litellm-heuristic"):
         row = candidates[name]
         assert _estimate(row, "qwk") in results, name
@@ -176,7 +191,7 @@ def test_readme_results_show_the_three_figures_with_a_caption_and_link_the_repor
         assert block.strip() and not block.strip().startswith("|"), figure
     assert "](report/base-v1/index.md)" in results
     table = [line for line in results.splitlines() if line.startswith("| ") and not line.startswith("| candidate")]
-    assert len(table) == 7  # the seven lines of the table
+    assert len(table) == 9  # the seven lines of the first lot, plus RouteLLM bert and the 4B model of lot B
 
 
 def _span(values: list[float], unit) -> str:
@@ -223,7 +238,7 @@ def test_readme_results_latency_and_weights_match_the_profile():
     p95 = _ms(float(full["latency_p95_ms"]))
     tail = f"At the 95th percentile, `s1d1-full-int8` takes {p95} (the cause of this tail is not"
     assert tail in flat
-    off = [r for r in profile if r["name"].endswith("-off")]
+    off = [r for r in profile if r["name"].startswith("base-v1-") and r["name"].endswith("-off")]
     assert {r["name"] for r in off} == {"base-v1-gemma4-off", "base-v1-qwen3-off"}
     assert "and then reasoning (reasoning capped at 512 tokens)" in flat
     no_reasoning = _span([float(r["latency_p50_ms"]) for r in off], _ms)
@@ -268,6 +283,7 @@ LOCAL_PATH_EXCEPTIONS = {
     "tests/test_translate.py",
     "tests/test_classify.py",
     "tests/test_laya_backend.py",
+    "tests/test_routellm_backend.py",
 }
 
 

@@ -89,6 +89,20 @@ QWK against `truth_all` (the median of the three main judges), 95% CI over 1,000
 | Laya english (`laya-english-tier`) | 0.405 [0.314, 0.490] | 0.311 [0.247, 0.386] |
 | Laya multilingual (`laya-multilingual-tier`) | 0.119 [−0.040, 0.264] | 0.278 [0.203, 0.353] |
 | LiteLLM heuristic | 0.089 [0.026, 0.172] | 0.342 [0.250, 0.436] |
+| RouteLLM bert (`routellm-bert`) | 0.278 [0.132, 0.408] | 0.381 [0.303, 0.467] |
+| LLM 4B, Gemma 4 E4B 8-bit (`llm4b-gemma4-e4b-off`) | 0.789 [0.698, 0.853] | 0.545 [0.447, 0.643] |
+
+The last two rows are those of lot B. `routellm-bert` is RouteLLM's published `bert` router, run on the prompts as they
+are; it predicts the probability that GPT-4 beats Mixtral on an English question, not a tier, read here with five equal
+bounds of 0.2 ([the mapping](#the-routellm-routers-and-the-4-billion-llm)): its QWK is 0.367 in English and 0.149 to
+0.303 in the other three languages (point values, the CIs overlap), and the paired gap `s1d1-full-int8` −
+`routellm-bert` is 0.528 [0.388, 0.668]. `llm4b-gemma4-e4b-off` is a small LLM that reads the v7 instructions like
+the judges, without reasoning; its QWK, computed on 356 ids (4 abstentions), is close to that of `s1d1-full-int8`, and
+the 2 σ rule does not separate them (paired gap 0.018 [−0.067, 0.105]). This model is of the Gemma 4 family, which is
+both one of the three judges and the labeller of the training data of s1d1; against the two other judges only
+(`truth_all_nogemma`), it is at 0.713 [0.628, 0.774] and `s1d1-full-int8` at 0.785 [0.713, 0.834]
+(`report/base-v1/tables/agreement_nogemma.csv`). It answers in 1.1 s per prompt on the GPU and
+weighs 8.9 GB on disk, `routellm-bert` 16.3 ms on the CPU for 1.1 GB.
 
 The judges are the measuring instrument, not competitors: no table ranks a candidate against a judge, except the
 ceiling. No "better than" sentence without the 2 σ rule (the CI of the paired gap excludes zero and exceeds 2 σ,
@@ -98,7 +112,7 @@ ceiling. No "better than" sentence without the 2 σ rule (the CI of the paired g
 LiteLLM's heuristic is the default classifier of LiteLLM's Auto Router, and Laya the other option that LiteLLM
 documents for a self-hosted classifier; the bench reads both without training or tuning (zero-shot) on
 this rubric, LiteLLM's four tiers translated name by name (see
-[The thirteen classifier folders](#the-thirteen-classifier-folders-eleven-in-the-results)). For `small`, the
+[The fifteen classifier folders](#the-fifteen-classifier-folders-thirteen-in-the-results)). For `small`, the
 bench does not separate `s1d1-small-int8` from `s1d1-full-int8`: the paired gap `s1d1-full-int8` − `s1d1-small-int8` is
 0.035 [−0.004, 0.076] (`report/base-v1/tables/paired.csv`, the 2 σ rule does not pass). `s1d1-small-int8` weighs 56 MB
 against 310 MB for `s1d1-full-int8` and answers in 5.8 ms per prompt against 9.1 ms (`report/base-v1/tables/profile.csv`,
@@ -392,7 +406,7 @@ one of the two judges abstained (column `abstained`).
 
 ## The report's judges and the classifiers
 
-The `base-v1` report rests on five series of judges and eleven classifiers, all on `data/prompts/base-v1.jsonl` (360
+The `base-v1` report rests on five series of judges and thirteen classifiers, all on `data/prompts/base-v1.jsonl` (360
 lines, SHA-256 `e6a6d4c12ef8b95caea942337a3a1e16ec1622cb4e75c8ee0b473ef609a32490`). The judges ran on 2026-10-30
 on a Mac M4 Max 128 GB, with `mlx-lm` 0.32.2, one model at a time, temperature 0, `--max-tokens 1024`, the `v7-single`
 instructions, revisions of [judges/MODELS.md](judges/MODELS.md).
@@ -425,7 +439,7 @@ abstentions), and `bench validate` prints `ok (1 abstention)`. What an abstentio
 [The truths](#the-truths) and in [judges/README.md](judges/README.md); this section does not return to it. In the agreements
 below, the `abstained` column counts the ids left out of the pair.
 
-### The thirteen classifier folders (eleven in the results)
+### The fifteen classifier folders (thirteen in the results)
 
 | folder | what it is | revision | duration |
 |---|---|---|---|
@@ -442,6 +456,8 @@ below, the `abstained` column counts the ids left out of the pair.
 | `classifiers/laya-english-tier` | Laya 0.4.15, english checkpoint, mps, most probable tier name by name | `convaiinnovations/laya@7b928d82…` | ≈ 20 s (not timed) |
 | `classifiers/laya-multilingual-tier` | Laya 0.4.15, multilingual checkpoint, mps, most probable tier name by name | `convaiinnovations/laya@7b928d82…` | ≈ 20 s (not timed) |
 | `classifiers/litellm-heuristic` | LiteLLM's built-in heuristic scorer (`classifier_type: heuristic`, default configuration), code copied as is at tag v1.106.6, no model | tag `v1.106.6`, commit `61c6ab78…` | under a second |
+| `classifiers/routellm-bert` | RouteLLM's `bert` router (`routellm/bert_gpt4_augmented`, XLM-RoBERTa-base), PyTorch float32, CPU, score = probability that the strong model wins, five equal bounds | `86237e3df400762178ea98379477b8296e66d5e4` | 14 s |
+| `classifiers/llm4b-gemma4-e4b-off` | Gemma 4 E4B-it 8-bit (MLX) reading the v7 instructions through `bench judge`, no reasoning, in the judge folder format, a candidate and not a judge | `4255b21bd9a9d3fc807ef7abd80373f5e3a52a73` | ≈ 7 min |
 
 The classifiers' durations are those of classifying the 360 prompts, with the small Hub download, the weights being
 already in cache. Three s1d1 revisions (`small`, `compact`, `full` int8) are pinned to the revision of the repository's card.
@@ -461,6 +477,34 @@ and `task` and `needs_tools` stay `null`. Its score is not on the v7 scale (it c
 therefore no `score`, and the scorer's raw decision (tier, score, signals, cause) is in `decisions.jsonl`, next to
 `labels.jsonl`. `bench run` reads it in the columns `litellm-heuristic.raw_score` and `litellm-heuristic.raw_tier`, and
 marks `"raw_decisions": true` in the classifier's entry of `run.json`. The raw score is used only for the rank measures.
+
+### The RouteLLM routers and the 4-billion LLM
+
+**What RouteLLM's routers measure.** RouteLLM (lm-sys, arXiv 2406.18665) publishes routers that predict, for an English
+question, the probability that the strong model (GPT-4) beats the weak one (Mixtral 8x7B), learned from Chatbot Arena
+battles: this is not a complexity tier. The bench gives them the prompt as it is, in the four languages (the routers are
+English: what this gives elsewhere is a result, not a defect corrected), keeps the `score` as the router gives it,
+without calibration, and reads it onto the tiers with five equal bounds fixed in advance: trivial [0 ; 0.2), low
+[0.2 ; 0.4), medium [0.4 ; 0.6), high [0.6 ; 0.8), expert [0.8 ; 1] (0.2 is low, 0.8 is expert, 1.0 is expert). `task`
+and `needs_tools` are `null`: the router does not predict them. This mapping is a choice of the bench, not a property of
+the router: other bounds would give other tiers, and the measure only says what these bounds give. `routellm-bert` is
+the only RouteLLM router run: `mf` (matrix factorisation) is excluded, because RouteLLM's repository hard-codes OpenAI's
+`text-embedding-3-small` embeddings (a paid API call, which the bench does not make; there is no local variant);
+`causal_llm` (a fine-tuned Llama-3-8B) is not run: its weights (`routellm/causal_llm_gpt4_augmented`) can be downloaded,
+but RouteLLM's code loads its tokenizer from the gated repository `meta-llama/Meta-Llama-3-8B`, to which this account
+has no access (a 403 answer), and the bench does not ask for that access; the Llama 3 licence was therefore not
+examined. `bench classify routellm` replays the computation of RouteLLM's `BERTRouter` (commit
+`0b64fdafe049e596a3f5657c219329f24af24198`) without installing the `routellm` package, in the optional `routellm` group
+(`torch`, `transformers`, `numpy`, `huggingface_hub`).
+
+**The 4-billion LLM.** `classifiers/llm4b-gemma4-e4b-off` is Gemma 4 E4B-it (the family of the Gemma 4 31B judge), in
+8-bit MLX, reading the same v7 instructions as the judges through `bench judge`, without reasoning; the folder keeps the
+format of a judge folder (`provider: local`, `log.jsonl` with the time of each call) and `bench run` loads it as a
+classifier: it is a candidate, outside `--main`. Four ids are abstentions (the model answers a task that is not one of
+the rubric's 19): they are outside the QWK of this candidate (356 ids). Its profile is read from its `log.jsonl` (see
+[The profile](#the-profile)). The two profile rows of this lot were measured afterwards, apart
+(`bench profile --only routellm-bert,llm4b-gemma4-e4b-off`, on 2026-10-31) and added to `results/base-v1.profile.json`
+without touching the other rows, whose latencies do not repeat identically (`meta.added_later` names them).
 
 **Hub revisions for the int8 repositories.** For `small`, `compact` and `full`, the current Hub head is not the revision of
 the card: the commits between them touch only metadata (`README.md`, `eval.json`, `footprint.json`,
@@ -528,6 +572,19 @@ another name.
   a different table from that of LiteLLM's scorer. They stay in the repository, because a classifier folder is never
   modified, but `bench run` no longer loads them: they are neither in the results nor in the report's numbers,
   which only says why.
+- **A RouteLLM router** (group `routellm`, CPU):
+
+  ```
+  uv run --group routellm bench classify routellm --routellm-router bert --revision 86237e3df400762178ea98379477b8296e66d5e4 \
+      --prompts data/prompts/base-v1.jsonl --out classifiers/routellm-bert --author <name>
+  ```
+- **The 4-billion LLM** (Apple silicon, group `judge`, model in `~/mlx-models/mlx-community--gemma-4-e4b-it-8bit`,
+  revision `4255b21bd9a9d3fc807ef7abd80373f5e3a52a73`):
+
+  ```
+  uv run --group judge bench judge --model mlx-community/gemma-4-e4b-it-8bit --prompts data/prompts/base-v1.jsonl \
+      --out classifiers/llm4b-gemma4-e4b-off --author <name> --thinking off --max-tokens 1024
+  ```
 - **LiteLLM's scorer** (no model, no group, no network):
 
   ```
@@ -539,8 +596,8 @@ another name.
   uv run bench run --prompts data/prompts/base-v1.jsonl --judges 'judges/base-v1-*' \
       --main base-v1-gemma4-cap512,base-v1-qwen3-cap512,base-v1-gptoss-cap512 \
       --classifiers 'classifiers/s1d1-*' classifiers/laya-english-tier classifiers/laya-multilingual-tier \
-      classifiers/litellm-heuristic classifiers/random classifiers/length classifiers/constant-low \
-      --out results/base-v1.parquet
+      classifiers/litellm-heuristic classifiers/routellm-bert classifiers/llm4b-gemma4-e4b-off classifiers/random \
+      classifiers/length classifiers/constant-low --out results/base-v1.parquet
   ```
 
   `--judges` and `--classifiers` take several values in a row (globs between quotes, which `bench run`
@@ -570,11 +627,11 @@ is true for 52 ids. A plain lower median, instead of rule R5, would change `trut
 
 ### What `results/` is, and is not
 
-`results/base-v1.parquet` (360 rows, 92 columns) and `results/base-v1.run.json` (the folders loaded, their revisions,
+`results/base-v1.parquet` (360 rows, 101 columns) and `results/base-v1.run.json` (the folders loaded, their revisions,
 the abstentions, the rules) are **derived** from the `judges/` and `classifiers/` folders: they are regenerated at each
 `bench run`; a classifier's columns are `<name>.complexity`, `<name>.task`, `<name>.needs_tools`, `<name>.score` when its
 `labels.jsonl` has one and, when it has a `decisions.jsonl`, `<name>.raw_score` and `<name>.raw_tier` (`litellm-heuristic` has
-these two and no `score`: five columns; `laya-english-tier` and `laya-multilingual-tier` too). It is not an immutable record, unlike the judge
+these two and no `score`: five columns; `laya-english-tier` and `laya-multilingual-tier` too; `routellm-bert` has a `score` and these two columns). It is not an immutable record, unlike the judge
 and classifier folders, which are added to and not rewritten: what is replayed is the inputs. Nor is it
 a report: no metric, no figure is in it, they are in `report/` (see [The report](#the-report)).
 

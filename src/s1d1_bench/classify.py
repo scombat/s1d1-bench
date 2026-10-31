@@ -20,7 +20,10 @@ The system adapters are dispatched from `run_classify_cmd` too: `s1d1` (the Hub 
 heuristic, and its expected level and four probabilities stay in `decisions.jsonl`, never in `labels.jsonl`) and
 `litellm-heuristic` (LiteLLM's own heuristic complexity scorer, vendored verbatim in
 `s1d1_bench.vendor.litellm_heuristic`: its four tiers map name to name onto low, medium, high, expert; its raw score,
-which is not on the v7 scale, stays in `decisions.jsonl` and never reaches `labels.jsonl`).
+which is not on the v7 scale, stays in `decisions.jsonl` and never reaches `labels.jsonl`) and `routellm` (a published
+router of RouteLLM, see `routellm_backend`: its output is the probability that the strong model wins, kept as it is as
+`score`, and read onto the five tiers by equal bounds of 0.2; the raw output stays in `decisions.jsonl`; `task` and
+`needs_tools` are null).
 """
 
 import datetime
@@ -323,6 +326,53 @@ def _litellm_heuristic(args, prompts: list[dict], digest: str) -> int:
     )
 
 
+def _routellm(args, prompts: list[dict], digest: str) -> int:
+    if not args.routellm_router:
+        return _fail("the routellm adapter needs --routellm-router (bert), the RouteLLM router to run")
+    try:
+        from s1d1_bench import routellm_backend
+
+        classify, info = routellm_backend.make_routellm_classifier(args.routellm_router, args.revision)
+        results = classify([p["prompt"] for p in prompts])
+    except ImportError as exc:  # the routellm dependency group is not installed: nothing was written
+        return _fail(
+            f"{exc}. The routellm adapter needs the routellm dependency group: "
+            "uv run --group routellm bench classify routellm ..."
+        )
+    tiers = [routellm_backend.tier_of_win_rate(r["strong_win_rate"]) for r in results]
+    rows = [
+        {"id": p["id"], "complexity": tier, "task": None, "needs_tools": None, "score": r["strong_win_rate"]}
+        for p, tier, r in zip(prompts, tiers, results, strict=True)
+    ]
+    raw = [
+        {"id": p["id"], "tier": tier, "score": r["strong_win_rate"], "probabilities": r["probabilities"]}
+        for p, tier, r in zip(prompts, tiers, results, strict=True)
+    ]
+    notes = (
+        f"Replay: uv run --group routellm bench classify routellm --routellm-router {args.routellm_router} "
+        f"--revision {info['revision']} (device {info['device']}, {info['precision']}). The published RouteLLM router "
+        f"{info['model']}, run as BERTRouter.calculate_strong_win_rate of lm-sys/RouteLLM@"
+        f"{routellm_backend.ROUTELLM_COMMIT}: one prompt per call, tokenizer truncation at {info['max_length']} "
+        "tokens, softmax of the three logits, score = 1 - (p1 + p2) = the probability that the strong model (GPT-4) "
+        "beats the weak one (Mixtral 8x7B) on an English question, as the router gives it (no calibration, rounded to "
+        "6 decimals). It does not predict a complexity tier. Tier = five equal bounds fixed in advance: trivial "
+        "[0 ; 0.2), low [0.2 ; 0.4), medium [0.4 ; 0.6), high [0.6 ; 0.8), expert [0.8 ; 1]. The prompts are given "
+        "as they are in the four languages (the router is English). task and needs_tools are null: the router "
+        "does not predict them. decisions.jsonl holds, by id, the tier, the score and the three softmax "
+        f"probabilities. {info['truncated']} prompts truncated."
+    )
+    return write_run(
+        args,
+        digest,
+        rows,
+        model=info["model"],
+        revision=info["revision"],
+        notes=notes,
+        extra={"decisions.jsonl": raw},
+        quantization=info["precision"],
+    )
+
+
 # adapter -> function (args, prompts, sha256 of the prompts file) -> exit code
 ADAPTERS: dict[str, Callable[[object, list[dict], str], int]] = {
     "random": _random,
@@ -331,6 +381,7 @@ ADAPTERS: dict[str, Callable[[object, list[dict], str], int]] = {
     "s1d1": _s1d1,
     "laya": _laya,
     "litellm-heuristic": _litellm_heuristic,
+    "routellm": _routellm,
 }
 
 
