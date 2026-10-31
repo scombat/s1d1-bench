@@ -183,6 +183,16 @@ def test_the_router_file_comes_from_the_main_repo_when_the_weights_are_elsewhere
     assert meta["router_revision"] == fake_hub.heads["scombat/s1d1-router"]
 
 
+def test_the_router_revision_pins_the_router_file(fake_hub):
+    pinned = "c" * 40
+    _, meta = s1d1_backend.make_s1d1_classifier(SMALL, "33c7f34", "auto", router_revision=pinned)
+    assert meta["router_revision"] == pinned and meta["revision"] == FULL_SHA  # the weights keep their own revision
+    assert fake_hub.fetch == [pinned]
+    assert ("scombat/s1d1-router", pinned) in fake_hub.info
+    _, meta = s1d1_backend.make_s1d1_classifier("scombat/s1d1-router", None, "torch", router_revision=pinned)
+    assert meta["router_revision"] == pinned and fake_hub.fetch[-1] == pinned  # even for the repo that carries it
+
+
 @pytest.mark.parametrize(
     ("repo", "prefix"),
     [
@@ -297,6 +307,20 @@ def test_cli_writes_a_valid_folder_with_the_resolved_revision(fake_hub, prompts_
         assert row["needs_tools_probability"] == expected["needs_tools_probability"]
         assert math.isfinite(row["score"])
     assert validate_judge_dir(out, prompts_file.parent) == []
+
+
+def test_cli_writes_the_router_revision_into_the_notes(fake_hub, prompts_file, tmp_path):
+    pinned = "d" * 40
+    out = tmp_path / "pinned"
+    assert _classify(prompts_file, out, "--model", SMALL, "--revision", "33c7f34", "--router-revision", pinned) == 0
+    meta = json.loads((out / "meta.json").read_text(encoding="utf-8"))
+    assert f"--router-revision {pinned}" in meta["notes"] and f"scombat/s1d1-router@{pinned}" in meta["notes"]
+    assert fake_hub.fetch == [pinned]
+    default = tmp_path / "default"  # without the option: the head of the router repo, written all the same
+    assert _classify(prompts_file, default, "--model", SMALL, "--revision", "33c7f34") == 0
+    head = fake_hub.heads["scombat/s1d1-router"]
+    notes = json.loads((default / "meta.json").read_text(encoding="utf-8"))["notes"]
+    assert f"--router-revision {head}" in notes and fake_hub.fetch[-1] == head
 
 
 def test_cli_refuses_on_the_card_revision_and_writes_nothing(fake_hub, prompts_file, tmp_path, capsys):

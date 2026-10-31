@@ -478,6 +478,25 @@ def test_a_folder_matched_twice_is_loaded_once(tmp_path):
     assert not any(c.startswith("laya.") for c in table.column_names)  # no --classifiers: no classifier column
 
 
+def test_judges_and_classifiers_take_several_values_per_option(tmp_path):
+    """`--judges a b c --classifiers x y`, the option repeated, and the two mixed all load the same folders."""
+    prompts = full_tree(tmp_path)
+    judges, classifiers = tmp_path / "judges", tmp_path / "classifiers"
+    base = ["run", "--prompts", str(prompts), "--main", "j-b,j-a,j-c"]
+    several = ["--judges", *(str(judges / n) for n in ("j-a", "j-b", "j-c")), "--classifiers"]
+    several += [str(classifiers / "laya"), str(classifiers / "random"), str(classifiers / "s1d1-*")]
+    mixed = ["--judges", str(judges / "j-a"), str(judges / "j-b"), "--judges", str(judges / "j-c"), "--classifiers"]
+    mixed += [str(classifiers / "laya"), "--classifiers", str(classifiers / "random"), str(classifiers / "s1d1-*")]
+    for name, tail in (("several", several), ("mixed", mixed)):
+        assert main([*base, *tail, "--out", str(tmp_path / name / "set.parquet")]) == 0, name
+    record = json.loads((tmp_path / "several" / "set.run.json").read_text(encoding="utf-8"))
+    assert [j["name"] for j in record["judges"]] == ["j-b", "j-a", "j-c"]  # the order of --main
+    assert [c["name"] for c in record["classifiers"]] == ["laya", "random", "s1d1-small-int8"]
+    one = pq.read_table(tmp_path / "several" / "set.parquet")
+    two = pq.read_table(tmp_path / "mixed" / "set.parquet")
+    assert one.column_names == two.column_names and one.equals(two)
+
+
 # --- abstentions ------------------------------------------------------------------------------------------------------
 
 

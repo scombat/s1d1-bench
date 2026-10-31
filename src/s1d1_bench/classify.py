@@ -46,7 +46,10 @@ TIER_TO_LEVEL = {"SIMPLE": "low", "MEDIUM": "medium", "COMPLEX": "high", "REASON
 
 def nearest_anchor(score: float) -> str:
     """The tier whose anchor is nearest to `score`; an exact midpoint between two anchors goes to the lower tier
-    (0.375 is low, 0.875 is high). The midpoints are (a + b) / 2 of neighbouring anchors, compared with `<=`."""
+    (0.375 is low, 0.875 is high). The midpoints are (a + b) / 2 of neighbouring anchors, compared with `<=`.
+
+    No adapter calls this function any more. The anchors (`ANCHORS`) serve the constant witness (`constant_labels`)
+    and the report; the function is kept for its tests."""
     for lower, upper in zip(LEVELS, LEVELS[1:], strict=False):
         if score <= (ANCHORS[lower] + ANCHORS[upper]) / 2:
             return lower
@@ -174,7 +177,12 @@ def _random(args, prompts: list[dict], digest: str) -> int:
     )
     every_draw = [{"draw": d, **row} for d, draw in enumerate(draws) for row in draw]
     return write_run(
-        args, digest, draws[0] if draws else [], model="witness:random", revision=f"seed {args.seed}", notes=notes,
+        args,
+        digest,
+        draws[0] if draws else [],
+        model="witness:random",
+        revision=f"seed {args.seed}",
+        notes=notes,
         extra={"draws.jsonl": every_draw},
     )
 
@@ -194,8 +202,12 @@ def _constant(args, prompts: list[dict], digest: str) -> int:
         "task and needs_tools are null."
     )
     return write_run(
-        args, digest, constant_labels([p["id"] for p in prompts], args.level),
-        model=f"witness:constant-{args.level}", revision="n/a", notes=notes,
+        args,
+        digest,
+        constant_labels([p["id"] for p in prompts], args.level),
+        model=f"witness:constant-{args.level}",
+        revision="n/a",
+        notes=notes,
     )
 
 
@@ -205,23 +217,31 @@ def _s1d1(args, prompts: list[dict], digest: str) -> int:
     try:
         from s1d1_bench import s1d1_backend
 
-        classify, info = s1d1_backend.make_s1d1_classifier(args.model, args.revision, args.backend)
+        classify, info = s1d1_backend.make_s1d1_classifier(
+            args.model, args.revision, args.backend, args.router_revision
+        )
         results = classify([p["prompt"] for p in prompts])
     except ImportError as exc:  # a dependency group is not installed: nothing was written
         return _fail(
-            f"{exc}. The s1d1 adapter needs the s1d1 dependency group (onnx, mlx backends) or s1d1-torch (torch): "
+            f"{exc}. The s1d1 adapter needs the s1d1 dependency group (onnx backend) or s1d1-torch (torch): "
             "uv run --group s1d1 bench classify s1d1 ..., or --group s1d1-torch --group s1d1."
         )
     rows = [{"id": p["id"], **result} for p, result in zip(prompts, results, strict=True)]
     notes = (
-        f"Replay: bench classify s1d1 --model {info['model']} --revision {info['revision']} --backend {args.backend}. "
-        f"s1d1_router.py of scombat/s1d1-router@{info['router_revision']}, backend {info['backend']}, device "
-        f"{info['device']}, precision {info['quantization']}. Prompts sorted by length in characters, batches of at "
+        f"Replay: bench classify s1d1 --model {info['model']} --revision {info['revision']} --backend {args.backend} "
+        f"--router-revision {info['router_revision']}. s1d1_router.py of "
+        f"scombat/s1d1-router@{info['router_revision']}, backend {info['backend']}, device {info['device']}, "
+        f"precision {info['quantization']}. Prompts sorted by length in characters, batches of at "
         f"most {s1d1_backend.BATCH_PROMPTS} prompts or about {s1d1_backend.BATCH_TOKENS} tokens, truncated at the "
         "router's MAX_LENGTH; tier = complexity_tier of decode() (capped at high), score = complexity_score."
     )
     return write_run(
-        args, digest, rows, model=info["model"], revision=info["revision"], notes=notes,
+        args,
+        digest,
+        rows,
+        model=info["model"],
+        revision=info["revision"],
+        notes=notes,
         quantization=info["quantization"],
     )
 
@@ -266,7 +286,12 @@ def _laya(args, prompts: list[dict], digest: str) -> int:
         f"{info['truncated']} prompts truncated at the token budget of the checkpoint."
     )
     return write_run(
-        args, digest, rows, model=info["model"], revision=info["revision"], notes=notes,
+        args,
+        digest,
+        rows,
+        model=info["model"],
+        revision=info["revision"],
+        notes=notes,
         extra={"decisions.jsonl": raw},
     )
 
@@ -275,12 +300,9 @@ def _litellm_heuristic(args, prompts: list[dict], digest: str) -> int:
     from s1d1_bench.vendor.litellm_heuristic import COMMIT, TAG, classify
 
     decisions = [(p["id"], classify(p["prompt"])) for p in prompts]
-    rows = [
-        {"id": i, "complexity": TIER_TO_LEVEL[d.tier], "task": None, "needs_tools": None} for i, d in decisions
-    ]
+    rows = [{"id": i, "complexity": TIER_TO_LEVEL[d.tier], "task": None, "needs_tools": None} for i, d in decisions]
     raw = [
-        {"id": i, "tier": d.tier, "score": d.score, "signals": list(d.signals), "cause": d.cause}
-        for i, d in decisions
+        {"id": i, "tier": d.tier, "score": d.score, "signals": list(d.signals), "cause": d.cause} for i, d in decisions
     ]
     notes = (
         "Replay: uv run bench classify litellm-heuristic --prompts ... --out ... --author ... (no model, no network). "
@@ -291,7 +313,12 @@ def _litellm_heuristic(args, prompts: list[dict], digest: str) -> int:
         f"needs_tools are null. Code copied verbatim ({TAG}), see src/s1d1_bench/vendor/litellm_heuristic/NOTICE.md."
     )
     return write_run(
-        args, digest, rows, model="litellm:complexity_router:heuristic", revision=f"{TAG} {COMMIT}", notes=notes,
+        args,
+        digest,
+        rows,
+        model="litellm:complexity_router:heuristic",
+        revision=f"{TAG} {COMMIT}",
+        notes=notes,
         extra={"decisions.jsonl": raw},
     )
 

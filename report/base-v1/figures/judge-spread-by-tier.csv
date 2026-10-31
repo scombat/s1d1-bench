@@ -1,4 +1,4 @@
-tier,spread,n_ids,n_ids_tier,mean_spread_tier,n_ids_null_spread_tier
+palier,écart (crans),ids,ids du palier,écart moyen du palier (crans),ids du palier sans écart
 trivial,0,44,68,0.35294117647058826,0
 trivial,1,24,68,0.35294117647058826,0
 trivial,2,0,68,0.35294117647058826,0

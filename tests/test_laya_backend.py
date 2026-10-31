@@ -1,4 +1,3 @@
-import importlib.util
 import json
 import os
 import sys
@@ -16,7 +15,7 @@ from s1d1_bench.run import read_decisions
 
 COMMIT = "7b928d8" + "c" * 33
 LABELS = ("SIMPLE", "MEDIUM", "COMPLEX", "REASONING")
-RESEARCH_FILE = Path("/Users/steve/work/s1d1-model-router/bench/laya_scores.py")
+QUESTION_FIXTURE = Path(__file__).parent / "fixtures" / "laya" / "question-v1.json"
 
 
 def probabilities(text: str) -> dict[str, float]:
@@ -87,16 +86,14 @@ def most_probable(text: str) -> str:
 # ---------- the question ----------
 
 
-def test_questions_are_the_research_repo_ones_byte_for_byte():
-    if not RESEARCH_FILE.is_file():
-        pytest.skip("the research repo is not readable here")
-    spec = importlib.util.spec_from_file_location("laya_scores_research", RESEARCH_FILE)
-    research = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(research)
-    assert laya_backend.INSTRUCTIONS == research.INSTRUCTIONS
-    assert laya_backend.CRITERIA == research.CRITERIA and list(laya_backend.CRITERIA) == list(research.CRITERIA)
-    assert laya_backend.QUESTIONS == research.QUESTIONS
-    assert json.dumps(laya_backend.QUESTIONS) == json.dumps(research.QUESTIONS)
+def test_the_question_is_the_frozen_one():
+    """LiteLLM's question, serialised once into a fixture: it must not move (same strings, same order)."""
+    frozen = json.loads(QUESTION_FIXTURE.read_text(encoding="utf-8"))
+    assert list(frozen) == ["INSTRUCTIONS", "CRITERIA", "QUESTIONS"]
+    assert laya_backend.INSTRUCTIONS == frozen["INSTRUCTIONS"]
+    assert laya_backend.CRITERIA == frozen["CRITERIA"] and list(laya_backend.CRITERIA) == list(frozen["CRITERIA"])
+    assert laya_backend.QUESTIONS == frozen["QUESTIONS"]
+    assert json.dumps(laya_backend.QUESTIONS) == json.dumps(frozen["QUESTIONS"])
 
 
 def test_the_question_is_one_choice_tier_with_four_criteria():
@@ -348,10 +345,12 @@ def test_english_checkpoint_scores_two_prompts_from_the_hub():
     pytest.importorskip("laya")
     classify, meta = laya_backend.make_laya_classifier("english", None)
     assert meta["laya_version"] and len(meta["commit"]) == 40
-    out = classify([
-        "What is the capital of Australia?",
-        "Prove that there are infinitely many primes and discuss the tradeoffs of three proof strategies.",
-    ])
+    out = classify(
+        [
+            "What is the capital of Australia?",
+            "Prove that there are infinitely many primes and discuss the tradeoffs of three proof strategies.",
+        ]
+    )
     assert len(out) == 2
     for row in out:
         assert list(row["probabilities"]) == list(LABELS)

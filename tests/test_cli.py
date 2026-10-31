@@ -8,7 +8,7 @@ import pytest
 from s1d1_bench.cli import build_parser, main
 from s1d1_bench.rubric import LEVELS, TASKS, load_rubric
 
-# sha256 of ~/work/s1d1-model-router/docs/judge-rubric-v7.txt, the source of the packaged copy
+# sha256 of docs/judge-rubric-v7.txt of the research notebook, the source of the packaged copy
 RUBRIC_SHA256 = "fd9f87bd0b390d94c675ddc2807affd9d1323dae0e752b830fe0e5bbb2d5ff79"
 
 
@@ -48,6 +48,22 @@ def test_report_help_lists_its_options(capsys):
         assert option in out
     args = build_parser().parse_args(["report", "--results", "r.parquet", "--meta", "m.parquet", "--out", "o"])
     assert (args.sigma, args.classifiers, args.template) == (0.005, Path("classifiers"), Path("report/TEMPLATE.md"))
+
+
+def test_classify_help_announces_no_mlx_backend_and_has_the_router_revision(capsys):
+    with pytest.raises(SystemExit):
+        main(["classify", "--help"])
+    out = capsys.readouterr().out
+    assert "--router-revision" in out and "--backend" in out
+    assert "mlx" not in out.lower()  # no `s1d1-mlx` dependency group: the backend is not advertised
+
+
+def test_run_options_take_several_values():
+    args = build_parser().parse_args(
+        ["run", "--prompts", "p.jsonl", "--judges", "j/a", "j/b", "--main", "a,b,c", "--classifiers", "c/x", "c/y"]
+        + ["--out", "o.parquet"]
+    )
+    assert (args.judges, args.classifiers) == (["j/a", "j/b"], ["c/x", "c/y"])
 
 
 def test_the_command_line_and_the_report_modules_load_without_matplotlib_nor_numpy():

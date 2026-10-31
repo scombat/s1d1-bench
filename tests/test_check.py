@@ -440,8 +440,14 @@ def test_run_request_writes_a_verdict_per_pair_in_input_order(tmp_path):
     ]
     log = read_jsonl(tmp_path / "fra.request.log.jsonl")
     assert [(r["id"], r["status"]) for r in log] == [("kb-fra", "ok"), ("ka-fra", "ok"), ("kc-fra", "ok")]
-    assert log[0] == {"id": "kb-fra", "status": "ok", "retries": 0, "wall_s": 0.5, "prompt_tokens": 10,
-                      "completion_tokens": 5}
+    assert log[0] == {
+        "id": "kb-fra",
+        "status": "ok",
+        "retries": 0,
+        "wall_s": 0.5,
+        "prompt_tokens": 10,
+        "completion_tokens": 5,
+    }
     assert generate.messages[0] == build_request_messages("C", PAIRS[0]["english"], PAIRS[0]["translation"], "fra")
 
 
@@ -460,8 +466,9 @@ def test_run_request_retries_a_json_error_once_with_a_nudge(tmp_path):
 
 
 def test_run_request_does_not_retry_a_cut_answer_or_an_exception(tmp_path):
-    generate = fake_generate([result('{"same_request": tr', finish_reason="length"), RuntimeError("boom"),
-                              verdict(True)])
+    generate = fake_generate(
+        [result('{"same_request": tr', finish_reason="length"), RuntimeError("boom"), verdict(True)]
+    )
     assert run_request(PAIRS, generate, tmp_path, "fra", consigne="C") == {"truncated": 1, "error": 1, "ok": 1}
     assert generate.calls == 3
     log = read_jsonl(tmp_path / "fra.request.log.jsonl")
@@ -480,16 +487,19 @@ def test_run_request_refuses_to_overwrite(tmp_path):
 
 
 def test_run_request_resume_skips_the_verdicts_already_written(tmp_path):
-    run_request(PAIRS, fake_generate([verdict(True), "x", "y", verdict(False, "lost")]), tmp_path, "fra",
-                consigne="C")
+    run_request(PAIRS, fake_generate([verdict(True), "x", "y", verdict(False, "lost")]), tmp_path, "fra", consigne="C")
     generate = fake_generate([verdict(True, "now ok")])
     assert run_request(PAIRS, generate, tmp_path, "fra", resume=True, consigne="C") == {"ok": 1}
     assert generate.calls == 1 and "Fix x." in generate.messages[0][1]["content"]
     rows = read_jsonl(tmp_path / "fra.request.jsonl")
     assert [(r["id"], r["reason"]) for r in rows] == [("kb-fra", "ok"), ("ka-fra", "now ok"), ("kc-fra", "lost")]
     log = read_jsonl(tmp_path / "fra.request.log.jsonl")
-    assert [(r["id"], r["status"]) for r in log] == [("kb-fra", "ok"), ("ka-fra", "json_error"), ("kc-fra", "ok"),
-                                                     ("ka-fra", "ok")]
+    assert [(r["id"], r["status"]) for r in log] == [
+        ("kb-fra", "ok"),
+        ("ka-fra", "json_error"),
+        ("kc-fra", "ok"),
+        ("ka-fra", "ok"),
+    ]
 
 
 def test_run_request_resume_with_foreign_ids_raises_and_touches_nothing(tmp_path):
@@ -558,8 +568,24 @@ def request_cmd(*argv):
 
 
 def request_base(tmp_path, english, translations, model="org/gemma-8bit", thinking="off"):
-    return ["--set", "base-v1", "--lang", "fra", "--english", english, "--translations", translations,
-            "--out", tmp_path / "checks", "--model", model, "--author", "steve", "--thinking", thinking]
+    return [
+        "--set",
+        "base-v1",
+        "--lang",
+        "fra",
+        "--english",
+        english,
+        "--translations",
+        translations,
+        "--out",
+        tmp_path / "checks",
+        "--model",
+        model,
+        "--author",
+        "steve",
+        "--thinking",
+        thinking,
+    ]
 
 
 def sha256(path):
@@ -569,8 +595,10 @@ def sha256(path):
 def test_cmd_request_writes_the_documented_meta_and_reads_the_model_text(tmp_path, monkeypatch, at_repo_root):
     english, translations, _ = write_set(tmp_path)
     # a correction is never applied: the check is on what the translator produced
-    write_jsonl(translations / "fra.corrections.jsonl", [{"id": "kc-fra", "prompt": "Écris un sonnet.",
-                                                          "reason": "r", "author": "a"}])
+    write_jsonl(
+        translations / "fra.corrections.jsonl",
+        [{"id": "kc-fra", "prompt": "Écris un sonnet.", "reason": "r", "author": "a"}],
+    )
     generate, seen = fake_backend(monkeypatch, [verdict(False, "year"), verdict(True), verdict(True)])
     assert request_cmd(*request_base(tmp_path, english, translations), "--notes", "first run") == 0
     assert seen == {"model_id": "org/gemma-8bit", "thinking": "off", "max_tokens": 512}
@@ -670,8 +698,9 @@ OTHER_REVISION = {**BACKEND_META, "revision": "f" * 40}
         ({}, OTHER_REVISION, BACKEND_META, "revision", True),
     ],
 )
-def test_cmd_request_resume_refuses_other_settings(tmp_path, monkeypatch, capsys, at_repo_root, change, meta,
-                                                   described, key, loaded):
+def test_cmd_request_resume_refuses_other_settings(
+    tmp_path, monkeypatch, capsys, at_repo_root, change, meta, described, key, loaded
+):
     english, translations, _ = write_set(tmp_path)
     out = first_run(tmp_path, monkeypatch, english, translations)
     before = {p.name: p.read_bytes() for p in out.iterdir()}
@@ -682,8 +711,9 @@ def test_cmd_request_resume_refuses_other_settings(tmp_path, monkeypatch, capsys
     other_english.write_text(english.read_text(encoding="utf-8") + "\n", encoding="utf-8")
     other_translations = tmp_path / "other-translations"
     other_translations.mkdir()
-    (other_translations / "fra.jsonl").write_text((translations / "fra.jsonl").read_text(encoding="utf-8") + "\n",
-                                                  encoding="utf-8")
+    (other_translations / "fra.jsonl").write_text(
+        (translations / "fra.jsonl").read_text(encoding="utf-8") + "\n", encoding="utf-8"
+    )
     (other_translations / "fra.meta.json").write_bytes((translations / "fra.meta.json").read_bytes())
     values = {"consigne": consigne, "english": other_english, "translations": other_translations}
     argv = [str(a) for a in request_base(tmp_path, english, translations)]
@@ -711,8 +741,9 @@ def test_cmd_request_refuses_a_local_path_in_notes(tmp_path, monkeypatch, capsys
     assert "local path" in capsys.readouterr().err
 
 
-def test_cmd_request_refuses_a_translation_without_its_english_before_loading(tmp_path, monkeypatch, capsys,
-                                                                              at_repo_root):
+def test_cmd_request_refuses_a_translation_without_its_english_before_loading(
+    tmp_path, monkeypatch, capsys, at_repo_root
+):
     english, translations, _ = write_set(tmp_path)
     write_jsonl(english, ENGLISH[:2])  # kc-eng is gone
     generate, seen = fake_backend(monkeypatch, [verdict(True)] * 3)
@@ -728,10 +759,14 @@ def test_cli_check_request_help_lists_its_arguments(capsys):
     out = capsys.readouterr().out
     for text in ("--model", "--author", "--thinking", "--max-tokens", "512", "--resume", "--notes", "--consigne"):
         assert text in out
-    args = build_parser().parse_args(["check", "request", "--set", "s", "--lang", "fra", "--english", "e",
-                                      "--translations", "t"])
-    assert (args.max_tokens, args.consigne, args.out) == (512, Path("consigne/check-same-request-v1.md"),
-                                                          Path("data/checks"))
+    args = build_parser().parse_args(
+        ["check", "request", "--set", "s", "--lang", "fra", "--english", "e", "--translations", "t"]
+    )
+    assert (args.max_tokens, args.consigne, args.out) == (
+        512,
+        Path("consigne/check-same-request-v1.md"),
+        Path("data/checks"),
+    )
     assert (args.model, args.author, args.thinking, args.resume, args.notes) == (None, None, None, False, "")
 
 

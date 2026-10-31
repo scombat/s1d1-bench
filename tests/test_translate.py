@@ -73,20 +73,29 @@ def test_parse_drops_a_closed_think_block():
     assert parse_translation("<think>hmm</think>\nBonjour") == ("ok", "Bonjour")
 
 
-@pytest.mark.parametrize("text,status", [("", "empty"), ("<think>…", "empty"), ("ok\n</prompt>", "envelope"),
-                                         ("<prompt id='x'>\ny", "envelope")])
+@pytest.mark.parametrize(
+    "text,status",
+    [("", "empty"), ("<think>…", "empty"), ("ok\n</prompt>", "envelope"), ("<prompt id='x'>\ny", "envelope")],
+)
 def test_parse_statuses(text, status):
     assert parse_translation(text) == (status, None)
 
 
-@pytest.mark.parametrize("text,status", [("  \n ", "empty"), ("x\n  </PROMPT>  ", "envelope"),
-                                         ("  <Prompt>\nx", "envelope")])
+@pytest.mark.parametrize(
+    "text,status", [("  \n ", "empty"), ("x\n  </PROMPT>  ", "envelope"), ("  <Prompt>\nx", "envelope")]
+)
 def test_parse_statuses_ignore_case_and_blanks(text, status):
     assert parse_translation(text) == (status, None)
 
 
-@pytest.mark.parametrize("text", ["<prompt>\nBonjour\n</prompt>", "\n  <PROMPT> \n\nBonjour\n\n </prompt>  \n",
-                                  "</think>\n<prompt>\nBonjour\n</prompt>"])
+@pytest.mark.parametrize(
+    "text",
+    [
+        "<prompt>\nBonjour\n</prompt>",
+        "\n  <PROMPT> \n\nBonjour\n\n </prompt>  \n",
+        "</think>\n<prompt>\nBonjour\n</prompt>",
+    ],
+)
 def test_parse_unwraps_one_outer_prompt_pair(text):
     assert parse_translation(text) == ("ok", "Bonjour")
 
@@ -159,10 +168,23 @@ def test_code_fences_are_written_as_the_model_wrote_them(tmp_path):
 def test_log_lines_carry_the_documented_fields(tmp_path):
     run_translate(PROMPTS_3[:2], fake_generate(["Bonjour", "", ""]), tmp_path, "fra")
     ok, empty = read_jsonl(tmp_path / "fra.log.jsonl")
-    assert ok == {"id": "k1-fra", "status": "ok", "retries": 0, "wall_s": 0.5, "prompt_tokens": 10,
-                  "completion_tokens": 5}
-    assert empty == {"id": "k2-fra", "status": "empty", "retries": 1, "wall_s": 1.0, "prompt_tokens": 20,
-                     "completion_tokens": 10, "raw": ""}
+    assert ok == {
+        "id": "k1-fra",
+        "status": "ok",
+        "retries": 0,
+        "wall_s": 0.5,
+        "prompt_tokens": 10,
+        "completion_tokens": 5,
+    }
+    assert empty == {
+        "id": "k2-fra",
+        "status": "empty",
+        "retries": 1,
+        "wall_s": 1.0,
+        "prompt_tokens": 20,
+        "completion_tokens": 10,
+        "raw": "",
+    }
     assert [r["id"] for r in read_jsonl(tmp_path / "fra.jsonl")] == ["k1-fra"]
 
 
@@ -183,8 +205,15 @@ def test_a_wrapped_answer_is_unwrapped_written_and_flagged_in_the_log_without_re
     assert run_translate(PROMPTS_3[:2], generate, tmp_path, "fra") == {"ok": 2} and generate.calls == 2
     assert [r["prompt"] for r in read_jsonl(tmp_path / "fra.jsonl")] == ["Bonjour", "```py\nx = 1\n```"]
     first, second = read_jsonl(tmp_path / "fra.log.jsonl")
-    assert first == {"id": "k1-fra", "status": "ok", "retries": 0, "wall_s": 0.5, "prompt_tokens": 10,
-                     "completion_tokens": 5, "unwrapped": True}
+    assert first == {
+        "id": "k1-fra",
+        "status": "ok",
+        "retries": 0,
+        "wall_s": 0.5,
+        "prompt_tokens": 10,
+        "completion_tokens": 5,
+        "unwrapped": True,
+    }
     assert second["unwrapped"] is True and "raw" not in second
 
 
@@ -346,8 +375,22 @@ def test_cmd_writes_the_documented_meta(tmp_path, monkeypatch):
     prompts, digest = prompts_file(tmp_path)
     generate, seen = fake_backend(monkeypatch, ["T1", "T2", "T3"])
     out = tmp_path / "translations"
-    code = translate_cmd("--model", "org/model-8bit", "--prompts", prompts, "--lang", "zho", "--out", out,
-                         "--author", "steve", "--thinking", "off", "--max-tokens", 900)
+    code = translate_cmd(
+        "--model",
+        "org/model-8bit",
+        "--prompts",
+        prompts,
+        "--lang",
+        "zho",
+        "--out",
+        out,
+        "--author",
+        "steve",
+        "--thinking",
+        "off",
+        "--max-tokens",
+        900,
+    )
     assert code == 0
     assert seen == {"model_id": "org/model-8bit", "thinking": "off", "max_tokens": 900}
     assert generate.messages[0][0]["content"] == consigne_text("zho")
@@ -388,8 +431,20 @@ def test_cmd_writes_meta_before_generating_and_refuses_another_consigne_on_resum
     from s1d1_bench import mlx_backend
 
     monkeypatch.setattr(mlx_backend, "make_mlx_generate", lambda m, t, max_tokens=1024: (answer, dict(BACKEND_META)))
-    base = ["--model", "org/m", "--prompts", prompts, "--lang", "fra", "--out", out, "--author", "a",
-            "--thinking", "off"]
+    base = [
+        "--model",
+        "org/m",
+        "--prompts",
+        prompts,
+        "--lang",
+        "fra",
+        "--out",
+        out,
+        "--author",
+        "a",
+        "--thinking",
+        "off",
+    ]
     assert translate_cmd(*base) == 0
     assert seen_meta and all(seen_meta)
     meta_before = (out / "fra.meta.json").read_bytes()
@@ -406,8 +461,20 @@ def test_cmd_writes_meta_before_generating_and_refuses_another_consigne_on_resum
 def test_cmd_resume_with_the_same_settings_goes_on_and_keeps_the_meta(tmp_path, monkeypatch):
     prompts, _ = prompts_file(tmp_path)
     out = tmp_path / "t"
-    base = ["--model", "org/m", "--prompts", prompts, "--lang", "fra", "--out", out, "--author", "a",
-            "--thinking", "off"]
+    base = [
+        "--model",
+        "org/m",
+        "--prompts",
+        prompts,
+        "--lang",
+        "fra",
+        "--out",
+        out,
+        "--author",
+        "a",
+        "--thinking",
+        "off",
+    ]
     fake_backend(monkeypatch, ["T1", "", "", "", ""])
     translate_cmd(*base)
     meta_before = (out / "fra.meta.json").read_bytes()
@@ -438,8 +505,9 @@ def test_cmd_resume_refuses_other_settings(tmp_path, monkeypatch, capsys, argv, 
     other.write_text(prompts.read_text(encoding="utf-8") + "\n", encoding="utf-8")  # same prompts, other bytes
     out = tmp_path / "t"
     fake_backend(monkeypatch, ["T1", "", "", "", ""])
-    translate_cmd("--model", "org/m", "--prompts", prompts, "--lang", "fra", "--out", out, "--author", "a",
-                  "--thinking", "off")
+    translate_cmd(
+        "--model", "org/m", "--prompts", prompts, "--lang", "fra", "--out", out, "--author", "a", "--thinking", "off"
+    )
     before = {p.name: p.read_bytes() for p in out.iterdir()}
     generate, seen = fake_backend(monkeypatch, ["T2", "T3"], meta=meta, described=described)
     argv = [a.format(other=other) for a in argv]
@@ -457,8 +525,20 @@ def test_cmd_resume_of_a_model_describe_model_cannot_find_is_one_line_unloaded(t
 
     prompts, _ = prompts_file(tmp_path)
     out = tmp_path / "t"
-    base = ["--model", "org/m", "--prompts", prompts, "--lang", "fra", "--out", out, "--author", "a",
-            "--thinking", "off"]
+    base = [
+        "--model",
+        "org/m",
+        "--prompts",
+        prompts,
+        "--lang",
+        "fra",
+        "--out",
+        out,
+        "--author",
+        "a",
+        "--thinking",
+        "off",
+    ]
     fake_backend(monkeypatch, ["T1", "", "", "", ""])
     translate_cmd(*base)
     generate, seen = fake_backend(monkeypatch, ["T2", "T3"])
@@ -477,8 +557,9 @@ def test_cmd_refuses_existing_files_without_resume(tmp_path, monkeypatch, capsys
     out = tmp_path / "t"
     out.mkdir()
     (out / "fra.meta.json").write_text("{}")
-    code = translate_cmd("--model", "org/m", "--prompts", prompts, "--lang", "fra", "--out", out, "--author", "a",
-                         "--thinking", "off")
+    code = translate_cmd(
+        "--model", "org/m", "--prompts", prompts, "--lang", "fra", "--out", out, "--author", "a", "--thinking", "off"
+    )
     assert code == 1 and generate.calls == 0 and seen == {}
     assert (out / "fra.meta.json").read_text() == "{}" and "--resume" in capsys.readouterr().err
 
@@ -488,8 +569,22 @@ def test_cmd_refuses_a_local_path_in_notes(tmp_path, monkeypatch, capsys, notes)
     prompts, _ = prompts_file(tmp_path)
     generate, _ = fake_backend(monkeypatch, ["T1"] * 3)
     out = tmp_path / "t"
-    code = translate_cmd("--model", "org/m", "--prompts", prompts, "--lang", "fra", "--out", out, "--author", "a",
-                         "--thinking", "off", "--notes", notes.format(home=Path.home()))
+    code = translate_cmd(
+        "--model",
+        "org/m",
+        "--prompts",
+        prompts,
+        "--lang",
+        "fra",
+        "--out",
+        out,
+        "--author",
+        "a",
+        "--thinking",
+        "off",
+        "--notes",
+        notes.format(home=Path.home()),
+    )
     assert code == 1 and generate.calls == 0 and not out.exists()
     assert "local path" in capsys.readouterr().err
 
@@ -497,8 +592,20 @@ def test_cmd_refuses_a_local_path_in_notes(tmp_path, monkeypatch, capsys, notes)
 def test_cmd_refuses_prompts_that_are_not_english_before_loading(tmp_path, monkeypatch, capsys):
     prompts, _ = prompts_file(tmp_path, [{"id": "k1-fra", "prompt": "Salut"}])
     generate, seen = fake_backend(monkeypatch, ["x"])
-    code = translate_cmd("--model", "org/m", "--prompts", prompts, "--lang", "rus", "--out", tmp_path / "t",
-                         "--author", "a", "--thinking", "off")
+    code = translate_cmd(
+        "--model",
+        "org/m",
+        "--prompts",
+        prompts,
+        "--lang",
+        "rus",
+        "--out",
+        tmp_path / "t",
+        "--author",
+        "a",
+        "--thinking",
+        "off",
+    )
     err = capsys.readouterr().err
     assert code == 1 and seen == {} and not (tmp_path / "t").exists()
     assert err.startswith("bench translate:") and "-eng" in err and "Traceback" not in err
@@ -508,8 +615,22 @@ def test_cmd_unknown_revision_is_not_replayable_and_says_why(tmp_path, monkeypat
     prompts, _ = prompts_file(tmp_path)
     fake_backend(monkeypatch, ["T1"] * 3, meta={**BACKEND_META, "revision": "unknown"})
     out = tmp_path / "t"
-    translate_cmd("--model", "org/m", "--prompts", prompts, "--lang", "fra", "--out", out, "--author", "a",
-                  "--thinking", "off", "--notes", "mine")
+    translate_cmd(
+        "--model",
+        "org/m",
+        "--prompts",
+        prompts,
+        "--lang",
+        "fra",
+        "--out",
+        out,
+        "--author",
+        "a",
+        "--thinking",
+        "off",
+        "--notes",
+        "mine",
+    )
     meta = json.loads((out / "fra.meta.json").read_text(encoding="utf-8"))
     assert meta["replayable"] is False and meta["translator"] == "org/m@unknown"
     assert meta["notes"].startswith("fake: no reasoning.") and "revision unknown" in meta["notes"]
@@ -519,8 +640,20 @@ def test_cmd_unknown_revision_is_not_replayable_and_says_why(tmp_path, monkeypat
 def test_cmd_prints_counts_and_median_tokens_per_second(tmp_path, monkeypatch, capsys):
     prompts, _ = prompts_file(tmp_path)
     fake_backend(monkeypatch, ["T1", "", "", result("T3", completion_tokens=30, wall_s=1.0)])
-    translate_cmd("--model", "org/m", "--prompts", prompts, "--lang", "fra", "--out", tmp_path / "t",
-                  "--author", "a", "--thinking", "off")
+    translate_cmd(
+        "--model",
+        "org/m",
+        "--prompts",
+        prompts,
+        "--lang",
+        "fra",
+        "--out",
+        tmp_path / "t",
+        "--author",
+        "a",
+        "--thinking",
+        "off",
+    )
     out = capsys.readouterr().out
     assert "ok 2" in out and "empty 1" in out
     assert "median 10.0 tokens/s" in out  # per generation: 10, 10, 10, 30

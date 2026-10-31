@@ -171,8 +171,9 @@ _LOCAL_PATH = re.compile(r"(?<![\w.])(?:~/|/(?:Users|home|private|tmp|var|Volume
 
 def resume_conflicts(old: dict, new: dict, keys: list[str]) -> list[str]:
     """The `keys` present in `new` whose value differs from the recorded meta `old`, one message each."""
-    return [f"{key} {old.get(key)!r} (meta.json) != {new[key]!r}" for key in keys if key in new
-            and old.get(key) != new[key]]
+    return [
+        f"{key} {old.get(key)!r} (meta.json) != {new[key]!r}" for key in keys if key in new and old.get(key) != new[key]
+    ]
 
 
 def local_path_keys(meta: dict) -> list[str]:
@@ -216,8 +217,10 @@ def run_judge_cmd(args) -> int:
     meta_path = out / "meta.json"
     existing = [p.name for p in (meta_path, out / "labels.jsonl", out / "log.jsonl") if p.exists()]
     if existing and not args.resume:
-        return fail(f"{out}: {', '.join(existing)} already exist; judge files are immutable. "
-                    "Use a new --out, or --resume to go on with that run.")
+        return fail(
+            f"{out}: {', '.join(existing)} already exist; judge files are immutable. "
+            "Use a new --out, or --resume to go on with that run."
+        )
     digest = hashlib.sha256(Path(args.prompts).read_bytes()).hexdigest()
     prompts = read_jsonl(args.prompts)
     problem = _prompt_fault(prompts)

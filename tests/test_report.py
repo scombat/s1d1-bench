@@ -680,6 +680,38 @@ def test_report_command_on_the_fake_set(tmp_path, capsys):
     assert "laya-rank" in {row[0] for t in markdown_tables(text) if "AUROC (high ou expert)" in t[0] for row in t[1:]}
 
 
+def test_figure_csv_headers_are_french_and_say_what_the_index_says(tmp_path):
+    pytest.importorskip("matplotlib")
+    from s1d1_bench.cli import main
+    from s1d1_bench.report_figures import HEADERS
+    from s1d1_bench.report_index import LABELS
+
+    args, _ = fake_report_inputs(tmp_path)
+    out = tmp_path / "out"
+    assert main([*args, "--out", str(out)]) == 0
+    for column, label in HEADERS.items():  # the same word as the Markdown tables of the index for the same column
+        assert LABELS.get(column, label) == label or column in {"kind", "value", "lo", "hi"}, column
+    headers = {}
+    for path in sorted((out / "figures").glob("*.csv")):
+        with open(path, encoding="utf-8", newline="") as f:
+            headers[path.stem] = next(csv.reader(f))
+    english = {column for column in HEADERS if column not in HEADERS.values()}
+    for stem, header in headers.items():
+        assert len(set(header)) == len(header), stem
+        assert not english & set(header), stem  # no internal (English) column name is left in a header
+    assert headers["qwk-bars"] == [
+        "type", "nom", "famille", "valeur", "borne basse", "borne haute", "tirages utilisés",
+    ]  # fmt: skip
+    with open(out / "figures" / "language-disagreements.csv", encoding="utf-8", newline="") as f:
+        first = next(csv.DictReader(f))
+    assert (first["groupe"], first["valeur"]) == ("tout", "tous les ids")
+    with open(out / "figures" / "qwk-bars.csv", encoding="utf-8", newline="") as f:
+        names = {row["type"]: row["nom"] for row in csv.DictReader(f)}
+    assert names["plafond (moyenne)"] == "moyenne"
+    with open(out / "tables" / "ceiling.csv", encoding="utf-8", newline="") as f:
+        assert "judge" in next(csv.reader(f))  # the tables keep their names: only the figure CSVs are translated
+
+
 def test_report_svg_byte_identical_across_two_runs(tmp_path):
     pytest.importorskip("matplotlib")
     from s1d1_bench.cli import main
@@ -767,6 +799,9 @@ def test_index_links_its_tables_and_says_what_it_does_not_measure(tmp_path):
     for link in links:
         if link.startswith("#"):
             assert link[1:] in anchors, link
+        elif link.startswith("../../docs/"):
+            # leaves the report folder: resolved from where the committed report lives, not from the temporary one
+            assert (Path(__file__).resolve().parents[1] / "report" / "base-v1" / link).is_file(), link
         else:
             assert (out / link).is_file(), link
     # the numbers of the predictions and of the sentence sit next to the links of their tables

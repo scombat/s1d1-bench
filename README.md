@@ -3,6 +3,8 @@
 Banc ouvert pour mesurer à quel point un classifieur de prompts s'accorde avec des juges LLM locaux, sur la grille de
 notation v7 (palier de complexité, score, tâche, `needs_tools`).
 
+Les décisions citées `docs/NN` sont dans [`docs/`](docs/README.md).
+
 ## Ce que le banc mesure, et ce qu'il ne mesure pas
 
 - **Mesuré.** L'accord des quatre sorties d'un classifieur avec la médiane des juges : palier de complexité, score,
@@ -15,6 +17,46 @@ notation v7 (palier de complexité, score, tâche, `needs_tools`).
 - **Non mesuré : la distribution réelle.** Le jeu est construit par cases, `expert` sera la moins fournie ; les prompts
   agentiques et multi-tours sont absents, le jeu est fait de premiers prompts.
 - **Non mesuré : les autres langues.** Seules les quatre langues choisies sont couvertes.
+
+## Résultats (`base-v1`, 2026-10-30)
+
+La phrase de docs/32 § 5, remplie avec les chiffres du rapport de `base-v1` (360 ids, 90 prompts de base) :
+
+> Sur 360 ids, soit 90 prompts de base en 4 langues, `s1d1-full-int8` s'accorde avec la médiane de 3 juges à QWK 0,807
+> [0,734 ; 0,852] ; le plafond inter-juges est 0,774 [0,718 ; 0,815] (chaque juge principal contre les deux autres, 8
+> votes et non 12 : `base-v1-gemma4-cap512` 0,827, `base-v1-qwen3-cap512` 0,794, `base-v1-gptoss-cap512` 0,702) ; Laya
+> english 0,405 [0,314 ; 0,490], Laya multilingual 0,119 [−0,040 ; 0,264] ; l'heuristique de LiteLLM 0,089 [0,026 ;
+> 0,172] ; la longueur du prompt 0,543 [0,424 ; 0,647]. L'IC de `s1d1-full-int8` contient la moyenne du plafond ;
+> `s1d1-full-int8` se distingue du plancher `length` selon la règle des 2 σ (écart apparié `s1d1-full-int8` −
+> `length` : 0,264 [0,159 ; 0,383]).
+
+![Accord de chaque candidat avec la médiane des juges principaux](report/base-v1/figures/qwk-bars.svg)
+
+![QWK par langue](report/base-v1/figures/qwk-by-language.svg)
+
+QWK contre `truth_all` (la médiane des trois juges principaux), IC à 95 % sur 1 000 tirages des 90 prompts de base ;
+« palier exact » est la part des ids dont le palier est celui de `truth_all` :
+
+| candidat | QWK [IC 95 %] | palier exact [IC 95 %] |
+|---|---|---|
+| s1d1 full int8 | 0,807 [0,734 ; 0,852] | 0,656 [0,569 ; 0,733] |
+| s1d1 small int8 | 0,772 [0,700 ; 0,822] | 0,650 [0,561 ; 0,731] |
+| plafond (moyenne des trois juges) | 0,774 [0,718 ; 0,815] | 0,600 [0,523 ; 0,671] |
+| longueur (témoin `length`) | 0,543 [0,424 ; 0,647] | 0,394 [0,300 ; 0,483] |
+| Laya english (`laya-english-tier`) | 0,405 [0,314 ; 0,490] | 0,311 [0,247 ; 0,386] |
+| Laya multilingual (`laya-multilingual-tier`) | 0,119 [−0,040 ; 0,264] | 0,278 [0,203 ; 0,353] |
+| LiteLLM heuristic | 0,089 [0,026 ; 0,172] | 0,342 [0,250 ; 0,436] |
+
+Les juges sont l'instrument de mesure, pas des concurrents : aucun tableau ne range un candidat face à un juge, sauf le
+plafond. Aucune phrase « meilleur que » sans la règle des 2 σ (l'IC de l'écart apparié exclut zéro et dépasse 2 σ,
+σ = 0,005) : la règle ne sépare pas `s1d1-full-int8` de `s1d1-full-fp16`, de `s1d1-small-int8` ni de
+`s1d1-compact-int8` (seul `tiny` en est séparé). Tout le reste est dans
+[`report/base-v1/index.md`](report/base-v1/index.md) ; pour le régénérer, depuis la racine du dépôt :
+
+```
+uv run --group report bench report --results results/base-v1.parquet --meta data/prompts/base-v1.meta.parquet \
+    --classifiers classifiers --out report/base-v1
+```
 
 ## Les commandes
 
@@ -161,11 +203,11 @@ uv run bench draw --presort judges/presort-qwen3-off --meta data/prompts/presort
 
 ## La traduction
 
-Les 90 prompts de base anglais (`data/prompts/base-v1-eng`, export de `base-v1.select.txt` et des dix prompts écrits à la
-main) sont traduits en français, russe et chinois simplifié par le modèle du pré-tri, Qwen3.8 27B 8 bits sans réflexion,
-à température 0 (docs/33). `bench translate` traduit un fichier de prompts dans une langue, un prompt par génération :
-la consigne (`consigne/translate-v1-<lang>.md`) est le message système, le prompt est donné entre balises `<prompt>`
-comme une donnée.
+Les 90 prompts de base anglais (`data/prompts/base-v1-eng`, export de `base-v1.select.txt` et des dix prompts écrits à
+la main) sont traduits en français, russe et chinois simplifié par le modèle du pré-tri, Qwen3.8 27B 8 bits sans
+réflexion, à température 0 ([docs/33](docs/33-translation-lot2.md)). `bench translate` traduit un fichier de prompts
+dans une langue, un prompt par génération : la consigne (`consigne/translate-v1-<lang>.md`) est le message système, le
+prompt est donné entre balises `<prompt>` comme une donnée.
 
 ```
 uv run --group judge bench translate --model mlx-community/Qwen3.8-27B-8bit --prompts data/prompts/base-v1-eng.jsonl \
@@ -282,13 +324,14 @@ sur un Mac M4 Max 128 Go, avec `mlx-lm` 0.32.2, un modèle à la fois, températ
 | `judges/base-v1-qwen3-off` | Qwen3.8 27B, sans raisonnement | 56 min 41 s (0,94 h) | effet de la réflexion, hors médiane |
 
 Les durées vont du début à la fin de chaque série, soit 9 h 57 min 38 s au total (le plan en prévoyait 8,4 h) ; celle de
-gpt-oss ne compte pas les 9 s de la reprise qui a écrit l'abstention. La première série (`qwen3-off`) a tourné seule sur la
-machine ; les autres ont tourné pendant que des sous-agents de relecture et des essais légers s'en servaient aussi : les
-durées ne se comparent donc pas à la seconde près. Les trois juges `cap512` forment la
-médiane principale : Gemma 4 est le réglage du juge de l'entraînement, et docs/32 demande au moins trois juges locaux, gpt-oss
-étant le troisième modèle qui lit le JSON sur les 50 prompts de l'essai (docs/34 décision 2). Les deux dossiers `off` mesurent
-l'effet « réflexion » sur les 360 prompts ; ils figurent dans le tableau des juges mais pas dans la médiane principale,
-parce que deux réglages d'un même modèle ne sont pas deux juges indépendants.
+gpt-oss ne compte pas les 9 s de la reprise qui a écrit l'abstention. La première série (`qwen3-off`) a tourné seule sur
+la machine ; les autres ont tourné pendant que des sous-agents de relecture et des essais légers s'en servaient aussi :
+les durées ne se comparent donc pas à la seconde près. Les trois juges `cap512` forment la médiane principale : Gemma 4
+est le réglage du juge de l'entraînement, et [docs/32](docs/32-open-bench-kit.md) demande au moins trois juges locaux,
+gpt-oss étant le troisième modèle qui lit le JSON sur les 50 prompts de l'essai
+([docs/34](docs/34-bench-run-report-lot3.md) décision 2). Les deux dossiers `off` mesurent l'effet « réflexion » sur les
+360 prompts ; ils figurent dans le tableau des juges mais pas dans la médiane principale, parce que deux réglages d'un
+même modèle ne sont pas deux juges indépendants.
 
 **Le cas d'abstention vient en premier.** `judges/base-v1-gptoss-cap512` compte 359 étiquettes et une abstention : gpt-oss
 refuse l'id `3ce175ed3ef6b933-zho` (le prompt chinois de synthèse de l'acide chlorhydrique) et rend un JSON illisible
@@ -411,11 +454,13 @@ autre nom.
   ```
   uv run bench run --prompts data/prompts/base-v1.jsonl --judges 'judges/base-v1-*' \
       --main base-v1-gemma4-cap512,base-v1-qwen3-cap512,base-v1-gptoss-cap512 \
-      --classifiers 'classifiers/s1d1-*' --classifiers classifiers/laya-english-tier \
-      --classifiers classifiers/laya-multilingual-tier --classifiers classifiers/litellm-heuristic \
-      --classifiers classifiers/random --classifiers classifiers/length --classifiers classifiers/constant-low \
+      --classifiers 'classifiers/s1d1-*' classifiers/laya-english-tier classifiers/laya-multilingual-tier \
+      classifiers/litellm-heuristic classifiers/random classifiers/length classifiers/constant-low \
       --out results/base-v1.parquet
   ```
+
+  `--judges` et `--classifiers` prennent plusieurs valeurs à la suite (des globs entre apostrophes, que `bench run`
+  développe lui-même), ou l'option répétée.
 
   Les classifieurs sont listés un à un : `'classifiers/*'` chargerait aussi `laya-english` et `laya-multilingual`, qui ne
   comptent plus (voir Laya plus haut).
@@ -516,25 +561,26 @@ de palier est `low` pour 93 % des ids, son exactitude (0,342) restant à côté 
 prédiction 1 (son QWK tombe en français, russe et chinois) se vérifie sur les valeurs ponctuelles, sans que les IC se
 séparent. Chaque chiffre est dans un tableau de `report/base-v1/tables/`, cité dans `index.md`.
 
-**Ce qu'il ne prouve pas.** Il ne sépare pas `s1d1-full-int8` de `s1d1-full-fp16`, de `small` ni de `compact` :
-les écarts appariés de `fp16` et de `small` ont un IC qui contient zéro, celui de `compact` (0,048 [0,009 ; 0,089]) exclut
-zéro mais sa borne basse n'est pas au-delà de 2 σ = 0,010 (σ = 0,005, docs/18, lecture stricte écrite dans le rapport).
-Les trois juges principaux sont dans la vérité : leur accord avec elle compte leurs propres votes, et le chiffre qui les
-compare est le plafond. Gemma 4 a produit les étiquettes d'entraînement de s1d1 (docs/32 § 4.4) et est dans `truth_all` :
-le rapport donne l'accord contre la médiane sans Gemma (`truth_all_nogemma`, tableau « Sans Gemma 4 ») ; `s1d1-full-int8`
-y passe de 0,807 à 0,785 (`fp16` de 0,814 à 0,794) ; parmi les candidats qui n'ont pas vu Gemma, `length` passe de 0,543 à
-0,478 et `laya-english-tier` de 0,405 à 0,347, tandis que `litellm-heuristic` (0,089 → 0,106) et `laya-multilingual-tier`
-(0,119 → 0,115), proches du plancher, ne baissent guère. Ces écarts se lisent sur les valeurs ponctuelles, sans IC (aucun
-écart apparié entre vérités n'est calculé). Sans Gemma, la vérité est la médiane des 8 votes de deux juges, arrondie vers
-le bas : `expert` disparaît (8 ids → 0), `high` passe de 52 à 28 ids, 20 des 90 prompts de base changent de palier (18 vers
-le bas), et un candidat qui ne prédit jamais `expert`, comme s1d1, peut y perdre moins. Les deux juges restants
-s'accordent avec Gemma (QWK 0,879 pour Qwen 3, 0,707 pour gpt-oss, tableau des juges). Le tableau « Sans Gemma 4 » ne dit donc pas si s1d1
-hérite des biais de Gemma. Le rapport ne mesure pas la grille, le routage, la distribution réelle des prompts, les prompts
-agentiques ou multi-tours, ni les langues autres que les quatre ; trois analyses de docs/32 ne sont pas produites dans ce
-lot (la part des prompts notés 0,70 à 0,80 que les juges mettent en `high` ou au-dessus, les confusions entre tâches
-voisines, la matrice de confusion normalisée de la tâche), et `expert` n'a que 8 ids sur 360 (2 prompts de base) : tout ce
-qui touche ce palier est dit sur très peu de prompts. Les 360 ids ne sont pas 360 prompts indépendants : ce sont 90
-prompts de base en quatre versions, et les IC en tiennent compte.
+**Ce qu'il ne prouve pas.** Il ne sépare pas `s1d1-full-int8` de `s1d1-full-fp16`, de `small` ni de `compact` : les
+écarts appariés de `fp16` et de `small` ont un IC qui contient zéro, celui de `compact` (0,048 [0,009 ; 0,089]) exclut
+zéro mais sa borne basse n'est pas au-delà de 2 σ = 0,010 (σ = 0,005, [docs/18](docs/README.md), lecture stricte écrite
+dans le rapport). Les trois juges principaux sont dans la vérité : leur accord avec elle compte leurs propres votes, et
+le chiffre qui les compare est le plafond. Gemma 4 a produit les étiquettes d'entraînement de s1d1 (docs/32 § 4.4) et
+est dans `truth_all` : le rapport donne l'accord contre la médiane sans Gemma (`truth_all_nogemma`, tableau « Sans Gemma
+4 ») ; `s1d1-full-int8` y passe de 0,807 à 0,785 (`fp16` de 0,814 à 0,794) ; parmi les candidats qui n'ont pas vu Gemma,
+`length` passe de 0,543 à 0,478 et `laya-english-tier` de 0,405 à 0,347, tandis que `litellm-heuristic` (0,089 → 0,106)
+et `laya-multilingual-tier` (0,119 → 0,115), proches du plancher, ne baissent guère. Ces écarts se lisent sur les
+valeurs ponctuelles, sans IC (aucun écart apparié entre vérités n'est calculé). Sans Gemma, la vérité est la médiane des
+8 votes de deux juges, arrondie vers le bas : `expert` disparaît (8 ids → 0), `high` passe de 52 à 28 ids, 20 des 90
+prompts de base changent de palier (18 vers le bas), et un candidat qui ne prédit jamais `expert`, comme s1d1, peut y
+perdre moins. Les deux juges restants s'accordent avec Gemma (QWK 0,879 pour Qwen 3, 0,707 pour gpt-oss, tableau des
+juges). Le tableau « Sans Gemma 4 » ne dit donc pas si s1d1 hérite des biais de Gemma. Le rapport ne mesure pas la
+grille, le routage, la distribution réelle des prompts, les prompts agentiques ou multi-tours, ni les langues autres que
+les quatre ; trois analyses de [docs/32](docs/32-open-bench-kit.md) ne sont pas produites dans ce lot (la part des
+prompts notés 0,70 à 0,80 que les juges mettent en `high` ou au-dessus, les confusions entre tâches voisines, la matrice
+de confusion normalisée de la tâche), et `expert` n'a que 8 ids sur 360 (2 prompts de base) : tout ce qui touche ce
+palier est dit sur très peu de prompts. Les 360 ids ne sont pas 360 prompts indépendants : ce sont 90 prompts de base en
+quatre versions, et les IC en tiennent compte.
 
 ## Dépendances
 
@@ -554,11 +600,18 @@ prompts de base en quatre versions, et les IC en tiennent compte.
 
 ## Licences
 
-- Code : [Apache-2.0](LICENSE).
+- Code : [Apache-2.0](LICENSE), **sauf** `src/s1d1_bench/vendor/litellm_heuristic/`, copie mot pour mot du scorer
+  heuristique de LiteLLM au tag v1.106.6, sous licence MIT (licence et notice des changements dans le dossier).
 - Prompts d'autres jeux publics : les prompts de `data/pool/*`, de `data/prompts/trial-50.*` et des lots sont repris
   tels quels de Dolly (CC-BY-SA-3.0), d'OASST2 et de m-ArenaHard (Apache-2.0) ; chacun garde sa licence, donnée ligne
   par ligne dans la colonne `licence` de `pool.parquet` et de `<jeu>.meta.parquet`. Le détail est dans
   [data/README.md](data/README.md).
+- Arena-Hard : les prompts anglais d'Arena-Hard viennent d'`arena-hard-auto` v0.1 (lmarena, Apache-2.0, prompts
+  d'utilisateurs de Chatbot Arena) et leurs traductions de `CohereLabs/m-ArenaHard` (Apache-2.0) ; les conditions de la
+  collecte amont auprès des utilisateurs de Chatbot Arena ne sont pas vérifiables en aval.
 - [CC-BY-4.0](data/LICENSE) (`data/LICENSE`) : les prompts écrits à la main et leurs traductions, les fichiers de juges
-  (`judges/`), les fichiers de classifieurs (`classifiers/`), les résultats (`results/`), les vérifications (`data/checks/`), la liste d'exclusion et les statistiques. Les traductions des prompts
-  d'un jeu public sont des œuvres dérivées et gardent la licence de la ligne (colonne `licence` de `meta.parquet`).
+  (`judges/`), les fichiers de classifieurs (`classifiers/`), les résultats (`results/`), le rapport (`report/<jeu>/`),
+  la rubrique `src/s1d1_bench/rubric/judge-rubric-v7.txt`, les consignes `consigne/`, les vérifications
+  (`data/checks/`), les documents copiés dans `docs/` (voir [docs/README.md](docs/README.md)), la liste d'exclusion
+  et les statistiques. Les traductions des prompts d'un jeu public sont des
+  œuvres dérivées et gardent la licence de la ligne (colonne `licence` de `meta.parquet`).

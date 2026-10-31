@@ -188,8 +188,10 @@ def run_translate_cmd(args) -> int:
     meta_path = out / f"{lang}.meta.json"
     existing = [p.name for p in (meta_path, out / f"{lang}.jsonl", out / f"{lang}.log.jsonl") if p.exists()]
     if existing and not args.resume:
-        return fail(f"{out}: {', '.join(existing)} already exist; a model's translations are immutable. "
-                    "Use a new --out, or --resume to go on with that run.")
+        return fail(
+            f"{out}: {', '.join(existing)} already exist; a model's translations are immutable. "
+            "Use a new --out, or --resume to go on with that run."
+        )
     consigne_path = Path(args.consigne or DEFAULT_CONSIGNE.format(lang=lang))
     try:
         consigne_bytes = consigne_path.read_bytes()
@@ -206,8 +208,14 @@ def run_translate_cmd(args) -> int:
             _, _, described = mlx_backend.describe_model(args.model, args.thinking)
         except (FileNotFoundError, ValueError) as exc:
             return fail(str(exc))
-        early = {"model": described["model"], "revision": described["revision"], "thinking": args.thinking,
-                 "consigne_sha256": consigne_sha256, "source_prompts_sha256": digest, "max_tokens": args.max_tokens}
+        early = {
+            "model": described["model"],
+            "revision": described["revision"],
+            "thinking": args.thinking,
+            "consigne_sha256": consigne_sha256,
+            "source_prompts_sha256": digest,
+            "max_tokens": args.max_tokens,
+        }
         conflicts = resume_conflicts(old, early, RESUME_KEYS)
         if conflicts:
             return fail(f"{meta_path}: cannot resume a run with other settings: {'; '.join(conflicts)}")

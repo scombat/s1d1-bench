@@ -52,6 +52,26 @@ NAMES = (
 )
 
 
+# The CSV beside each figure is written in French like the Markdown tables of the index: the header of each plotted
+# column below (the same words as `report_index.LABELS` for the same column), and the few English cell values. The
+# SVG and the numbers are untouched: only the header row and these words differ from the internal column names.
+HEADERS = {
+    "kind": "type", "name": "nom", "family": "famille", "value": "valeur", "lo": "borne basse", "hi": "borne haute",
+    "draws_used": "tirages utilisés", "lang": "langue", "n_ids": "ids", "qwk": "QWK", "candidate": "candidat",
+    "truth_tier": "palier de truth_all", "pred_tier": "palier prédit", "row_share": "part de la ligne",
+    "bin_low": "case : borne basse", "bin_high": "case : borne haute", "mean_score": "score moyen",
+    "mean_anchor": "ancre moyenne", "tier": "palier", "spread": "écart (crans)", "n_ids_tier": "ids du palier",
+    "mean_spread_tier": "écart moyen du palier (crans)", "n_ids_null_spread_tier": "ids du palier sans écart",
+    "group": "groupe", "n_ids_disagreement": "ids en désaccord", "share_of_ids": "part des ids",
+    "n_keys": "prompts de base", "n_keys_disagreement": "prompts de base en désaccord", "threshold": "seuil",
+    "precision": "précision", "recall": "rappel",
+}  # fmt: skip
+CELLS = {  # figure -> column -> English cell value -> French
+    "language-disagreements": {"group": {"all": "tout", "lang": "langue", "source": "source"},
+                               "value": {"all": "tous les ids"}},
+}  # fmt: skip
+
+
 class Figure(NamedTuple):
     """A figure of the report: its SVG and CSV (None when it was not drawn) and the French lines of what it left out."""
 
@@ -210,7 +230,7 @@ def _qwk_bars(computed: dict[str, pa.Table], sigma: float, mpl):
         data.append(
             {
                 "kind": "plafond (moyenne)",
-                "name": "mean",
+                "name": "moyenne",
                 "family": "juges",
                 "value": mean[0]["qwk"],
                 "lo": mean[0]["qwk_lo"],
@@ -561,6 +581,8 @@ def figures(computed: dict[str, pa.Table], out_dir: Path | str, sigma: float = 0
                 drawn.append(Figure(name, None, None, tuple(notes)))
                 continue
             fig.savefig(svg, format="svg", metadata={"Date": None}, bbox_inches="tight")
-            write_csv(csv, columns, rows)
+            cells = CELLS.get(name, {})
+            french_rows = [{HEADERS[c]: cells.get(c, {}).get(row.get(c), row.get(c)) for c in columns} for row in rows]
+            write_csv(csv, [HEADERS[c] for c in columns], french_rows)
             drawn.append(Figure(name, svg, csv, tuple(notes)))
     return drawn

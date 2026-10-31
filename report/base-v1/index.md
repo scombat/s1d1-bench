@@ -32,9 +32,9 @@ Tableaux : [`tables/agreement_all.csv`](tables/agreement_all.csv), [`tables/ceil
 L'autre chiffre principal (même vérité, même unité) : `s1d1-full-fp16` 0,814 [0,738 ; 0,865].
 
 Tous ces chiffres sont des QWK contre `truth_all`, la médiane des votes des 3 juges principaux sur les quatre
-versions de chaque prompt de base, avec leur IC à 95 % : 1 000 tirages des 90 prompts de base, les quatre
-versions suivent leur prompt de base. Clef-flash, nommé dans la phrase de docs/32, n'est pas mesuré dans ce lot
-(docs/34, décision 4 : non vérifié, docs/32 § 8).
+versions de chaque prompt de base, avec leur IC à 95 % : 1 000 tirages des 90 prompts de base, les quatre versions
+suivent leur prompt de base. Clef-flash, nommé dans la phrase de [docs/32](../../docs/32-open-bench-kit.md), n'est pas
+mesuré dans ce lot ([docs/34](../../docs/34-bench-run-report-lot3.md), décision 4 : non vérifié, docs/32 § 8).
 
 Les deux clauses de la fin sont choisies par des règles écrites dans le code (`src/s1d1_bench/report_index.py`) :
 
@@ -46,9 +46,10 @@ Les deux clauses de la fin sont choisies par des règles écrites dans le code (
   règle des 2 σ, « ne se distingue pas du plancher `length` » sinon.
 
 **La règle des 2 σ** : aucune phrase de supériorité sans que l'IC de l'écart apparié exclue zéro et dépasse 2 σ, σ =
-0,005 (le bruit des graines de s1d1, docs/18) ; lecture stricte : borne basse > 2 σ = 0,010 (ou, pour un écart
-négatif, borne haute < −0,010). Le tableau des écarts appariés l'applique à chaque candidat ; hors de ce
-tableau, seules les deux prédictions, écrites avant les chiffres, sont lues sur les valeurs ponctuelles, et le disent.
+0,005 (le bruit des graines de s1d1, [docs/18](../../docs/README.md)) ; lecture stricte :
+borne basse > 2 σ = 0,010 (ou, pour un écart négatif, borne haute < −0,010). Le tableau des écarts
+appariés l'applique à chaque candidat ; hors de ce tableau, seules les deux prédictions, écrites avant les chiffres,
+sont lues sur les valeurs ponctuelles, et le disent.
 
 ## Mises en garde (docs/32 § 2)
 
@@ -59,10 +60,10 @@ corrélation de rang et AUROC pour les autres scores), tâche (exactitude, F1 ma
 courbe précision-rappel, sur peu de positifs : l'IC le dit). Le palier de complexité est mesuré globalement, par langue,
 par source, par origine et par palier de la vérité ; la tâche, `needs_tools` et le score le sont globalement seulement.
 
-**Plafond et plancher.** Plafond = accord de chaque juge principal avec la médiane des autres ; un classifieur
-au-dessus imite un juge, il ne dépasse pas la grille. Plancher = les témoins : aléatoire (dix tirages), longueur du
-prompt (en caractères, seuils par quantiles) et `constant-low`. Entre les deux, le bruit des graines de s1d1 (docs/18)
-en bande : σ ≈ 0,005 QWK, repris comme nombre, pas remesuré.
+**Plafond et plancher.** Plafond = accord de chaque juge principal avec la médiane des autres ; un classifieur au-dessus
+imite un juge, il ne dépasse pas la grille. Plancher = les témoins : aléatoire (dix tirages), longueur du prompt (en
+caractères, seuils par quantiles) et `constant-low`. Entre les deux, le bruit des graines de s1d1
+([docs/18](../../docs/README.md)) en bande : σ ≈ 0,005 QWK, repris comme nombre, pas remesuré.
 
 **Ce qui n'est pas mesuré.**
 
@@ -72,7 +73,7 @@ en bande : σ ≈ 0,005 QWK, repris comme nombre, pas remesuré.
 - (c) La distribution réelle des prompts : le jeu est construit par cases, et `expert` devait être la case la moins
   fournie. Ids par palier de `truth_all` : trivial 68, low 116, medium 116, high 52, expert 8 ids ([`tables/by_tier.csv`](tables/by_tier.csv)).
 - (d) Les prompts agentiques et multi-tours : le jeu est fait de premiers prompts.
-- (e) Les langues autres que les quatre choisies : docs/17 reste la seule mesure sur 78 langues.
+- (e) Les langues autres que les quatre choisies : [docs/17](../../docs/README.md) reste la seule mesure sur 78 langues.
 
 ## Comment lire
 
@@ -257,8 +258,9 @@ avec elle se lit avec les paires « même modèle » du tableau des juges, qui m
 | s1d1-small-int8 | 360 | 0,736 [0,664 ; 0,789] | 0,608 [0,528 ; 0,683] | 1,000 [1,000 ; 1,000] | 0,757 [0,684 ; 0,806] | expert |
 | s1d1-tiny-int8 | 360 | 0,612 [0,539 ; 0,670] | 0,531 [0,453 ; 0,606] | 0,989 [0,978 ; 0,997] | 0,642 [0,548 ; 0,705] | expert |
 
-Les mêmes candidats contre la médiane des juges principaux sans `base-v1-gemma4-cap512` (les deux chiffres de la décision 9 de docs/32,
-que cite la décision 3 de docs/34).
+Les mêmes candidats contre la médiane des juges principaux sans `base-v1-gemma4-cap512` (les deux chiffres de la décision 9 de
+[docs/32](../../docs/32-open-bench-kit.md), que cite la décision 3 de
+[docs/34](../../docs/34-bench-run-report-lot3.md)).
 
 | nom | rôle | ids | QWK | exact | ± 1 | alpha ordinal | paliers jamais prédits |
 |---|---|---|---|---|---|---|---|
@@ -734,11 +736,11 @@ _Score de s1d1 (échelle v7, 0–1) contre l'ancre du palier de truth_all (0–1
 
 ## Ce qui manque
 
-Trois analyses de docs/32 ne sont pas produites dans ce lot :
+Trois analyses de [docs/32](../../docs/32-open-bench-kit.md) ne sont pas produites dans ce lot :
 
 - (i) la part des prompts notés 0,70 à 0,80 que les juges mettent en `high` ou au-dessus (la lecture de la calibration
-  de docs/32 § 2) ; le rapport publie à la place la fiabilité du score contre l'ancre du palier de la vérité (docs/34,
-  décision 8) ;
+  de docs/32 § 2) ; le rapport publie à la place la fiabilité du score contre l'ancre du palier de la vérité
+  ([docs/34](../../docs/34-bench-run-report-lot3.md), décision 8) ;
 - (ii) les confusions entre tâches voisines (editing / summarization / extraction, chat / information_seeking) ;
 - (iii) la matrice de confusion normalisée de la tâche (docs/32 § 3.4).
 

@@ -216,7 +216,12 @@ def _classify_arguments(sub: argparse.ArgumentParser) -> None:
     sub.add_argument(
         "--revision", default=None, help="s1d1, laya: Hub revision of the weights (default: the current one)"
     )
-    sub.add_argument("--backend", default="auto", help="s1d1: auto (variant.json of the repo), onnx, torch or mlx")
+    sub.add_argument(
+        "--router-revision",
+        default=None,
+        help="s1d1: Hub revision of s1d1_router.py (default: that of the weights for s1d1-router, else the head)",
+    )
+    sub.add_argument("--backend", default="auto", help="s1d1: auto (variant.json of the repo), onnx or torch")
     sub.add_argument(
         "--laya-model", choices=["english", "multilingual"], default=None, help="laya: the checkpoint to question"
     )
@@ -225,13 +230,21 @@ def _classify_arguments(sub: argparse.ArgumentParser) -> None:
 def _run_arguments(sub: argparse.ArgumentParser) -> None:
     sub.add_argument("--prompts", type=Path, required=True, help="prompts file of the set (.meta.parquet beside it)")
     sub.add_argument(
-        "--judges", action="append", required=True, help="glob of judge folders, e.g. 'judges/base-v1-*'; repeatable"
+        "--judges",
+        nargs="+",
+        action="extend",
+        required=True,
+        help="globs of judge folders, e.g. 'judges/base-v1-*'; several values, or the option repeated",
     )
     sub.add_argument(
         "--main", required=True, help="comma-separated judge folder names that make the truths, in priority order"
     )
     sub.add_argument(
-        "--classifiers", action="append", default=None, help="glob of classifier folders, e.g. 'classifiers/*'"
+        "--classifiers",
+        nargs="+",
+        action="extend",
+        default=None,
+        help="globs of classifier folders, e.g. 'classifiers/s1d1-*'; several values, or the option repeated",
     )
     sub.add_argument(
         "--out", type=Path, required=True, help="results table, results/<set>.parquet (+ <set>.run.json beside it)"

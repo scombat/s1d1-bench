@@ -203,8 +203,14 @@ def build_request_messages(consigne: str, english: str, translation: str, lang: 
     """System message = the consigne, byte-exact; user message = the English and the translation as data, each
     between its own <prompt lang="..."> tags. `retry` appends a nudge, so that a greedy second try is not the same."""
     user = (
-        '<prompt lang="eng">\n' + english + '\n</prompt>\n\n<prompt lang="' + lang + '">\n' + translation
-        + "\n</prompt>\n\n" + REQUEST_INSTRUCTION
+        '<prompt lang="eng">\n'
+        + english
+        + '\n</prompt>\n\n<prompt lang="'
+        + lang
+        + '">\n'
+        + translation
+        + "\n</prompt>\n\n"
+        + REQUEST_INSTRUCTION
     )
     if retry:
         user += REQUEST_RETRY_SUFFIX
@@ -460,8 +466,10 @@ def _run_request_cmd(args, fail) -> int:
     files = (meta_path, out / f"{lang}.request.jsonl", out / f"{lang}.request.log.jsonl")
     existing = [p.name for p in files if p.exists()]
     if existing and not args.resume:
-        return fail(f"{out}: {', '.join(existing)} already exist; a model's verdicts are immutable. "
-                    "Use a new --out, or --resume to go on with that run.")
+        return fail(
+            f"{out}: {', '.join(existing)} already exist; a model's verdicts are immutable. "
+            "Use a new --out, or --resume to go on with that run."
+        )
     consigne_path = Path(args.consigne or REQUEST_CONSIGNE)
     try:  # before the model loads and before anything is written
         consigne_bytes = consigne_path.read_bytes()
@@ -485,9 +493,15 @@ def _run_request_cmd(args, fail) -> int:
             _, _, described = mlx_backend.describe_model(args.model, args.thinking)
         except (FileNotFoundError, ValueError) as exc:
             return fail(str(exc))
-        early = {"model": described["model"], "revision": described["revision"], "thinking": args.thinking,
-                 "consigne_sha256": consigne_sha256, "english_prompts_sha256": english_sha256,
-                 "translations_sha256": translations_sha256, "max_tokens": args.max_tokens}
+        early = {
+            "model": described["model"],
+            "revision": described["revision"],
+            "thinking": args.thinking,
+            "consigne_sha256": consigne_sha256,
+            "english_prompts_sha256": english_sha256,
+            "translations_sha256": translations_sha256,
+            "max_tokens": args.max_tokens,
+        }
         conflicts = resume_conflicts(old, early, REQUEST_RESUME_KEYS)
         if conflicts:
             return fail(f"{meta_path}: cannot resume a run with other settings: {'; '.join(conflicts)}")

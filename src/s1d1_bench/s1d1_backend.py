@@ -4,6 +4,8 @@ The router file is downloaded from the Hub repo `scombat/s1d1-router` and import
 weights are downloaded (read only, no token) at a pinned revision into the Hub cache and handed to its `Router` as a
 local folder, so the revision written in meta.json is the one that was run.
 
+- Router file: `--router-revision` pins the revision of `s1d1_router.py` (default: the revision of the weights for
+  `scombat/s1d1-router` itself, else the head of that repo); the commit run is written in meta.json notes.
 - Revision: `HfApi.model_info(repo, revision=...).sha`, the head of the repo at run time unless `--revision` is given.
   The `-onnx-int8` repos are compared with the revision of their card (`CARD_REVISIONS`, the commit of the int8
   weights with `reduce_range`); a run on another revision is refused before anything is downloaded.
@@ -100,9 +102,7 @@ def resolve_revision(repo: str, revision: str | None) -> str:
 # ---------- batches ----------
 
 
-def plan_batches(
-    prompts: list[str], max_prompts: int, max_tokens: int, max_length: int
-) -> list[list[int]]:
+def plan_batches(prompts: list[str], max_prompts: int, max_tokens: int, max_length: int) -> list[list[int]]:
     """Indices of `prompts` in batches: sorted by length in characters (equal lengths in the order of the list), at
     most `max_prompts` per batch and `len(batch) * tokens(longest)` at most `max_tokens`, a token being 3 characters
     and a prompt never more than `max_length` tokens. A prompt too big for the budget is a batch of its own."""
@@ -145,15 +145,21 @@ def _dtype_label(backend: str, router, folder: str) -> str:
 
 
 def make_s1d1_classifier(
-    repo: str, revision: str | None, backend: str
+    repo: str, revision: str | None, backend: str, router_revision: str | None = None
 ) -> tuple[Callable[[list[str]], list[dict]], dict]:
     """(classify, meta): `classify(prompts)` rates a list of prompts by sorted batches and returns, in the order of
     the prompts, dicts of `complexity`, `task`, `needs_tools`, `score` and `needs_tools_probability`. `meta` holds
     `model` (the repo), `revision` (resolved), `router_revision` (of `s1d1_router.py`), `backend`, `device` and
     `quantization` (backend and precision, e.g. `onnx-int8`). Raises ValueError, before any download, for an
-    `-onnx-int8` repo whose revision is not the one of its card."""
+    `-onnx-int8` repo whose revision is not the one of its card.
+
+    `router_revision` is the revision of `s1d1_router.py` on the Hub (`ROUTER_REPO`); by default the file is the one
+    of the weights when they come from `ROUTER_REPO`, else the head of that repo."""
     resolved = resolve_revision(repo, revision)
-    router_revision = resolved if repo == ROUTER_REPO else model_info(ROUTER_REPO).sha
+    if router_revision:
+        router_revision = model_info(ROUTER_REPO, router_revision).sha
+    else:
+        router_revision = resolved if repo == ROUTER_REPO else model_info(ROUTER_REPO).sha
     module = fetch_router_module(router_revision)
     folder = snapshot(repo, resolved, module.HUB_FILES)
     chosen = module.backend_of(folder) if backend == "auto" else backend
