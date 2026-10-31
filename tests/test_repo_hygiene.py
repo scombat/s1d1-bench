@@ -112,3 +112,33 @@ def test_readme_results_show_both_figures_and_link_the_report():
         assert f"]({path})" in results, figure
         assert (REPO_ROOT / path).is_file(), figure
     assert "](report/base-v1/index.md)" in results
+
+
+# the files whose strings check, on purpose, that a local path is refused or kept out of meta.json
+LOCAL_PATH_EXCEPTIONS = {
+    "tests/test_check.py",
+    "tests/test_judge_runner.py",
+    "tests/test_translate.py",
+    "tests/test_classify.py",
+    "tests/test_laya_backend.py",
+}
+
+
+def test_no_local_paths():
+    """No `/Users/` nor `~/work/` in the code, the tests and the two READMEs, but in the named test files above."""
+    files = [
+        *(REPO_ROOT / "src").rglob("*.py"),
+        *(REPO_ROOT / "tests").rglob("*.py"),
+        REPO_ROOT / "README.md",
+        REPO_ROOT / "docs" / "README.md",
+    ]
+    vendor = REPO_ROOT / "src" / "s1d1_bench" / "vendor"
+    found = []
+    for path in files:
+        relative = path.relative_to(REPO_ROOT).as_posix()
+        if relative in LOCAL_PATH_EXCEPTIONS or path.is_relative_to(vendor) or path == Path(__file__).resolve():
+            continue
+        text = path.read_text(encoding="utf-8")
+        if "/Users/" in text or "~/work/" in text:
+            found.append(relative)
+    assert found == []

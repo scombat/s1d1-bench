@@ -3,11 +3,11 @@
 The question is the one LiteLLM's complexity router sends (`litellm/router_strategy/complexity_router/
 complexity_router.py`, read on 2026-10-25 by the research repo): one `choice` question named `tier`, the instructions
 `DEFAULT_JEV_INSTRUCTIONS` and the four criteria `_JEV_TIER_CRITERIA`. `INSTRUCTIONS`, `CRITERIA` and `QUESTIONS` below
-are copied identically (same strings, same order) from `bench/laya_scores.py` of the research repo
-(/Users/steve/work/s1d1-model-router/bench/laya_scores.py, docs/27 section 5), read on 2026-10-30; the way the research
-adapter (`bench/laya_adapter.py`) calls it is kept too: `Router()` with its default checkpoints, one
+are LiteLLM's question as docs/27 section 5 reads it (same strings, same order, read on 2026-10-30); the way the
+research adapter (`bench/laya_adapter.py`) calls it is kept too: `Router()` with its default checkpoints, one
 `predict_batch` request per prompt with `{"state": prompt, "questions": QUESTIONS, "model": "english"|"multilingual"}`,
-batches of 32 over the prompts sorted by length. `tests/test_laya_backend.py` compares the strings with that file.
+batches of 32 over the prompts sorted by length. `tests/test_laya_backend.py` compares the strings with the frozen copy
+`tests/fixtures/laya/question-v1.json`: the question must not move.
 
 - Answer: Laya answers the question with a probability for each of the four levels, `SIMPLE`, `MEDIUM`, `COMPLEX`,
   `REASONING`, in the order of `CRITERIA`; `classify` returns them as they come (not renormalised), under
@@ -30,7 +30,7 @@ from collections.abc import Callable
 
 from s1d1_bench.s1d1_backend import hub_env, model_info
 
-# ---------- the question, as docs/27 reads it (bench/laya_scores.py, read on 2026-10-30) ----------
+# ---------- the question, as docs/27 section 5 reads it (read on 2026-10-30) ----------
 
 INSTRUCTIONS = (
     "Pick the cheapest tier whose models can fully answer this request. Judge the request itself; "

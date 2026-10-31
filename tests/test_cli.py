@@ -8,7 +8,7 @@ import pytest
 from s1d1_bench.cli import build_parser, main
 from s1d1_bench.rubric import LEVELS, TASKS, load_rubric
 
-# sha256 of ~/work/s1d1-model-router/docs/judge-rubric-v7.txt, the source of the packaged copy
+# sha256 of docs/judge-rubric-v7.txt of the research notebook, the source of the packaged copy
 RUBRIC_SHA256 = "fd9f87bd0b390d94c675ddc2807affd9d1323dae0e752b830fe0e5bbb2d5ff79"
 
 
