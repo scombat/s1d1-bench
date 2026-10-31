@@ -1,5 +1,6 @@
 import csv
 import math
+import re
 from pathlib import Path
 
 import numpy as np
@@ -745,3 +746,85 @@ def test_report_without_numpy_exits_1_with_the_hint(tmp_path, capsys, monkeypatc
     assert code == 1
     err = capsys.readouterr().err
     assert "numpy" in err and "uv run --group report bench report" in err
+
+
+def _slug(heading: str) -> str:
+    """The anchor GitHub gives a Markdown heading: lower case, punctuation dropped, spaces as hyphens."""
+    return re.sub(r"[^\w\- ]", "", heading.strip().lower()).replace(" ", "-")
+
+
+def test_index_links_its_tables_and_says_what_it_does_not_measure(tmp_path):
+    pytest.importorskip("matplotlib")
+    from s1d1_bench.cli import main
+
+    args, _ = fake_report_inputs(tmp_path)
+    out = tmp_path / "out"
+    assert main([*args, "--out", str(out)]) == 0
+    text = (out / "index.md").read_text(encoding="utf-8")
+    anchors = {_slug(line.lstrip("#")) for line in text.splitlines() if line.startswith("#")}
+    links = re.findall(r"\]\(([^)\s]+)\)", text)
+    for link in links:
+        if link.startswith("#"):
+            assert link[1:] in anchors, link
+        else:
+            assert (out / link).is_file(), link
+    # the numbers of the predictions and of the sentence sit next to the links of their tables
+    for table in ("predictions", "by_language", "agreement_all", "ceiling", "paired", "by_tier"):
+        assert f"(tables/{table}.csv)" in text, table
+    assert "#les-deux-prédictions-en-tableau" in links
+    # the breakdowns are for the tier only; the three analyses of docs/32 not produced are listed
+    assert "la tâche, `needs_tools` et le score le sont globalement seulement" in text
+    missing = text.split("## Ce qui manque")[1]
+    for item in ("(i) la part des prompts notés 0,70 à 0,80", "(ii) les confusions entre tâches voisines", "(iii)"):
+        assert item in missing, item
+    assert "Rien" not in missing
+
+
+def test_predictions_wording_reads_the_point_values_and_the_overlap():
+    from s1d1_bench.report_index import _predictions_first
+
+    def row(prediction, name, lang, qwk, lo, hi, verified):
+        return {"prediction": prediction, "name": name, "lang": lang, "qwk": qwk, "qwk_lo": lo, "qwk_hi": hi,
+                "verified": verified}  # fmt: skip
+
+    rows = [
+        row("prediction_2", "length", "all", 0.54, 0.42, 0.65, False),
+        row("prediction_2", "litellm-heuristic", "all", 0.09, 0.03, 0.17, False),
+        row("prediction_2", "s1d1-full-int8", "all", 0.81, 0.73, 0.85, False),
+        row("prediction_1", "litellm-heuristic", "eng", 0.20, 0.09, 0.33, False),
+        row("prediction_1", "litellm-heuristic", "fra", 0.25, 0.10, 0.40, False),
+        row("prediction_1", "litellm-heuristic", "rus", 0.30, 0.12, 0.45, False),
+        row("prediction_1", "litellm-heuristic", "zho", 0.04, -0.02, 0.08, False),
+    ]
+    computed = {
+        "predictions": pa.Table.from_pylist(rows),
+        "by_language": pa.Table.from_pylist([{"name": "litellm-heuristic", "n_ids_all": 90}]),
+    }
+    text = _predictions_first(computed, "360 ids", "90 prompts de base")
+    first, second = text.split("\n\n")[:2]
+    assert first.startswith("**La prédiction 2 n'est pas vérifiée : `litellm-heuristic` (0,090 [0,030 ; 0,170]) est")
+    assert "devait se tenir entre `length` et `s1d1-full-int8`" in first
+    assert "QWK(" not in text  # said in words, not as a formula repeated
+    assert "les IC de `litellm-heuristic` et de `length` ne se recouvrent pas" in first
+    assert second.startswith("**La prédiction 1 n'est pas vérifiée : les QWK en fra et rus ne sont pas au-dessous")
+    assert "les IC de fra et rus recouvrent celui de eng ; l'IC de zho ne recouvre pas celui de eng" in second
+    assert "−0,020" in second  # the true minus sign in prose numbers
+
+
+def test_report_command_refuses_a_missing_template_before_computing(tmp_path, capsys, monkeypatch):
+    pytest.importorskip("matplotlib")
+    from s1d1_bench import report
+    from s1d1_bench.cli import main
+
+    args, _ = fake_report_inputs(tmp_path)
+    args[args.index("--template") + 1] = str(tmp_path / "nowhere.md")
+    monkeypatch.setattr(report, "tables", lambda *a, **k: pytest.fail("the tables were computed"))
+    assert main([*args, "--out", str(tmp_path / "out")]) == 1
+    assert "nowhere.md: missing (the template of index.md)" in capsys.readouterr().err
+
+
+def test_markdown_numbers_take_the_true_minus_sign_and_the_csv_keeps_the_hyphen(tmp_path):
+    table = pa.table({"qwk": [-0.1234], "qwk_lo": [-0.2], "qwk_hi": [0.05]})
+    assert markdown_table(table).splitlines()[2] == "| −0,123 [−0,200 ; 0,050] |"
+    (path,) = write_tables({"t": table}, tmp_path)
+    assert path.read_text(encoding="utf-8").splitlines()[1] == "-0.1234,-0.2,0.05"

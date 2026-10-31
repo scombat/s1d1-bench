@@ -32,7 +32,8 @@ OTHERS = ("témoins et autres", GREY)
 CONFUSION = (REFERENCE, "laya-multilingual-tier", LITELLM, FLOOR)  # the four panels of `confusion`
 HATCHES = ("", "//", "\\\\", "xx", "--", "++")  # per language, or per candidate within a family
 MARKERS = ("o", "s", "^", "D", "v", "P")
-LINES = ("-", "--", "-.", ":", (0, (5, 1)), (0, (1, 1)))
+LINES = ("-", "--", ":", "-.", (0, (5, 1, 1, 1, 1, 1)), (0, (8, 2)))  # solid, dashed, dotted, dash-dot, dash-dot-dot
+SHADES = (0.0, -0.35, 0.4, -0.6, 0.6, -0.2)  # within a family: the same hue, darker (< 0) or lighter (> 0)
 RC = {
     "svg.hashsalt": "s1d1-bench",  # the ids of clip paths and glyphs, otherwise random
     "svg.fonttype": "none",
@@ -72,6 +73,24 @@ def _family_order(names: Sequence[str]) -> list[str]:
     """The candidates grouped by family (s1d1, Laya, LiteLLM, the others), table order within a family."""
     rank = {label: n for n, (_, label, _) in enumerate(FAMILIES)}
     return sorted(names, key=lambda name: rank.get(family(name)[0], len(FAMILIES)))
+
+
+def _shade(colour: str, amount: float) -> str:
+    """`colour` (#RRGGBB) mixed with black (amount < 0) or white (amount > 0): the same hue, another lightness."""
+    rgb = [int(colour[i : i + 2], 16) for i in (1, 3, 5)]
+    target = 255 if amount > 0 else 0
+    mixed = [round(c + (target - c) * abs(amount)) for c in rgb]
+    return "#" + "".join(f"{c:02X}" for c in mixed)
+
+
+def _series(name: str, n: int) -> dict:
+    """The line style of the n-th series of a figure with several lines of one family: its hue at another lightness,
+    its own dash pattern and marker."""
+    return {
+        "color": _shade(family(name)[1], SHADES[n % len(SHADES)]),
+        "linestyle": LINES[n % len(LINES)],
+        "marker": MARKERS[n % len(MARKERS)],
+    }
 
 
 def _rank_in_family(names: Sequence[str]) -> dict[str, int]:
@@ -166,6 +185,8 @@ def _qwk_bars(computed: dict[str, pa.Table], sigma: float, mpl):
         ax.barh(pos, row["value"], color=colour, hatch=HATCHES[ranks[row["name"]] % len(HATCHES)], edgecolor="white")
         error = _errors([row], "value", "lo", "hi")
         ax.errorbar(row["value"], pos, xerr=error, fmt="none", ecolor=BLACK, capsize=3, linewidth=1)
+        # the point estimate as a marker: a bar of length 0 (constant-low's QWK of 0) stays visible
+        ax.plot(row["value"], pos, marker="D", markersize=5, color=colour, markeredgecolor=BLACK, zorder=3)
     ax.set_yticks(y, [f"{name} ({french(by_name[name]['qwk'], 3)})" for name in order])
     ceiling = computed["ceiling"].to_pylist()
     judges = [r for r in ceiling if r["judge"] != "mean"]
@@ -200,10 +221,11 @@ def _qwk_bars(computed: dict[str, pa.Table], sigma: float, mpl):
     else:
         notes.append("plafond absent (pas de juge principal) : lignes du plafond non tracées")
     floor = computed["floor"].to_pylist()
-    for name, style in ((FLOOR, "--"), (CONSTANT, "-.")):
+    for name, style, shade in ((FLOOR, "--", GREY), (CONSTANT, "-.", "#555555")):
         found = [r for r in floor if r["name"] == name and r["draw"] is None]
         if found:
-            ax.axvline(found[0]["qwk"], color=GREY, linestyle=style, linewidth=1.5, label=f"plancher : {name}")
+            ax.axvline(found[0]["qwk"], color=shade, linestyle=style, linewidth=1.5, label=f"plancher : {name}",
+                       zorder=2.5)  # fmt: skip
             data.append(
                 {
                     "kind": "plancher",
@@ -377,16 +399,14 @@ def _reliability(computed: dict[str, pa.Table], sigma: float, mpl):
     columns = ["candidate", "bin_low", "bin_high", "n_ids", "mean_score", "mean_anchor"]
     fig = mpl.figure.Figure(figsize=(5.6, 5.2))
     ax = fig.add_subplot()
-    ax.plot([0, 1], [0, 1], color=BLACK, linestyle=":", linewidth=1, label="score = ancre (calibration parfaite)")
+    ax.plot([0, 1], [0, 1], color=GREY, linewidth=0.8, label="score = ancre (calibration parfaite)")
     for n, name in enumerate(names):
         found = [r for r in bins if r["candidate"] == name]
         ax.plot(
             [r["mean_score"] for r in found],
             [r["mean_anchor"] for r in found],
-            color=family(name)[1],
-            marker=MARKERS[n % len(MARKERS)],
-            linestyle=LINES[n % len(LINES)],
-            linewidth=1,
+            **_series(name, n),
+            linewidth=1.2,
             markersize=4,
             label=name,
         )
@@ -479,9 +499,10 @@ def _needs_tools_pr(computed: dict[str, pa.Table], sigma: float, mpl):
             [r["recall"] for r in found],
             [r["precision"] for r in found],
             where="post",
-            color=family(name)[1],
-            linestyle=LINES[n % len(LINES)],
-            linewidth=1,
+            **_series(name, n),
+            markevery=max(1, len(found) // 10),  # a count, not a fraction: a curve may be all nan
+            markersize=4,
+            linewidth=1.2,
             label=name,
         )
     title = "needs_tools : précision et rappel selon le seuil de probabilité"

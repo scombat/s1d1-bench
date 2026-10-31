@@ -847,8 +847,8 @@ def write_tables(computed: dict[str, pa.Table], out_dir: Path | str) -> list[Pat
 
 
 def french(value, digits: int = 3) -> str:
-    """A value as the report writes it: floats at `digits` decimals with a comma, booleans oui/non, nan and null as
-    a dash, `|` escaped for Markdown."""
+    """A value as the report writes it: floats at `digits` decimals with a comma and the true minus sign, booleans
+    oui/non, nan and null as a dash, `|` escaped for Markdown."""
     if value is None or (isinstance(value, float) and math.isnan(value)):
         return "—"
     if isinstance(value, bool):
@@ -856,7 +856,7 @@ def french(value, digits: int = 3) -> str:
     if isinstance(value, int):
         return str(value)
     if isinstance(value, float):
-        return f"{value:.{digits}f}".replace(".", ",")
+        return f"{value:.{digits}f}".replace(".", ",").replace("-", "−")  # the true minus sign
     return str(value).replace("|", "\\|")
 
 
@@ -898,9 +898,9 @@ MATPLOTLIB_HINT = (
 
 def run_report_cmd(args) -> int:
     """`bench report`: `--out/tables/*.csv`, `--out/figures/*.svg` (each with its CSV) and `--out/index.md`, from
-    `--results`, its `<stem>.run.json`, `--meta` and the `--classifiers` root. Exit 1 with a message on a refusal (a
-    missing input, a classifier folder or `random/draws.jsonl` missing from the root) or when matplotlib is missing;
-    the check of matplotlib comes first, before any computation."""
+    `--results`, its `<stem>.run.json`, `--meta`, the `--classifiers` root and `--template`. Exit 1 with a message on
+    a refusal (a missing input, a classifier folder or `random/draws.jsonl` missing from the root) or when matplotlib
+    is missing; matplotlib and the inputs are checked first, before any computation."""
     try:
         import matplotlib  # noqa: F401  (the figures need it; checked before the tables take their time)
     except ImportError:
@@ -912,8 +912,17 @@ def run_report_cmd(args) -> int:
     results_path = Path(args.results)
     run_path = results_path.with_name(results_path.stem + ".run.json")
     try:
-        if not run_path.is_file():
-            raise ValueError(f"{run_path}: missing (the run record of {results_path}, written by bench run)")
+        inputs = [
+            (results_path, "the results table of bench run"),
+            (run_path, f"the run record of {results_path}, written by bench run"),
+            (Path(args.meta), "the meta table of the set"),
+            (Path(args.template), "the template of index.md"),
+        ]
+        for path, what in inputs:  # every input checked before the tables take their time
+            if not path.is_file():
+                raise ValueError(f"{path}: missing ({what})")
+        if not Path(args.classifiers).is_dir():
+            raise ValueError(f"{args.classifiers}: missing (the root of the classifier folders)")
         run = json.loads(run_path.read_text(encoding="utf-8"))
         computed = tables(pq.read_table(results_path), pq.read_table(args.meta), run, args.classifiers, args.sigma)
         written = write_tables(computed, args.out)

@@ -11,13 +11,21 @@ premier.
 
 {predictions_first}
 
+Tableaux : [`tables/predictions.csv`](tables/predictions.csv), [`tables/by_language.csv`](tables/by_language.csv) ;
+dans cette page : [Les deux prédictions, en tableau](#les-deux-prédictions-en-tableau).
+
 ## La phrase de docs/32 § 5
 
 > Sur {n_ids} ids, soit {n_base} prompts de base en {n_langs} langues, {headline_name} s'accorde avec la médiane de
 > {k_judges} juges à QWK {headline_qwk} {headline_ci} ; le plafond inter-juges est {ceiling_mean} (chaque juge
 > principal contre les deux autres, 8 votes et non 12 : {ceiling_values}) ; Laya english {laya_english}, Laya
 > multilingual {laya_multilingual} ; l'heuristique de LiteLLM {litellm} ; la longueur du prompt {length}.
-> {headline_name} est {position_vs_ceiling} et {vs_floor}.
+> L'IC de {headline_name} {position_vs_ceiling} ; {headline_name} {vs_floor}.
+
+Tableaux : [`tables/agreement_all.csv`](tables/agreement_all.csv), [`tables/ceiling.csv`](tables/ceiling.csv),
+[`tables/paired.csv`](tables/paired.csv) ; dans cette page : [Les candidats contre
+`truth_all`](#les-candidats-contre-truth_all), [Le plafond](#le-plafond--chaque-juge-principal-contre-les-deux-autres),
+[Les écarts appariés](#les-écarts-appariés).
 
 {headline_others}
 
@@ -28,10 +36,10 @@ versions suivent leur prompt de base. Clef-flash, nommé dans la phrase de docs/
 
 Les deux clauses de la fin sont choisies par des règles écrites dans le code (`src/s1d1_bench/report_index.py`) :
 
-- position par rapport au plafond : « dans la bande du plafond » quand la moyenne du plafond tombe dans l'IC du chiffre
-  principal ; « au-dessous du plafond » quand la borne haute de cet IC est au-dessous de la moyenne ; « au-dessus du
-  plafond » quand sa borne basse est au-dessus (un candidat au-dessus du plafond imite un juge, il ne dépasse pas la
-  grille) ;
+- position par rapport au plafond : « contient la moyenne du plafond » quand la moyenne du plafond tombe dans l'IC du
+  chiffre principal ; « est au-dessous de la moyenne du plafond » quand la borne haute de cet IC est au-dessous de la
+  moyenne ; « est au-dessus de la moyenne du plafond » quand sa borne basse est au-dessus (un candidat au-dessus du
+  plafond imite un juge, il ne dépasse pas la grille) ;
 - plancher : « se distingue du plancher `length` » quand l'écart apparié du chiffre principal moins `length` passe la
   règle des 2 σ, « ne se distingue pas du plancher `length` » sinon.
 
@@ -44,9 +52,10 @@ tableau, seules les deux prédictions, écrites avant les chiffres, sont lues su
 
 **Ce qui est mesuré.** Pour chaque classifieur, l'accord de ses sorties avec la médiane des juges : palier de
 complexité (QWK, exactitude, exactitude à ± 1 palier, alpha ordinal, matrice de confusion), score (MAE contre l'ancre
-du palier médian, diagramme de fiabilité, erreur de calibration attendue, pour les seuls scores sur l'échelle v7), tâche
-(exactitude, F1 macro), `needs_tools` (F1, MCC, AUROC, courbe précision-rappel, sur peu de positifs : l'IC le dit). Le
-tout globalement, par langue, par source, par origine et par palier de la vérité.
+du palier médian, diagramme de fiabilité, erreur de calibration attendue, pour les seuls scores sur l'échelle v7 ;
+corrélation de rang et AUROC pour les autres scores), tâche (exactitude, F1 macro), `needs_tools` (F1, MCC, AUROC,
+courbe précision-rappel, sur peu de positifs : l'IC le dit). Le palier de complexité est mesuré globalement, par langue,
+par source, par origine et par palier de la vérité ; la tâche, `needs_tools` et le score le sont globalement seulement.
 
 **Plafond et plancher.** Plafond = accord de chaque juge principal avec la médiane des autres ; un classifieur
 au-dessus imite un juge, il ne dépasse pas la grille. Plancher = les témoins : aléatoire (dix tirages), longueur du
@@ -59,7 +68,7 @@ en bande : σ ≈ 0,005 QWK, repris comme nombre, pas remesuré.
   côté par décision de l'utilisateur (2026-10-28).
 - (b) Le routage (le passage du score au modèle) : affaire du déployeur.
 - (c) La distribution réelle des prompts : le jeu est construit par cases, et `expert` devait être la case la moins
-  fournie. Ids par palier de `truth_all` : {tier_counts}.
+  fournie. Ids par palier de `truth_all` : {tier_counts} ([`tables/by_tier.csv`](tables/by_tier.csv)).
 - (d) Les prompts agentiques et multi-tours : le jeu est fait de premiers prompts.
 - (e) Les langues autres que les quatre choisies : docs/17 reste la seule mesure sur 78 langues.
 
@@ -74,11 +83,12 @@ en bande : σ ≈ 0,005 QWK, repris comme nombre, pas remesuré.
   juges, la médiane est la moyenne des deux paliers arrondie vers le bas.
 - **Unités** : « ids » compte les versions (une par langue, {n_ids} en tout) ; « prompts de base » compte les
   `base_key` ({n_base}). Les IC tirent les prompts de base, jamais les ids.
-- **Paliers jamais prédits** : {tiers_never_predicted}. Le QWK reste sur l'échelle à cinq paliers : un candidat qui
+- **Paliers jamais prédits** : {tiers_never_predicted} ([`tables/agreement_all.csv`](tables/agreement_all.csv),
+  colonne « paliers jamais prédits »). Le QWK reste sur l'échelle à cinq paliers : un candidat qui
   ne prédit jamais un palier est au mieux à un cran sur les ids de ce palier.
 - **Indécidables, abstentions, votes nuls** : indécidables : {undecidable} (sortis de toute mesure de palier) ;
-  abstentions : {abstentions} ; votes nuls de complexité : {null_votes}. Un vote nul retire l'id pour ce juge
-  seulement.
+  abstentions : {abstentions} ; votes nuls de complexité : {null_votes} ([`tables/inputs.csv`](tables/inputs.csv), le
+  tableau des dossiers ci-dessous). Un vote nul retire l'id pour ce juge seulement.
 - Un nombre suivi de crochets est une valeur ponctuelle et son IC à 95 % ; « — » : non défini (par exemple un QWK sur
   un sous-groupe qui n'a qu'un palier de vérité).
 
@@ -144,7 +154,8 @@ les compare à la médiane des autres est le plafond. Les juges hors de la véri
 
 {table_agreement_nogemma_candidates}
 
-Les mêmes candidats contre la médiane des juges principaux sans {gemma} (décision 9 de docs/34 : les deux chiffres).
+Les mêmes candidats contre la médiane des juges principaux sans {gemma} (les deux chiffres de la décision 9 de docs/32,
+que cite la décision 3 de docs/34).
 
 {table_agreement_nogemma_judges}
 
@@ -240,6 +251,9 @@ prédisent pas : {no_task_candidates}.
 
 {figure_needs_tools_pr}
 
+Chaque courbe suit un candidat qui donne une probabilité de `needs_tools` : en baissant le seuil, le rappel monte et la
+précision change ; la ligne pointillée grise est la part des positifs, la précision d'un tirage au hasard.
+
 ## Rangs et calibration du score
 
 {table_rank_metrics}
@@ -260,6 +274,16 @@ MAE, Spearman et erreur de calibration attendue (dix cases) du score contre l'an
 {table_predictions}
 
 ## Ce qui manque
+
+Trois analyses de docs/32 ne sont pas produites dans ce lot :
+
+- (i) la part des prompts notés 0,70 à 0,80 que les juges mettent en `high` ou au-dessus (la lecture de la calibration
+  de docs/32 § 2) ; le rapport publie à la place la fiabilité du score contre l'ancre du palier de la vérité (docs/34,
+  décision 8) ;
+- (ii) les confusions entre tâches voisines (editing / summarization / extraction, chat / information_seeking) ;
+- (iii) la matrice de confusion normalisée de la tâche (docs/32 § 3.4).
+
+Rôles, candidats et panneaux de figure absents de ce run :
 
 {missing}
 
