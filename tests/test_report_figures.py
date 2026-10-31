@@ -148,13 +148,14 @@ def test_one_marker_shape_and_no_hatch_in_any_figure(small):  # noqa: F811
 
 
 def test_shade_and_family_colours():
-    from s1d1_bench.report_figures import colour, family, shade
+    from s1d1_bench.report_figures import JUDGE, colour, family, shade
 
     assert family("s1d1-full-int8") == ("s1d1", "#2a78d6")
     assert family("laya-english-tier") == ("Laya", "#eb6834")
-    assert family("litellm-heuristic") == ("LiteLLM", "#1baf7a")
-    assert family("routellm-bert") == ("RouteLLM", "#7e57c2")
-    assert family("llm4b-gemma4-e4b-off") == ("LLM 4B", "#b8860b")
+    assert family("litellm-heuristic") == ("third-party routers", "#1baf7a")
+    assert family("routellm-bert") == ("third-party routers", "#1baf7a")  # one hue for the two kinds of routers
+    assert colour("litellm-heuristic") == "#1baf7a" and colour("routellm-bert") == shade("#1baf7a", 0.4)
+    assert family("llm4b-gemma4-e4b-off") == ("LLM reading the v7 instructions", JUDGE)  # the colour of the judges
     assert family("length") == ("witnesses and others", "#7a7975")
     assert shade("#2a78d6", 0) == "#2a78d6"
     assert shade("#000000", 0.5) == "#808080" and shade("#ffffff", -0.5) == "#808080"

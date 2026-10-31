@@ -44,26 +44,33 @@ from s1d1_bench.rubric import LEVELS
 # the palette: text, secondary text, grid, paper; the family hues; the judges and the ceiling
 INK, MUTED, GRID, PAPER = "#0b0b0b", "#52514e", "#e6e5e1", "#fcfcfb"
 BLUE, ORANGE, GREEN, GREY = "#2a78d6", "#eb6834", "#1baf7a", "#7a7975"
-PURPLE, GOLD = "#7e57c2", "#b8860b"
 JUDGE, JUDGE_SOFT = "#0b0b0b", "#52514e"
+LLM_READER = "LLM reading the v7 instructions"
+# (prefixes of the names, label, hue): grouped by kind and not by brand, three hues and the grey of the witnesses. The
+# routers of other projects share one hue (a variant is two steps lighter); a small LLM that reads the v7 instructions
+# like the judges takes the colour of the judges
 FAMILIES = (
-    ("s1d1-", "s1d1", BLUE),
-    ("laya-", "Laya", ORANGE),
-    ("litellm-", "LiteLLM", GREEN),
-    ("routellm-", "RouteLLM", PURPLE),
-    ("llm4b-", "LLM 4B", GOLD),
+    (("s1d1-",), "s1d1", BLUE),
+    (("laya-",), "Laya", ORANGE),
+    (("litellm-", "routellm-"), "third-party routers", GREEN),
+    (("llm4b-",), LLM_READER, JUDGE),
 )
 OTHERS = ("witnesses and others", GREY)
 # within a family, the lightness step of a variant (shade: < 0 darker, > 0 lighter), by a word of its name
 VARIANTS = {
     "s1d1-": (("fp16", -0.25), ("compact", 0.25), ("small", 0.45), ("tiny", 0.6)),
     "laya-": (("multilingual", 0.4),),
+    "routellm-": (("bert", 0.4),),
 }
 CONFUSION = (REFERENCE, "laya-multilingual-tier", LITELLM, FLOOR)  # the four panels of `confusion`
 HEAT = (0.9, 0.0, -0.5)  # the single-hue heat maps: blue lightened (value 0), blue, blue darkened (the top)
 TIER_SHADES = (0.82, 0.58, 0.32, 0.0, -0.5)  # tier-distribution: trivial to expert, one neutral hue, light to dark
 DEVICES = {"cpu": "CPU", "mps": "GPU (MPS)", "gpu-mlx": "GPU (MLX)"}  # the device of a profile row, as a label says it
 JUDGES_LABEL = "main judges: each against the other two (8 votes)"
+READER_LABEL = "the 4B candidate: an LLM reading the v7 instructions"
+JUDGES_AND_READER_LABEL = (
+    "main judges (each against the other two, 8 votes) and the 4B candidate: an LLM reading the v7 instructions"
+)
 # A point label sits right of its point, vertically centred; where it would overlap another label or point on the
 # figure of base-v1, it moves by this offset in points (dx, dy; dx < 0: right-aligned, left of the point; dx == 0:
 # centred above or below it). Looked at
@@ -170,8 +177,8 @@ def style():
 
 def family(name: str) -> tuple[str, str]:
     """(family label, colour) of a candidate, by the prefix of its name."""
-    for prefix, label, hue in FAMILIES:
-        if name.startswith(prefix):
+    for prefixes, label, hue in FAMILIES:
+        if name.startswith(prefixes):
             return label, hue
     return OTHERS
 
@@ -998,9 +1005,13 @@ def _scatter(name: str, computed: dict[str, pa.Table], measure: str, what: str, 
     ax.set_ylabel("QWK against truth_all")
     better(ax, "y", higher=True)
     better_corner(ax)
-    handles = family_handles([p["name"] for p in points if p["family"] != "judges"], mpl, point=True)
-    if any(p["family"] == "judges" for p in points):
-        handles.append(_point_handle(mpl, JUDGE, JUDGES_LABEL))
+    # the judges and the small LLM share the colour of the judges: one entry for both, which keeps the y of the judges
+    handles = family_handles([p["name"] for p in points if p["family"] not in ("judges", LLM_READER)], mpl, point=True)
+    has_judges = any(p["family"] == "judges" for p in points)
+    has_reader = any(p["family"] == LLM_READER for p in points)
+    if has_judges or has_reader:
+        text = JUDGES_LABEL if not has_reader else JUDGES_AND_READER_LABEL if has_judges else READER_LABEL
+        handles.append(_point_handle(mpl, JUDGE, text))
     return (fig, ax, points, handles), notes
 
 
