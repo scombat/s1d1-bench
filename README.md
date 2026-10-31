@@ -53,7 +53,7 @@ The sentence of docs/32 § 5, filled with the figures of the `base-v1` report (3
 
 ![Agreement of each candidate with the median of the main judges](report/base-v1/figures/qwk-bars.svg)
 
-`s1d1-full-int8` reaches the inter-judge ceiling: its CI, 0.807 [0.734, 0.852], contains the ceiling mean (0.774, black
+`s1d1-full-int8` sits at the inter-judge ceiling: its CI, 0.807 [0.734, 0.852], contains the ceiling mean (0.774, black
 line; dark grey lines: each main judge against the other two). The witnesses make the floor (dashed grey lines and grey
 band); Laya (0.405 and 0.119) and LiteLLM (0.089) are below the prompt length (0.543), on point values. A position on
 the figure is not a superiority sentence: that needs the 2 σ rule, the CI of the paired gap excluding zero and exceeding
