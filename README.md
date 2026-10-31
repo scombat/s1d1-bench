@@ -238,72 +238,72 @@ All commands are run from the repository root. Steps 4 and 5 need an Apple silic
    uv run bench agree judges/trial-*
    ```
 
-## Le tirage des prompts de base
+## The draw of the base prompts
 
-Le jeu de base n'est pas choisi à la main (docs/32 § 3.1, amendé le 2026-10-29). Les 900 candidats anglais
-(`data/prompts/presort-900`, export des `candidates-eng.jsonl`) sont étiquetés par un juge de pré-tri qui n'est pas
-Gemma 4 (`judges/presort-qwen3-off`, Qwen3.8 27B sans réflexion ; c'est un dossier de juge ordinaire, pas un juge du
-banc). `bench draw` tire ensuite 20 prompts par strate `trivial`, `low`, `medium`, `high` : mélange à graine fixe de
-chaque strate, puis les `needs_tools` vrais en tourniquet jusqu'à 20, puis chaque tâche de la rubrique jusqu'à 4
-(depuis la strate qui a le plus de place), puis remplissage. Un veto (`<id><TAB><raison>` par ligne, deux règles seulement :
-même gabarit dans la même strate, ou traduction qui changerait la tâche) retire un id de son ordre, le suivant de la
-strate prend sa place et les autres tirages ne bougent pas. Ce que les candidats ne permettent pas (un minimum de
-`needs_tools` ou de tâche) est signalé, pas corrigé en silence.
+The base set is not chosen by hand (docs/32 § 3.1, amended on 2026-10-29). The 900 English candidates
+(`data/prompts/presort-900`, export of `candidates-eng.jsonl`) are labelled by a presort judge that is not
+Gemma 4 (`judges/presort-qwen3-off`, Qwen3.8 27B without reasoning; it is an ordinary judge folder, not a judge of the
+bench). `bench draw` then draws 20 prompts per stratum `trivial`, `low`, `medium`, `high`: a shuffle of each stratum with
+a fixed seed, then the true `needs_tools` in round-robin up to 20, then each task of the rubric up to 4
+(from the stratum with the most room), then filling. A veto (`<id><TAB><reason>` per line, two rules only:
+same template in the same stratum, or a translation that would change the task) removes an id from its order, the next
+one of the stratum takes its place and the other draws do not move. What the candidates do not allow (a minimum of
+`needs_tools` or of a task) is reported, not silently corrected.
 
 ```
 uv run bench draw --presort judges/presort-qwen3-off --meta data/prompts/presort-900.meta.parquet \
     --out data/prompts/base-v1.select.txt --seed 0 --veto data/prompts/base-v1.veto.txt
 ```
 
-`base-v1.select.txt` (les clés tirées), `base-v1.draw.json` (règle, graine, strates, manques) et `base-v1.veto.txt`
-(les retraits et leur raison) sont publiés : le tirage se rejoue. La case `expert` est faite des dix prompts de
-`data/handwritten/expert-v1.jsonl`, pas du vivier.
+`base-v1.select.txt` (the drawn keys), `base-v1.draw.json` (rule, seed, strata, shortfalls) and `base-v1.veto.txt`
+(the removals and their reason) are published: the draw can be replayed. The `expert` cell is made of the ten prompts of
+`data/handwritten/expert-v1.jsonl`, not of the pool.
 
-## La traduction
+## The translation
 
-Les 90 prompts de base anglais (`data/prompts/base-v1-eng`, export de `base-v1.select.txt` et des dix prompts écrits à
-la main) sont traduits en français, russe et chinois simplifié par le modèle du pré-tri, Qwen3.8 27B 8 bits sans
-réflexion, à température 0 ([docs/33](docs/33-translation-lot2.md)). `bench translate` traduit un fichier de prompts
-dans une langue, un prompt par génération : la consigne (`consigne/translate-v1-<lang>.md`) est le message système, le
-prompt est donné entre balises `<prompt>` comme une donnée.
+The 90 English base prompts (`data/prompts/base-v1-eng`, export of `base-v1.select.txt` and of the ten handwritten
+prompts) are translated into French, Russian and simplified Chinese by the presort model, Qwen3.8 27B 8-bit without
+reasoning, at temperature 0 ([docs/33](docs/33-translation-lot2.md)). `bench translate` translates a prompts file
+into one language, one prompt per generation: the instructions (`consigne/translate-v1-<lang>.md`) are the system
+message, the prompt is given between `<prompt>` tags as data.
 
 ```
 uv run --group judge bench translate --model mlx-community/Qwen3.8-27B-8bit --prompts data/prompts/base-v1-eng.jsonl \
-    --lang fra --consigne consigne/translate-v1-fra.md --out data/translations/base-v1 --author <nom> --thinking off
+    --lang fra --consigne consigne/translate-v1-fra.md --out data/translations/base-v1 --author <name> --thinking off
 ```
 
-Sortie dans `--out` : `<lang>.jsonl` (les traductions), `<lang>.meta.json` (modèle, révision, consigne et son SHA-256,
-SHA-256 du fichier anglais, réglages), `<lang>.log.jsonl` (un état par prompt : `ok`, `empty`, `envelope`, `truncated`,
-`error`). Comme pour un juge, les fichiers ne sont jamais réécrits ; `--resume` reprend une série interrompue avec les
-mêmes réglages. Une traduction qui contient une ligne `</prompt>` ou qui commence par `<prompt` est une erreur consignée,
-jamais une traduction ; seule exception, une réponse entièrement enveloppée dans une paire `<prompt>…</prompt>` (le
-modèle recopie les balises) est dépouillée de cette paire et le journal le dit (`unwrapped`).
+Output in `--out`: `<lang>.jsonl` (the translations), `<lang>.meta.json` (model, revision, instructions and their
+SHA-256, SHA-256 of the English file, settings), `<lang>.log.jsonl` (one status per prompt: `ok`, `empty`, `envelope`,
+`truncated`, `error`). As with a judge, the files are never rewritten; `--resume` resumes an interrupted run with the
+same settings. A translation that contains a `</prompt>` line or that starts with `<prompt` is a logged error,
+never a translation; the one exception, an answer entirely wrapped in a `<prompt>…</prompt>` pair (the
+model copies the tags), is stripped of that pair and the log says so (`unwrapped`).
 
-Vitesse mesurée (M-série 128 Go, MLX, série de 90 prompts, chargement compris) : 825 s en français, 825 s en russe,
-657 s en chinois, soit une médiane de 9 à 11 jetons par seconde en décodage.
+Measured speed (M-series 128 GB, MLX, run of 90 prompts, loading included): 825 s in French, 825 s in Russian,
+657 s in Chinese, that is a median of 9 to 11 tokens per second in decoding.
 
-### Les vérifications
+### The checks
 
-Une traduction n'est pas livrée sans relecture. `bench check` ne corrige rien : il signale des lignes pour qu'un humain
-les lise, et écrit tout dans `data/checks/<jeu>/` (`<lang>.structure.jsonl`, `<lang>.labels.jsonl`,
-`<lang>.request.jsonl`, puis `<lang>.review.md`, la feuille où chaque id signalé a un `avis :` et une `décision :`).
+A translation is not delivered without proofreading. `bench check` corrects nothing: it flags lines for a human to
+read, and writes everything in `data/checks/<set>/` (`<lang>.structure.jsonl`, `<lang>.labels.jsonl`,
+`<lang>.request.jsonl`, then `<lang>.review.md`, the sheet where each flagged id has an `avis :` (opinion) and a
+`décision :` (decision)).
 
-- `structure` : blocs de code, URL, nombres, guillemets droits, nombre de lignes, longueur (rapport traduction/anglais
-  borné par langue), balise `<prompt>`. Règle de lecture : les signalements `quotes` sont presque tous des guillemets
-  typographiques (« », 「」) à la place de guillemets droits, une limite de la règle et non une erreur ; les `numbers`
-  sont des « 3:30 » devenus « 15h30 », des ordinaux écrits en toutes lettres ou des séparateurs de milliers ; les
-  `length` sont de très courts prompts.
-- `labels` : le juge Qwen3 (celui du pré-tri) étiquette l'anglais et la traduction (`judges/check-qwen3-off-<lang>`) ;
-  une `task` ou un `needs_tools` qui change est signalé. Pour les 28 prompts Arena-Hard, la traduction Google
-  (m-ArenaHard) sert de témoin (`bench witness`, `judges/witness-qwen3-off-<lang>`) : si le témoin reçoit du juge la
-  même étiquette que notre traduction, le signalement est levé. Le bruit du juge domine ce contrôle : presque toutes
-  les différences d'étiquette sont du bruit, sauf trois mistraductions que Gemma 4 a aussi repérées.
-- `request` : Gemma 4 31B (un autre modèle que le traducteur) lit l'anglais et la traduction et répond en JSON
-  `{"same_request": bool, "reason": str}` (`consigne/check-same-request-v1.md`). Un `false` est un signal, pas un verdict.
+- `structure`: code blocks, URLs, numbers, straight quotes, number of lines, length (translation/English ratio,
+  bounded per language), `<prompt>` tag. Reading rule: the `quotes` flags are almost all typographic quotes (« »,
+  「」) in place of straight quotes, a limit of the rule and not an error; the `numbers` ones are "3:30" turned into
+  "15h30", ordinals written out in words or thousands separators; the `length` ones are very short prompts.
+- `labels`: the Qwen3 judge (the presort one) labels the English and the translation (`judges/check-qwen3-off-<lang>`);
+  a `task` or a `needs_tools` that changes is flagged. For the 28 Arena-Hard prompts, the Google translation
+  (m-ArenaHard) serves as a witness (`bench witness`, `judges/witness-qwen3-off-<lang>`): if the witness gets from the
+  judge the same label as our translation, the flag is lifted. Judge noise dominates this check: almost all
+  label differences are noise, except three mistranslations that Gemma 4 also spotted.
+- `request`: Gemma 4 31B (a different model from the translator) reads the English and the translation and answers in
+  JSON `{"same_request": bool, "reason": str}` (`consigne/check-same-request-v1.md`). A `false` is a signal, not a verdict.
 
 ```
 uv run --group judge bench check request --set base-v1 --lang fra --english data/prompts/base-v1-eng.jsonl \
-    --translations data/translations/base-v1 --model mlx-community/gemma-4-31b-it-8bit --author <nom> --thinking off
+    --translations data/translations/base-v1 --model mlx-community/gemma-4-31b-it-8bit --author <name> --thinking off
 uv run bench check structure --set base-v1 --lang fra --english data/prompts/base-v1-eng.jsonl \
     --translations data/translations/base-v1
 uv run bench check labels --set base-v1 --lang fra --english data/prompts/base-v1-eng.jsonl \
@@ -313,62 +313,62 @@ uv run bench check review --set base-v1 --lang fra --english data/prompts/base-v
     --translations data/translations/base-v1 --witness data/translations/base-v1/witness-arena
 ```
 
-Le témoin Google est brut : entités HTML (`&#39;`) et espaces en bord de ligne y restent, nous ne le nettoyons pas.
+The Google witness is raw: HTML entities (`&#39;`) and spaces at the edge of a line stay in it, we do not clean it.
 
-Une correction humaine est une superposition : `data/translations/base-v1/<lang>.corrections.jsonl` (une ligne
-`{"id", "prompt", "reason", "author"}` par id corrigé). `bench export` l'applique et marque `corrected` dans
-`meta.parquet`; les fichiers du modèle (`<lang>.jsonl`) ne sont jamais réécrits. Un veto (traduction qui changerait la
-tâche, deux signaux réunis) retirerait l'id du tirage et ses remplaçants iraient dans une vague `-r1` (`--translations`
-se répète, une fois par vague) ; la relecture de `base-v1` n'en a décidé aucun.
+A human correction is an overlay: `data/translations/base-v1/<lang>.corrections.jsonl` (one line
+`{"id", "prompt", "reason", "author"}` per corrected id). `bench export` applies it and marks `corrected` in
+`meta.parquet`; the model's files (`<lang>.jsonl`) are never rewritten. A veto (a translation that would change the
+task, two signals together) would remove the id from the draw and its replacements would go into an `-r1` wave
+(`--translations` is repeated, once per wave); the proofreading of `base-v1` decided none.
 
-La relecture de `base-v1` (les trois langues lues contre l'anglais) a retenu 22 corrections : français 9, russe 6,
-chinois 7. 11 changent le sens (les fautes de frappe anglaises « captiols » et « store » prises au pied de la lettre
-dans les trois langues ; « banks' » perdu en français et en chinois ; « stochastic » ajouté en russe ; « aloud » ajouté
-et « keep score » mal rendu en français), 7 sont des termes techniques faux (key schedule, responsable du traitement,
-assignment en français ; shellcode en russe ; litmus test, proto-indo-européen et titre de revue traduit en chinois),
-4 sont des noms ou des accords abîmés (Tanooki, un accord de grammaire, « Шлой », Bourbon rendu par Bourgogne). Aucun
-veto. Ce que cela ne prouve pas : le contrôle de sens est un contrôle de lecture sur 90 prompts par langue, fait par un
-seul relecteur (Claude Fable 5.1), pas par des locuteurs natifs ; ni la qualité stylistique ni le registre ne sont mesurés.
+The proofreading of `base-v1` (the three languages read against the English) retained 22 corrections: French 9,
+Russian 6, Chinese 7. 11 change the meaning (the English typos "captiols" and "store" taken literally in the three
+languages; "banks'" lost in French and in Chinese; "stochastic" added in Russian; "aloud" added and "keep score"
+poorly rendered in French), 7 are wrong technical terms (key schedule, "responsable du traitement", "assignment" in
+French; shellcode in Russian; litmus test, Proto-Indo-European and a journal title translated in Chinese), 4 are damaged
+names or agreements (Tanooki, a grammatical agreement, "Шлой", Bourbon rendered as Bourgogne). No
+veto. What this does not prove: the meaning check is a reading check over 90 prompts per language, done by a
+single reviewer (Claude Fable 5.1), not by native speakers; neither stylistic quality nor register is measured.
 
-### Le jeu apparié
+### The paired set
 
-`data/prompts/base-v1.jsonl` réunit les 90 prompts dans les quatre langues (360 lignes, 9 lots, ids `<clé>-<lang>`),
-avec les corrections appliquées :
+`data/prompts/base-v1.jsonl` gathers the 90 prompts in the four languages (360 lines, 9 batches, ids `<key>-<lang>`),
+with the corrections applied:
 
 ```
 uv run bench export --select data/prompts/base-v1.select.txt --handwritten data/handwritten/expert-v1.jsonl \
     --translations data/translations/base-v1 --langs eng,fra,rus,zho --name base-v1
 ```
 
-Les fichiers `base-v1-<lang>.jsonl` sont ceux que les juges de vérification ont vus, avant corrections ; ils restent tels
-quels (leur SHA-256 est celui que `bench validate` demande aux dossiers `check-*`), et `bench export` refuse de réécrire
-un fichier de prompts qu'un dossier de juge épingle par son SHA-256 si le contenu change. `meta.parquet` porte `translator`
-(`modèle@révision`, vide en anglais) et `corrected`.
+The `base-v1-<lang>.jsonl` files are those the verification judges saw, before corrections; they stay as they
+are (their SHA-256 is the one `bench validate` asks of the `check-*` folders), and `bench export` refuses to rewrite
+a prompts file that a judge folder pins by its SHA-256 if the content changes. `meta.parquet` carries `translator`
+(`model@revision`, empty in English) and `corrected`.
 
-## Apporter ses prompts
+## Bringing your own prompts
 
-`base-v1` est le premier jeu d'une série : rien n'oblige les suivants à reprendre ses prompts, ses langues ou ses
-sources. Pour proposer un jeu `<jeu>` :
+`base-v1` is the first set of a series: nothing obliges the following ones to reuse its prompts, its languages or its
+sources. To propose a set `<set>`:
 
-1. **Un vivier.** `bench pool` (`--exclusions` pour la liste des clés à écarter, `--candidates` et `--per-source` pour les
-   candidats) construit le vivier ; `bench export --select <clés> --name <jeu>` en fait le fichier de prompts
-   `data/prompts/<jeu>.*`, avec `--langs` et `--translations` pour les langues autres que l'anglais.
-2. **Un pré-tri par un juge qui n'est pas du banc.** Un modèle autre que les trois juges principaux étiquette les
-   candidats (`bench judge`), dans un dossier de juge ordinaire, comme `judges/presort-qwen3-off` pour `base-v1`.
-3. **Un tirage publié.** `bench draw --presort … --meta … --out … --seed <graine> --veto <fichier>` ; publiez les clés
-   tirées, la graine, le veto et ses raisons : le tirage se rejoue (voir [Le tirage](#le-tirage-des-prompts-de-base)).
-4. **Une traduction relue.** `bench translate` traduit chaque langue, `bench check` signale ce qu'il faut relire, et un
-   locuteur de la langue relit (voir [La traduction](#la-traduction)).
-5. **Les juges du banc.** `bench judge` fait juger le jeu par les trois juges principaux, puis `bench validate`,
-   `bench agree`, `bench classify`, `bench run` et `bench report` produisent les dossiers et le rapport du jeu.
+1. **A pool.** `bench pool` (`--exclusions` for the list of keys to leave out, `--candidates` and `--per-source` for the
+   candidates) builds the pool; `bench export --select <keys> --name <set>` makes the prompts file
+   `data/prompts/<set>.*` from it, with `--langs` and `--translations` for the languages other than English.
+2. **A presort by a judge that is not a bench judge.** A model other than the three main judges labels the
+   candidates (`bench judge`), in an ordinary judge folder, like `judges/presort-qwen3-off` for `base-v1`.
+3. **A published draw.** `bench draw --presort … --meta … --out … --seed <seed> --veto <file>`; publish the drawn keys,
+   the seed, the veto and its reasons: the draw can be replayed (see [The draw](#the-draw-of-the-base-prompts)).
+4. **A proofread translation.** `bench translate` translates each language, `bench check` flags what to proofread, and a
+   speaker of the language proofreads (see [The translation](#the-translation)).
+5. **The bench judges.** `bench judge` has the three main judges judge the set, then `bench validate`,
+   `bench agree`, `bench classify`, `bench run` and `bench report` produce the folders and the report of the set.
 
-Une PR ajoute : un dossier de prompts, ses dossiers de juges et de classifieurs, et son rapport (`report/<jeu>/`, avec
-`results/<jeu>.parquet` qui le nourrit). Elle ne touche jamais un fichier existant : ni les juges, ni les classifieurs,
-ni les résultats, ni les prompts d'un jeu déjà publié. Un jeu qui voudrait corriger `base-v1` est un autre jeu.
+A PR adds: a prompts folder, its judge and classifier folders, and its report (`report/<set>/`, with
+`results/<set>.parquet` that feeds it). It never touches an existing file: neither the judges, nor the classifiers,
+nor the results, nor the prompts of a set already published. A set that wants to correct `base-v1` is another set.
 
-À lire avant de commencer : les licences des sources (la colonne `licence` de `pool.parquet` et de `<jeu>.meta.parquet`,
-section [Licences](#licences)) et la liste d'exclusion (`data/exclusions/`, qui dit ce que s1d1 a déjà vu : voir
-[Reproduire l'essai](#reproduire-lessai), étape 1).
+To read before starting: the licences of the sources (the `licence` column of `pool.parquet` and of `<set>.meta.parquet`,
+section [Licences](#licences)) and the exclusion list (`data/exclusions/`, which says what s1d1 has already seen: see
+[Reproducing the trial](#reproducing-the-trial), step 1).
 
 ## Les vérités
 
