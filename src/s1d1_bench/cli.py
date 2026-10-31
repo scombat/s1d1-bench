@@ -39,7 +39,7 @@ _HELP = {
     "check": "flag the translations of a set for a human review (structure, labels, same request, review sheet)",
     "classify": (
         "write a classifier folder: a witness (random, length, constant) "
-        "or a system (s1d1, laya, litellm-heuristic, routellm)"
+        "or a system (s1d1, laya, litellm-heuristic, routellm, nvidia)"
     ),
     "run": "merge the judge and classifier folders of a set into one table, with the truths of the main judges",
     "report": "write the report of a results table: tables (CSV), figures (SVG + CSV) and index.md from a template",
@@ -206,8 +206,9 @@ def _classify_arguments(sub: argparse.ArgumentParser) -> None:
 
     sub.add_argument(
         "adapter",
-        choices=["random", "length", "constant", "s1d1", "laya", "litellm-heuristic", "routellm"],
-        help="random, length, constant: the witnesses; s1d1, laya, litellm-heuristic, routellm: the systems under test",
+        choices=["random", "length", "constant", "s1d1", "laya", "litellm-heuristic", "routellm", "nvidia"],
+        help="random, length, constant: the witnesses; s1d1, laya, litellm-heuristic, routellm, nvidia: the systems "
+        "under test",
     )
     sub.add_argument("--prompts", type=Path, required=True, help="prompts to classify (jsonl of id, prompt)")
     sub.add_argument(
@@ -220,7 +221,9 @@ def _classify_arguments(sub: argparse.ArgumentParser) -> None:
     sub.add_argument("--level", choices=LEVELS, default="low", help="constant: the tier given to every prompt")
     sub.add_argument("--model", default=None, help="s1d1: Hub repo id of the weights")
     sub.add_argument(
-        "--revision", default=None, help="s1d1, laya, routellm: Hub revision of the weights (default: the current one)"
+        "--revision",
+        default=None,
+        help="s1d1, laya, routellm, nvidia: Hub revision of the weights (default: the current one)",
     )
     sub.add_argument(
         "--router-revision",

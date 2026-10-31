@@ -284,6 +284,7 @@ LOCAL_PATH_EXCEPTIONS = {
     "tests/test_classify.py",
     "tests/test_laya_backend.py",
     "tests/test_routellm_backend.py",
+    "tests/test_nvidia_backend.py",
 }
 
 

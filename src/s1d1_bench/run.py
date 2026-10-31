@@ -11,6 +11,8 @@ data, rewritten at every call (docs/34, decision 6).
 
 A classifier folder that has a `decisions.jsonl` (its raw output, e.g. a score outside [0, 1]) also gives the columns
 `<name>.raw_score` and `<name>.raw_tier`, read as they are; `run.json` then marks the classifier `raw_decisions: true`.
+A row whose `tier` and `score` are both null is a decision not made (an id the classifier does not cover): both columns
+are null there.
 """
 
 import datetime
@@ -202,8 +204,9 @@ def load_folder(path: Path | str, prompts_sha: str, ids: list[str]) -> tuple[str
 
 def read_decisions(path: Path | str, ids: list[str]) -> dict[str, dict]:
     """`id` -> {"tier", "score"} from a classifier's `decisions.jsonl`, the values untouched (a score may be negative).
-    Refused (ValueError naming the file) when a row has no id, a string `tier` or a finite numeric `score`, when an id
-    appears twice, when an id of `ids` has no row or a row has an id not in `ids`."""
+    Refused (ValueError naming the file) when a row has no id, a string `tier` or a finite numeric `score` (both null
+    is a decision not made, kept as None), when an id appears twice, when an id of `ids` has no row or a row has an id
+    not in `ids`."""
     decisions: dict[str, dict] = {}
     try:
         rows = read_jsonl(path)
@@ -214,12 +217,15 @@ def read_decisions(path: Path | str, ids: list[str]) -> dict[str, dict]:
         if not isinstance(i, str):
             raise ValueError(f"{path}: row {number} has no string 'id'")
         score = row.get("score")
+        if i in decisions:
+            raise ValueError(f"{path}: duplicate id {i!r}")
+        if row.get("tier") is None and score is None and "tier" in row and "score" in row:
+            decisions[i] = {"tier": None, "score": None}  # a decision not made: the classifier does not cover this id
+            continue
         if not isinstance(row.get("tier"), str) or isinstance(score, bool) or not isinstance(score, int | float):
             raise ValueError(f"{path}: id {i!r}: needs a string 'tier' and a numeric 'score'")
         if not math.isfinite(score):
             raise ValueError(f"{path}: id {i!r}: 'score' must be a finite number, not {score!r}")
-        if i in decisions:
-            raise ValueError(f"{path}: duplicate id {i!r}")
         decisions[i] = {"tier": row["tier"], "score": float(score)}
     missing = [i for i in ids if i not in decisions]
     if missing:
