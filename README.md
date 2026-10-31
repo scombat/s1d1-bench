@@ -7,10 +7,11 @@ witness 0.543, Laya 0.405 (english) and 0.119 (multilingual), LiteLLM's heuristi
 not competitors; no "better than" claim is made unless the paired difference passes the 2 σ rule. Licences: code
 Apache-2.0 (one MIT copy), data CC-BY-4.0 or its source's.
 
-The model can be tried in the browser, where it runs in the page, in the
-[demo Space](https://huggingface.co/spaces/scombat/s1d1-router-demo).
+The model can be tried in the browser in the [demo Space](https://huggingface.co/spaces/scombat/s1d1-router-demo); it
+runs in the page itself.
 
-Below are what the bench does not measure, the [results](#results-base-v1-2026-10-30), the commands and how to replay. The full report is [`report/base-v1/index.md`](report/base-v1/index.md): its first section is in English, the
+This README covers what the bench does not measure, the [results](#results-base-v1-2026-10-30), the commands and how
+to replay. The full report is [`report/base-v1/index.md`](report/base-v1/index.md): its first section is in English, the
 rest in French. The decisions cited as `docs/NN` are in [`docs/`](docs/README.md); those decision documents are in
 French.
 
