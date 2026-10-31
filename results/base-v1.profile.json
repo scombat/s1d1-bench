@@ -1,0 +1,196 @@
+{
+  "meta": {
+    "batch_size": 1,
+    "date": "2026-10-31",
+    "machine": "macOS-27.0.1-arm64-arm-64bit, Apple M4 Max",
+    "prompts": "data/prompts/base-v1.jsonl",
+    "prompts_sha256": "e6a6d4c12ef8b95caea942337a3a1e16ec1622cb4e75c8ee0b473ef609a32490",
+    "run": "results/base-v1.run.json",
+    "skipped": [
+      {
+        "name": "constant-low",
+        "reason": "witness: not a model"
+      },
+      {
+        "name": "length",
+        "reason": "witness: not a model"
+      },
+      {
+        "name": "random",
+        "reason": "witness: not a model"
+      }
+    ],
+    "warmup": 10
+  },
+  "rows": [
+    {
+      "device": "mps",
+      "kind": "classifier",
+      "latency_mean_ms": 29.999,
+      "latency_p50_ms": 25.063,
+      "latency_p95_ms": 50.799,
+      "model": "convaiinnovations/laya",
+      "name": "laya-english-tier",
+      "note": "time of classify([prompt]) per prompt (one predict_batch request: tokenisation, forward pass, reading of the tier answer), batch of 1, 360 prompts after 10 warm-up calls, time.perf_counter_ns; laya 0.4.15 on mps; weights: model.safetensors of the pinned revision in the local Hub cache; peak RSS: ru_maxrss of a fresh process that loaded this model only (interpreter, libraries and model load included); memory held by the GPU driver (MPS) may not be fully counted in the RSS",
+      "peak_rss_mb": 2932.1,
+      "revision": "laya 0.4.15 convaiinnovations/laya@7b928d828b7b0e022f929d9bd2e44165aa270148",
+      "weights_mb": 842.6
+    },
+    {
+      "device": "mps",
+      "kind": "classifier",
+      "latency_mean_ms": 15.507,
+      "latency_p50_ms": 12.841,
+      "latency_p95_ms": 30.22,
+      "model": "convaiinnovations/laya/multilingual",
+      "name": "laya-multilingual-tier",
+      "note": "time of classify([prompt]) per prompt (one predict_batch request: tokenisation, forward pass, reading of the tier answer), batch of 1, 360 prompts after 10 warm-up calls, time.perf_counter_ns; laya 0.4.15 on mps; weights: model.safetensors of the pinned revision in the local Hub cache; peak RSS: ru_maxrss of a fresh process that loaded this model only (interpreter, libraries and model load included); memory held by the GPU driver (MPS) may not be fully counted in the RSS",
+      "peak_rss_mb": 2708.9,
+      "revision": "laya 0.4.15 convaiinnovations/laya@7b928d828b7b0e022f929d9bd2e44165aa270148",
+      "weights_mb": 643.8
+    },
+    {
+      "device": "cpu",
+      "kind": "classifier",
+      "latency_mean_ms": 0.29,
+      "latency_p50_ms": 0.123,
+      "latency_p95_ms": 1.186,
+      "model": "litellm:complexity_router:heuristic",
+      "name": "litellm-heuristic",
+      "note": "time of classify([prompt]) per prompt (LiteLLM's heuristic scorer), batch of 1, 360 prompts after 10 warm-up calls, time.perf_counter_ns; pure Python rules on cpu; no weights (rules only); peak RSS: ru_maxrss of a fresh process that loaded this model only (interpreter, libraries and model load included)",
+      "peak_rss_mb": 24.5,
+      "revision": "v1.106.6 61c6ab78393ef45683dd7d963d2a315bd845e20b",
+      "weights_mb": 0.0
+    },
+    {
+      "device": "cpu",
+      "kind": "classifier",
+      "latency_mean_ms": 20.007,
+      "latency_p50_ms": 8.907,
+      "latency_p95_ms": 78.696,
+      "model": "scombat/s1d1-router-6src-compact-onnx-int8",
+      "name": "s1d1-compact-int8",
+      "note": "time of classify([prompt]) per prompt (tokenisation, forward pass, decoding), batch of 1, 360 prompts after 10 warm-up calls, time.perf_counter_ns; onnx-int8 on cpu; weights: model_int8.onnx of the pinned revision in the local Hub cache; peak RSS: ru_maxrss of a fresh process that loaded this model only (interpreter, libraries and model load included)",
+      "peak_rss_mb": 914.4,
+      "revision": "7e87870132a19d12b32dbad1f8233801b8145b9f",
+      "weights_mb": 138.5
+    },
+    {
+      "device": "mps",
+      "kind": "classifier",
+      "latency_mean_ms": 10.593,
+      "latency_p50_ms": 8.553,
+      "latency_p95_ms": 21.931,
+      "model": "scombat/s1d1-router",
+      "name": "s1d1-full-fp16",
+      "note": "time of classify([prompt]) per prompt (tokenisation, forward pass, decoding), batch of 1, 360 prompts after 10 warm-up calls, time.perf_counter_ns; torch-fp16 on mps; weights: model.safetensors of the pinned revision in the local Hub cache; peak RSS: ru_maxrss of a fresh process that loaded this model only (interpreter, libraries and model load included); memory held by the GPU driver (MPS) may not be fully counted in the RSS",
+      "peak_rss_mb": 937.4,
+      "revision": "7fb9a4e3d03e3d942a98648268ff76c6152c18d6",
+      "weights_mb": 615.1
+    },
+    {
+      "device": "cpu",
+      "kind": "classifier",
+      "latency_mean_ms": 20.062,
+      "latency_p50_ms": 9.114,
+      "latency_p95_ms": 76.762,
+      "model": "scombat/s1d1-router-6src-full-onnx-int8",
+      "name": "s1d1-full-int8",
+      "note": "time of classify([prompt]) per prompt (tokenisation, forward pass, decoding), batch of 1, 360 prompts after 10 warm-up calls, time.perf_counter_ns; onnx-int8 on cpu; weights: model_int8.onnx of the pinned revision in the local Hub cache; peak RSS: ru_maxrss of a fresh process that loaded this model only (interpreter, libraries and model load included)",
+      "peak_rss_mb": 1284.6,
+      "revision": "068d0d20d5901c2db6934c89fde48b87c973fed8",
+      "weights_mb": 310.3
+    },
+    {
+      "device": "cpu",
+      "kind": "classifier",
+      "latency_mean_ms": 12.032,
+      "latency_p50_ms": 5.791,
+      "latency_p95_ms": 44.721,
+      "model": "scombat/s1d1-router-6src-small-onnx-int8",
+      "name": "s1d1-small-int8",
+      "note": "time of classify([prompt]) per prompt (tokenisation, forward pass, decoding), batch of 1, 360 prompts after 10 warm-up calls, time.perf_counter_ns; onnx-int8 on cpu; weights: model_int8.onnx of the pinned revision in the local Hub cache; peak RSS: ru_maxrss of a fresh process that loaded this model only (interpreter, libraries and model load included)",
+      "peak_rss_mb": 680.4,
+      "revision": "33c7f34a30af04735390264824d6bfa8546abb7a",
+      "weights_mb": 56.0
+    },
+    {
+      "device": "cpu",
+      "kind": "classifier",
+      "latency_mean_ms": 3.477,
+      "latency_p50_ms": 1.646,
+      "latency_p95_ms": 12.81,
+      "model": "scombat/s1d1-router-6src-tiny-onnx-int8",
+      "name": "s1d1-tiny-int8",
+      "note": "time of classify([prompt]) per prompt (tokenisation, forward pass, decoding), batch of 1, 360 prompts after 10 warm-up calls, time.perf_counter_ns; onnx-int8 on cpu; weights: model_int8.onnx of the pinned revision in the local Hub cache; peak RSS: ru_maxrss of a fresh process that loaded this model only (interpreter, libraries and model load included)",
+      "peak_rss_mb": 638.4,
+      "revision": "dac13b5c0356864ea4501fa151d74dcd8b3ea22a",
+      "weights_mb": 24.7
+    },
+    {
+      "device": "gpu-mlx",
+      "kind": "judge",
+      "latency_mean_ms": 44751.1,
+      "latency_p50_ms": 42786.5,
+      "latency_p95_ms": 67715.4,
+      "model": "mlx-community/gemma-4-31b-it-8bit",
+      "name": "base-v1-gemma4-cap512",
+      "note": "wall_s of log.jsonl over its 360 ok calls (of 360 lines; errors left out), one prompt per call by construction, GPU through MLX (mlx-lm 0.32.2); each call reads the v7 instruction (about 1 900 tokens) with the prompt, mean 2001 prompt tokens, and generates a mean 394 tokens (thinking cap:512, max_tokens 1024); weights: the 7 weight files of mlx-community--gemma-4-31b-it-8bit; peak RSS not measurable after the fact",
+      "peak_rss_mb": null,
+      "revision": "f5f3dc92ab4af76724c36c21eb6bedadb3a851be",
+      "weights_mb": 33763.1
+    },
+    {
+      "device": "gpu-mlx",
+      "kind": "judge",
+      "latency_mean_ms": 30389.222,
+      "latency_p50_ms": 28433.5,
+      "latency_p95_ms": 53776.95,
+      "model": "mlx-community/Qwen3.8-27B-8bit",
+      "name": "base-v1-qwen3-cap512",
+      "note": "wall_s of log.jsonl over its 360 ok calls (of 360 lines; errors left out), one prompt per call by construction, GPU through MLX (mlx-lm 0.32.2); each call reads the v7 instruction (about 1 900 tokens) with the prompt, mean 2010 prompt tokens, and generates a mean 325 tokens (thinking cap:512, max_tokens 1024); weights: the 6 weight files of mlx-community--Qwen3.8-27B-8bit; peak RSS not measurable after the fact",
+      "peak_rss_mb": null,
+      "revision": "815b83c0df8ffd1d1b5244cf75fd6ef14fca9ef9",
+      "weights_mb": 29501.2
+    },
+    {
+      "device": "gpu-mlx",
+      "kind": "judge",
+      "latency_mean_ms": 1911.178,
+      "latency_p50_ms": 1821.0,
+      "latency_p95_ms": 2634.6,
+      "model": "mlx-community/gpt-oss-20b-MXFP4-Q8",
+      "name": "base-v1-gptoss-cap512",
+      "note": "wall_s of log.jsonl over its 359 ok calls (of 361 lines; errors left out), one prompt per call by construction, GPU through MLX (mlx-lm 0.32.2); each call reads the v7 instruction (about 1 900 tokens) with the prompt, mean 1964 prompt tokens, and generates a mean 89 tokens (thinking cap:512, max_tokens 1024); weights: the 3 weight files of mlx-community--gpt-oss-20b-MXFP4-Q8; peak RSS not measurable after the fact",
+      "peak_rss_mb": null,
+      "revision": "773a7da77e569019bb0fd17a554b263738d669a3",
+      "weights_mb": 12076.2
+    },
+    {
+      "device": "gpu-mlx",
+      "kind": "judge",
+      "latency_mean_ms": 12989.206,
+      "latency_p50_ms": 12635.5,
+      "latency_p95_ms": 15700.1,
+      "model": "mlx-community/gemma-4-31b-it-8bit",
+      "name": "base-v1-gemma4-off",
+      "note": "wall_s of log.jsonl over its 360 ok calls (of 360 lines; errors left out), one prompt per call by construction, GPU through MLX (mlx-lm 0.32.2); each call reads the v7 instruction (about 1 900 tokens) with the prompt, mean 2003 prompt tokens, and generates a mean 20 tokens (thinking off, max_tokens 1024); weights: the 7 weight files of mlx-community--gemma-4-31b-it-8bit; peak RSS not measurable after the fact",
+      "peak_rss_mb": null,
+      "revision": "f5f3dc92ab4af76724c36c21eb6bedadb3a851be",
+      "weights_mb": 33763.1
+    },
+    {
+      "device": "gpu-mlx",
+      "kind": "judge",
+      "latency_mean_ms": 9425.483,
+      "latency_p50_ms": 9153.5,
+      "latency_p95_ms": 11039.75,
+      "model": "mlx-community/Qwen3.8-27B-8bit",
+      "name": "base-v1-qwen3-off",
+      "note": "wall_s of log.jsonl over its 360 ok calls (of 360 lines; errors left out), one prompt per call by construction, GPU through MLX (mlx-lm 0.32.2); each call reads the v7 instruction (about 1 900 tokens) with the prompt, mean 1986 prompt tokens, and generates a mean 20 tokens (thinking off, max_tokens 1024); weights: the 6 weight files of mlx-community--Qwen3.8-27B-8bit; peak RSS not measurable after the fact",
+      "peak_rss_mb": null,
+      "revision": "815b83c0df8ffd1d1b5244cf75fd6ef14fca9ef9",
+      "weights_mb": 29501.2
+    }
+  ]
+}
