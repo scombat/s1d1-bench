@@ -12,7 +12,8 @@ The style (docs/36 § 2 of the model repository) is one for every figure, and th
 - English only in a figure (the French captions live under it, in `index.md`): no accented letter in an SVG.
 - Title in bold at the top left, a grey subtitle under it with the unit and the number of ids; nothing else inside
   the frame but the marks, their value labels and their point labels.
-- Each measured axis says, in grey at its end, "higher is better →" or "← lower is better".
+- Each measured axis says, in grey at its end, "higher is better →" or "← lower is better"; a figure of two measures
+  (quality against latency, against weights) says "better ↖" in grey at the corner it points to (`better_corner`).
 - Identity by colour and written label, never by shape: one hue per family (s1d1 blue, Laya orange, LiteLLM green,
   witnesses grey, judges and ceiling black or dark grey); within a family, the variants differ by lightness steps of
   the same hue and by their label written beside the mark. No hatch, one marker shape (`o`), one line style per role
@@ -20,9 +21,13 @@ The style (docs/36 § 2 of the model repository) is one for every figure, and th
 - The legend sits below the frame, one entry per family and one per reference line, never one per variant; a figure
   of a single series has none.
 
-A candidate or role a figure needs that is absent from the tables loses its panel (or its line), and a French line
-saying so is returned for the index; a figure left with nothing to draw is not written (and a stale file of that name
-is removed). Never an error.
+A candidate or role a figure needs that is absent from the tables loses its panel (or its line, or its point), and a
+French line saying so is returned for the index; a figure left with nothing to draw is not written (and a stale file
+of that name is removed). Never an error. The two figures of the profile (`quality-vs-latency`,
+`quality-vs-footprint`) are not drawn without the table `profile`; a candidate or main judge of the run missing from
+the profile, a model of the profile the run does not name, and a model whose measure cannot sit on the log axis (0 MB
+of weights: LiteLLM's rules) each get such a line. The witnesses are not models: they never get a point there, and are
+not said missing (the caption under the figure says so).
 """
 
 import math
@@ -33,7 +38,7 @@ from typing import NamedTuple
 
 import pyarrow as pa
 
-from s1d1_bench.report import CONSTANT, FLOOR, LITELLM, RANDOM, REFERENCE, write_csv
+from s1d1_bench.report import CONSTANT, FLOOR, LITELLM, RANDOM, REFERENCE, WITNESSES, write_csv
 from s1d1_bench.rubric import LEVELS
 
 # the palette: text, secondary text, grid, paper; the family hues; the judges and the ceiling
@@ -49,6 +54,27 @@ VARIANTS = {
 }
 CONFUSION = (REFERENCE, "laya-multilingual-tier", LITELLM, FLOOR)  # the four panels of `confusion`
 HEAT = (0.9, 0.0, -0.5)  # the single-hue heat maps: blue lightened (value 0), blue, blue darkened (the top)
+TIER_SHADES = (0.82, 0.58, 0.32, 0.0, -0.5)  # tier-distribution: trivial to expert, one neutral hue, light to dark
+DEVICES = {"cpu": "CPU", "mps": "GPU (MPS)", "gpu-mlx": "GPU (MLX)"}  # the device of a profile row, as a label says it
+JUDGES_LABEL = "main judges: each against the other two (8 votes)"
+# A point label sits right of its point, vertically centred; where it would overlap another label or point on the
+# figure of base-v1, it moves by this offset in points (dx, dy; dx < 0: right-aligned, left of the point). Looked at
+# on the rendered figures; a name absent here keeps the default.
+LABEL_OFFSETS: dict[tuple[str, str], tuple[float, float]] = {
+    # s1d1 full fp16, full int8, compact and small sit within 0.06 QWK and half a decade of each other; gemma4 and qwen3
+    # within 0.2 decade: labels to the left, above or below, clear of the neighbours' points and whiskers
+    ("quality-vs-latency", "s1d1-full-fp16"): (-8, 10),
+    ("quality-vs-latency", "s1d1-compact-int8"): (6, -12),
+    ("quality-vs-latency", "s1d1-small-int8"): (-8, 0),
+    ("quality-vs-latency", "base-v1-gemma4-cap512"): (-8, 10),
+    ("quality-vs-latency", "base-v1-qwen3-cap512"): (-8, 0),
+    ("quality-vs-footprint", "s1d1-full-int8"): (-8, 10),
+    ("quality-vs-footprint", "s1d1-full-fp16"): (6, -16),  # below qwen3's label, which reaches back to 5 GB
+    ("quality-vs-footprint", "s1d1-compact-int8"): (6, -14),
+    ("quality-vs-footprint", "s1d1-small-int8"): (-8, 0),
+    ("quality-vs-footprint", "base-v1-gemma4-cap512"): (-8, 10),
+    ("quality-vs-footprint", "base-v1-qwen3-cap512"): (-8, 0),
+}
 RC = {
     "svg.hashsalt": "s1d1-bench",  # the ids of clip paths and glyphs, otherwise random
     "svg.fonttype": "none",
@@ -88,6 +114,9 @@ NAMES = (
     "judge-spread-by-tier",
     "language-disagreements",
     "needs-tools-pr",
+    "quality-vs-latency",
+    "quality-vs-footprint",
+    "tier-distribution",
 )
 
 # The CSV beside each figure is in English like the figure: the header of each plotted column below. The numbers are
@@ -101,7 +130,10 @@ HEADERS = {
     "mean_spread_tier": "mean spread of the tier (steps)", "n_ids_null_spread_tier": "ids of the tier without spread",
     "group": "group", "n_ids_disagreement": "ids in disagreement", "share_of_ids": "share of ids",
     "n_keys": "base prompts", "n_keys_disagreement": "base prompts in disagreement", "threshold": "threshold",
-    "precision": "precision", "recall": "recall",
+    "precision": "precision", "recall": "recall", "role": "role", "n_ids_total": "ids of the bar",
+    "share": "share of the bar", "device": "device", "latency_p50_ms": "median latency (ms)",
+    "latency_p95_ms": "p95 latency (ms)", "weights_mb": "weights on disk (MB)",
+    "peak_rss_mb": "peak RSS of the process (MB)",
 }  # fmt: skip
 
 
@@ -217,6 +249,23 @@ def better(ax, axis: str, higher: bool = True) -> None:
         raise ValueError(f"axis must be 'x' or 'y', not {axis!r}")
 
 
+def better_corner(ax, text: str = "better ↖") -> None:
+    """The reading direction of a figure of two measures, in grey, just outside the corner of the frame it points to
+    (the top left: a higher quality and a lower cost)."""
+    ax.annotate(
+        text,
+        xy=(0, 1),
+        xycoords="axes fraction",
+        xytext=(-6, 4),
+        textcoords="offset points",
+        ha="right",
+        va="bottom",
+        color=MUTED,
+        fontsize=7.5,
+        annotation_clip=False,
+    )
+
+
 def legend_below(fig, handles: Sequence, ncol: int | None = None):
     """The one legend of the figure, below the frame, left-aligned with the first panel; none when `handles` is
     empty. `handles`: one per family (`family_handles`) and one per reference line."""
@@ -239,15 +288,21 @@ def legend_below(fig, handles: Sequence, ncol: int | None = None):
     )
 
 
-def family_handles(names: Sequence[str], mpl, line: bool = False) -> list:
+def family_handles(names: Sequence[str], mpl, line: bool = False, point: bool = False) -> list:
     """One legend handle per family present among `names`, in the order of `FAMILIES` (the others last): a patch of
-    the family hue, or a solid line for a figure of lines."""
+    the family hue, a solid line for a figure of lines, or a round point for a figure of points."""
     present = {family(name) for name in names}
     ordered = [(label, hue) for _, label, hue in FAMILIES if (label, hue) in present]
     ordered += [OTHERS] if OTHERS in present else []
     if line:
         return [mpl.lines.Line2D([], [], color=hue, linewidth=2, label=label) for label, hue in ordered]
+    if point:
+        return [_point_handle(mpl, hue, label) for label, hue in ordered]
     return [mpl.patches.Patch(facecolor=hue, edgecolor="none", label=label) for label, hue in ordered]
+
+
+def _point_handle(mpl, hue: str, text: str):
+    return mpl.lines.Line2D([], [], linestyle="none", marker="o", markersize=7, color=hue, label=text)
 
 
 def label(ax, x: float, y: float, text: str, dx: float = 4, dy: float = 0, color: str = INK, **kw):
@@ -821,6 +876,214 @@ def _needs_tools_pr(computed: dict[str, pa.Table], sigma: float, mpl):
     return fig, columns, curve, []
 
 
+def _duration(value: float, _position=None) -> str:
+    """A tick of the latency axis (ms): "0.1 ms", "10 ms", "1 s", "10 s"."""
+    if value >= 1000:
+        return f"{value / 1000:g} s"
+    return f"{value:g} ms"
+
+
+def _size(value: float, _position=None) -> str:
+    """A tick of the weights axis (MB): "10 MB", "100 MB", "1 GB", "10 GB"."""
+    if value >= 1000:
+        return f"{value / 1000:g} GB"
+    return f"{value:g} MB"
+
+
+def _profile_points(computed: dict[str, pa.Table], measure: str, what: str, unit: str):
+    """The points of a figure of the profile: (points, notes), points None when there is no profile. One point per
+    candidate of the run in the profile (the witnesses never: they are not models) and one per main judge, at x =
+    `measure` of its profile row, y = its QWK against truth_all (`agreement_all`) or, for a main judge, its ceiling
+    QWK against the other two main judges (`ceiling`, the values the ceiling lines of qwk-bars draw: its agreement
+    with truth_all counts its own votes). `what` and `unit` name the measure in the French notes."""
+    if "profile" not in computed:
+        return None, ["pas de profil (`results/<jeu>.profile.json` de `bench profile`) : figure non tracée"]
+    profile = {r["name"]: r for r in computed["profile"].to_pylist()}
+    agreement = {r["name"]: r for r in computed["agreement_all"].to_pylist()}
+    ceiling = {r["judge"]: r for r in computed["ceiling"].to_pylist() if r["judge"] != "mean"}
+    candidates = [n for n, r in agreement.items() if r["role"] == "candidate" and n not in WITNESSES]
+    points, notes = [], []
+    for name in candidates + list(ceiling):
+        if name not in profile:
+            notes.append(f"`{name}` absent du profil : pas de point")
+            continue
+        row = profile[name]
+        x = row[measure]
+        if _nan(x):
+            notes.append(f"`{name}` : {what} non mesuré(e) : pas de point")
+            continue
+        if x <= 0:
+            reason = f"pas de fichier de poids ({x:g} {unit})" if measure == "weights_mb" else f"{what} {x:g} {unit}"
+            notes.append(f"`{name}` : {reason}, hors de l'axe logarithmique : pas de point")
+            continue
+        judge = name in ceiling
+        q = ceiling[name] if judge else agreement[name]
+        points.append(
+            row
+            | {
+                "kind": "main judge (QWK against the other two main judges)" if judge else "candidate",
+                "family": "judges" if judge else family(name)[0],
+                "qwk": q["qwk"],
+                "lo": q["qwk_lo"],
+                "hi": q["qwk_hi"],
+                "draws_used": q["qwk_draws_used"],
+            }
+        )
+    notes += [
+        f"`{name}` est dans le profil mais pas dans le run : pas de point" for name in profile if name not in agreement
+    ]
+    return points, notes
+
+
+def _short(name: str, computed: dict[str, pa.Table]) -> str:
+    """A judge's name without the set name in front ("base-v1-gemma4-cap512" -> "gemma4-cap512")."""
+    summary = {r["item"]: r["value"] for r in computed["inputs_summary"].to_pylist()}
+    stem = Path(str(summary.get("prompts", ""))).stem
+    return name[len(stem) + 1 :] if stem and name.startswith(stem + "-") else name
+
+
+def _profile_meta(computed: dict[str, pa.Table]) -> tuple[str, str]:
+    """(batch size, machine) of the profile: "batch 1", "Apple M4 Max" (the chip, the last part of `machine`)."""
+    rows = computed["profile"].to_pylist()
+    batch = next((r["batch_size"] for r in rows if r["batch_size"] is not None), None)
+    machine = next((r["machine"] for r in rows if r["machine"]), None)
+    return (f"batch {batch}" if batch is not None else "batch ?"), (machine.split(", ")[-1] if machine else "?")
+
+
+def _scatter(name: str, computed: dict[str, pa.Table], measure: str, what: str, unit: str, mpl):
+    """quality-vs-latency and quality-vs-footprint: QWK (y, thin black whisker: its 95 % CI) against `measure` (x,
+    log), one round point per model with its label "name · device" beside it."""
+    points, notes = _profile_points(computed, measure, what, unit)
+    if points is None:
+        return None, notes
+    if not points:
+        return None, [*notes, "aucun modèle du profil à placer : figure non tracée"]
+    fig = mpl.figure.Figure(figsize=(8.0, 5.0))
+    ax = fig.add_subplot()
+    for p in points:
+        judge = p["family"] == "judges"
+        hue = JUDGE if judge else colour(p["name"])
+        if not (_nan(p["lo"]) or _nan(p["hi"])):
+            ax.errorbar(
+                p[measure], p["qwk"], yerr=_errors([p], "qwk", "lo", "hi"), fmt="none", ecolor=INK, elinewidth=0.8,
+                capsize=0, zorder=2,
+            )  # fmt: skip
+        ax.scatter([p[measure]], [p["qwk"]], s=48, color=hue, marker="o", edgecolors=PAPER, linewidths=0.8, zorder=3)
+        text = f"{_short(p['name'], computed) if judge else p['name']} · {DEVICES.get(p['device'], p['device'])}"
+        dx, dy = LABEL_OFFSETS.get((name, p["name"]), (6, 0))
+        label(ax, p[measure], p["qwk"], text, dx=dx, dy=dy, zorder=4)
+    xs = [p[measure] for p in points]
+    ax.set_xscale("log")
+    ax.set_xlim(min(xs) / 4, max(xs) * 4)
+    lows = [p["lo"] for p in points if not _nan(p["lo"])] + [p["qwk"] for p in points]
+    ax.set_ylim(min([-0.1, *lows]) - 0.03, 1.0)
+    ax.xaxis.set_major_locator(mpl.ticker.LogLocator(base=10, numticks=12))
+    ax.xaxis.set_minor_locator(mpl.ticker.NullLocator())
+    ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(_duration if measure.startswith("latency") else _size))
+    _axes(ax, x=False, grid="both")
+    ax.tick_params(axis="x", length=3, width=0.8)
+    ax.set_ylabel("QWK against truth_all")
+    better(ax, "y", higher=True)
+    better_corner(ax)
+    handles = family_handles([p["name"] for p in points if p["family"] != "judges"], mpl, point=True)
+    if any(p["family"] == "judges" for p in points):
+        handles.append(_point_handle(mpl, JUDGE, JUDGES_LABEL))
+    return (fig, ax, points, handles), notes
+
+
+def _quality_vs_latency(computed: dict[str, pa.Table], sigma: float, mpl):
+    drawn, notes = _scatter("quality-vs-latency", computed, "latency_p50_ms", "latence", "ms", mpl)
+    if drawn is None:
+        return None, [], [], notes
+    fig, ax, points, handles = drawn
+    n_ids, n_base, _ = _units(computed)
+    batch, machine = _profile_meta(computed)
+    ax.set_xlabel("median latency per prompt (log scale)")
+    better(ax, "x", higher=False)
+    title(
+        ax,
+        "Agreement with the judges against latency",
+        f"median latency per prompt, {batch}, {machine}; judges read a 1,900-token instruction\n"
+        f"QWK against truth_all, {n_ids}; whiskers: 95% CI over the {n_base}",
+    )
+    fig.tight_layout()
+    legend_below(fig, handles, ncol=4)
+    columns = ["kind", "name", "family", "device", "latency_p50_ms", "latency_p95_ms", "qwk", "lo", "hi", "draws_used"]
+    return fig, columns, points, notes
+
+
+def _quality_vs_footprint(computed: dict[str, pa.Table], sigma: float, mpl):
+    drawn, notes = _scatter("quality-vs-footprint", computed, "weights_mb", "poids", "Mo", mpl)
+    if drawn is None:
+        return None, [], [], notes
+    fig, ax, points, handles = drawn
+    n_ids, n_base, _ = _units(computed)
+    ax.set_xlabel("weights on disk (log scale; 1 MB = 10^6 bytes)")
+    better(ax, "x", higher=False)
+    title(
+        ax,
+        "Agreement with the judges against weights on disk",
+        "weights on disk of each model: the one memory measure every model has (peak RSS of the classifiers in the "
+        f"CSV)\nQWK against truth_all, {n_ids}; whiskers: 95% CI over the {n_base}",
+    )
+    fig.tight_layout()
+    legend_below(fig, handles, ncol=4)
+    columns = ["kind", "name", "family", "device", "weights_mb", "peak_rss_mb", "qwk", "lo", "hi", "draws_used"]
+    return fig, columns, points, notes
+
+
+def _tier_distribution(computed: dict[str, pa.Table], sigma: float, mpl):
+    rows = computed["tier_distribution"].to_pylist() if "tier_distribution" in computed else []
+    bars = list(dict.fromkeys(r["name"] for r in rows))
+    if not bars:
+        return None, [], [], ["pas de distribution des paliers : figure non tracée"]
+    truth = [name for name in bars if any(r["role"] == "truth" for r in rows if r["name"] == name)]
+    overall = {r["name"]: r["qwk"] for r in _rows(computed["agreement_all"], role="candidate")}
+    candidates = _family_order([name for name in bars if name not in truth], overall)
+    names = truth + candidates
+    ys = list(range(len(truth))) + [y + len(truth) + (0.6 if truth else 0) for y in _positions(candidates)]
+    cell = {(r["name"], r["tier"]): r for r in rows}
+    hues = {level: shade(GREY, amount) for level, amount in zip(LEVELS, TIER_SHADES, strict=True)}
+    fig = mpl.figure.Figure(figsize=(8.0, 0.27 * len(names) + 1.9))
+    ax = fig.add_subplot()
+    for y, name in zip(ys, names, strict=True):
+        left = 0.0
+        for level in LEVELS:
+            share = cell[name, level]["share"]
+            if _nan(share) or share <= 0:
+                continue
+            ax.barh(y, share, left=left, height=0.62, color=hues[level], edgecolor=PAPER, linewidth=0.6, zorder=2)
+            if share >= 0.08:  # the share written in the wide segments only
+                ink = _ink(mpl.colors.to_rgba(hues[level]))
+                ax.text(
+                    left + share / 2, y, number(share, 2), ha="center", va="center", fontsize=7, color=ink, zorder=3
+                )
+            left += share
+    ax.set_yticks(ys, names)
+    ax.set_ylim(ys[-1] + 0.7, -0.7)
+    ax.set_xlim(0, 1)
+    ax.set_xticks([0, 0.25, 0.5, 0.75, 1])
+    ax.tick_params(axis="y", length=0)
+    ax.spines["left"].set_visible(False)
+    _axes(ax, y=False)
+    ax.set_xlabel("share of the ids of the bar given each tier")
+    totals = sorted({r["n_ids_total"] for r in rows if r["name"] in candidates})
+    first = cell[truth[0], LEVELS[0]]["n_ids_total"] if truth else None
+    sub = "share of the ids of each bar by tier, trivial (light) to expert (dark)"
+    counts = [f"truth_all (median of the main judges): {first} decidable ids"] if first is not None else []
+    if totals:
+        span = str(totals[0]) if len(totals) == 1 else f"{totals[0]}-{totals[-1]}"
+        counts.append(f"{span} ids per candidate")
+    sub += ("\n" + "; ".join(counts)) if counts else ""
+    title(ax, "Predicted tiers against the truth", sub)
+    fig.tight_layout()
+    legend_below(
+        fig, [mpl.patches.Patch(facecolor=hues[level], edgecolor="none", label=level) for level in LEVELS], ncol=5
+    )
+    columns = ["name", "role", "tier", "n_ids", "n_ids_total", "share"]
+    return fig, columns, [cell[name, level] for name in names for level in LEVELS], []
+
+
 _DRAW = {
     "qwk-bars": _qwk_bars,
     "qwk-by-language": _qwk_by_language,
@@ -829,6 +1092,9 @@ _DRAW = {
     "judge-spread-by-tier": _judge_spread,
     "language-disagreements": _language_disagreements,
     "needs-tools-pr": _needs_tools_pr,
+    "quality-vs-latency": _quality_vs_latency,
+    "quality-vs-footprint": _quality_vs_footprint,
+    "tier-distribution": _tier_distribution,
 }
 
 

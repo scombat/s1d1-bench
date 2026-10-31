@@ -27,6 +27,7 @@ from s1d1_bench.report import (
     HEADLINE,
     LITELLM,
     MACRO_F1_NOTE,
+    NOT_IN_RUN,
     PASSES,
     RAW,
     REFERENCE,
@@ -60,11 +61,13 @@ LABELS = {
     "candidate": "candidat", "difference": f"écart apparié de QWK ({REFERENCE} − candidat)",
     "rule_2sigma": "règle des 2 σ", "prediction": "prédiction", "verified": "vérifiée", "model": "modèle",
     "revision": "révision", "date": "date", "n_ids_abstained": "ids en abstention", "n_ids_null_vote": "ids à vote nul",
-    "null_votes_ids": "ids des votes nuls", "item": "élément", "why": "pourquoi",
+    "null_votes_ids": "ids des votes nuls", "item": "élément", "why": "pourquoi", "device": "appareil",
+    "weights_mb": "poids sur disque (Mo)", "latency_p50_ms": "latence médiane (ms)", "latency_p95_ms": "p95 (ms)",
+    "latency_mean_ms": "moyenne (ms)", "peak_rss_mb": "RSS de crête (Mo)",
 }  # fmt: skip
 VALUES = {
     "role": {"candidate": "candidat", "judge-in-truth": "juge dans la vérité",
-             "judge-outside-truth": "juge hors de la vérité"},
+             "judge-outside-truth": "juge hors de la vérité", NOT_IN_RUN: "hors du run"},
     "kind": {"informed witness": "témoin informé", "constant witness": "témoin constant", "random draw": "tirage",
              "random min": "minimum des tirages", "random max": "maximum des tirages",
              "random mean": "moyenne des tirages", "judge": "juge", "classifier": "classifieur"},
@@ -109,7 +112,14 @@ COLUMNS = {
     "inputs": ["name", "kind", "role", "model", "revision", "date", "n_ids_abstained", "n_ids_null_vote",
                "null_votes_ids"],
     "inputs_summary": ["item", "value"],
+    "profile": ["name", "kind", "role", "device", "latency_p50_ms", "latency_p95_ms", "latency_mean_ms", "weights_mb",
+                "peak_rss_mb"],
 }  # fmt: skip
+DIGITS = {"profile": 1}  # milliseconds and megabytes at one decimal; every other table at three
+NO_PROFILE = (
+    "_(pas de profil : `results/<jeu>.profile.json`, écrit par `bench profile`, n'est pas à côté des résultats, et "
+    "`--profile` ne le nomme pas)_"
+)
 SPLIT = ("agreement_all", "agreement_nogemma", "by_language", "lang_change", "by_source", "by_origin", "by_tier",
          "task", "needs_tools")  # fmt: skip  # candidates and judges in two tables: the judges are the instrument
 SKIPPED = {
@@ -135,6 +145,11 @@ CAPTIONS = {
     "language-disagreements": "Part des ids où truth_lang ≠ truth_all (0–1), par langue et par source, avec les "
     "nombres d'ids",
     "needs-tools-pr": "Précision et rappel de needs_tools (0–1) selon le seuil de probabilité, sur {n_ids}",
+    "quality-vs-latency": "QWK contre truth_all ({n_ids}) contre la latence médiane par prompt (lot de 1, échelle "
+    "logarithmique) ; juges principaux : QWK contre les deux autres",
+    "quality-vs-footprint": "QWK contre truth_all ({n_ids}) contre le poids des fichiers de poids sur disque (échelle "
+    "logarithmique) ; juges principaux : QWK contre les deux autres",
+    "tier-distribution": "Part des ids de chaque palier (0–1), truth_all puis chaque candidat",
 }
 
 
@@ -198,7 +213,8 @@ def _summary(computed: dict[str, pa.Table]) -> dict[str, str]:
 
 def _render(table: pa.Table, name: str, keep=None, drop: Sequence[str] = ()) -> str:
     """One table of the report as French Markdown: the columns of `COLUMNS[name]` (minus `drop`), the rows where
-    `keep(row)` holds, the values of `VALUES` in French; "_(aucune ligne)_" for none."""
+    `keep(row)` holds, the values of `VALUES` in French, at `DIGITS` decimals (3 by default); "_(aucune ligne)_" for
+    none."""
     rows = [r for r in table.to_pylist() if keep is None or keep(r)]
     if not rows:
         return "_(aucune ligne)_"
@@ -212,7 +228,7 @@ def _render(table: pa.Table, name: str, keep=None, drop: Sequence[str] = ()) -> 
                 row[column] = mapping[row[column]]
     present = set(rows[0])
     columns = [c for c in COLUMNS[name] if c in present and c not in drop]
-    return markdown_table(pa.Table.from_pylist(rows), columns=columns, labels=LABELS)
+    return markdown_table(pa.Table.from_pylist(rows), columns=columns, digits=DIGITS.get(name, 3), labels=LABELS)
 
 
 def _why(row: dict) -> str:
@@ -230,6 +246,9 @@ def _why(row: dict) -> str:
 def _tables(computed: dict[str, pa.Table]) -> dict[str, str]:
     out = {}
     for name in COLUMNS:
+        if name not in computed:  # the profile, when there is none
+            out[f"table_{name}"] = NO_PROFILE
+            continue
         table = computed[name]
         if name in SPLIT:
             out[f"table_{name}_candidates"] = _render(table, name, lambda r: r["role"] == "candidate", drop=["role"])

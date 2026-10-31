@@ -133,12 +133,37 @@ def small_decisions():
     return {"laya-rank": {i: {"tier": "x", "score": (2.0 if i.startswith("k1") else -1.0)} for i in ids_of(KEYS)}}
 
 
+def fake_profile(run: dict) -> dict:
+    """The profile of a fake set (`bench profile`): every classifier of its run record on cpu, every judge on the
+    GPU through MLX, without peak RSS for the judges."""
+    rows = []
+    for n, entry in enumerate(run["classifiers"]):
+        rows.append(
+            {
+                "name": entry["name"], "kind": "classifier", "model": entry["model"], "revision": "r", "device": "cpu",
+                "weights_mb": 10.0 * (n + 1), "latency_p50_ms": 1.0 + n, "latency_p95_ms": 3.0 + n,
+                "latency_mean_ms": 1.5 + n, "peak_rss_mb": 100.0 + n, "note": "fake classifier",
+            }
+        )  # fmt: skip
+    for n, entry in enumerate(run["judges"]):
+        rows.append(
+            {
+                "name": entry["name"], "kind": "judge", "model": entry["model"], "revision": "r", "device": "gpu-mlx",
+                "weights_mb": 1000.0 * (n + 1), "latency_p50_ms": 1000.0 * (n + 1),
+                "latency_p95_ms": 1500.0 * (n + 1), "latency_mean_ms": 1100.0 * (n + 1), "peak_rss_mb": None,
+                "note": "fake judge",
+            }
+        )  # fmt: skip
+    meta = {"machine": "fake machine, Fake M0", "batch_size": 1, "warmup": 10, "date": "2026-10-31", "skipped": []}
+    return {"meta": meta, "rows": rows}
+
+
 @pytest.fixture(scope="module")
 def small(tmp_path_factory):
     results, meta, run, root = build(
         tmp_path_factory.mktemp("small"), KEYS, small_votes(), small_preds(), small_decisions()
     )
-    return tables(results, meta, run, root, sigma=0.005), (results, meta, run, root)
+    return tables(results, meta, run, root, sigma=0.005, profile=fake_profile(run)), (results, meta, run, root)
 
 
 def rows(table, **where):
@@ -335,6 +360,47 @@ def test_two_sigma_rule():
     assert two_sigma_rule(math.nan, math.nan, sigma) == FAILS
 
 
+def test_profile_table_takes_every_row_of_the_json(small):
+    computed, (_, _, run, _) = small
+    profile = fake_profile(run)
+    found = computed["profile"].to_pylist()
+    assert [r["name"] for r in found] == [r["name"] for r in profile["rows"]]  # the order of the file
+    for row, source in zip(found, profile["rows"], strict=True):
+        assert {key: row[key] for key in source} == source, row["name"]  # every key of the row, untouched
+    assert one(computed["profile"], name="j-a")["role"] == IN_TRUTH
+    assert one(computed["profile"], name="j-a-off")["role"] == OUTSIDE
+    assert one(computed["profile"], name="s1d1-full-int8")["role"] == "candidate"
+    assert {(r["machine"], r["batch_size"]) for r in found} == {("fake machine, Fake M0", 1)}  # from its meta
+
+
+def test_tier_distribution_one_row_per_candidate_and_tier_plus_the_truth(small):
+    computed, (_, _, run, _) = small
+    found = computed["tier_distribution"].to_pylist()
+    names = ["truth_all"] + [entry["name"] for entry in run["classifiers"]]
+    assert [r["name"] for r in found] == [name for name in names for _ in LEVELS]  # the truth first
+    assert [r["tier"] for r in found] == LEVELS * len(names)
+    for name in names:
+        assert math.isclose(sum(r["share"] for r in found if r["name"] == name), 1.0), name
+    # k1: truth high (4 ids), k2: truth trivial (4 ids); s1d1: high, high, medium, medium, trivial, trivial, low, low
+    truth = {r["tier"]: r["share"] for r in found if r["name"] == "truth_all"}
+    assert truth == {"trivial": 0.5, "low": 0.0, "medium": 0.0, "high": 0.5, "expert": 0.0}
+    s1d1 = {r["tier"]: (r["n_ids"], r["n_ids_total"]) for r in found if r["name"] == "s1d1-full-int8"}
+    assert s1d1 == {"trivial": (2, 8), "low": (2, 8), "medium": (2, 8), "high": (2, 8), "expert": (0, 8)}
+    assert {r["role"] for r in found} == {"truth", "candidate"}
+
+
+def test_tables_without_a_profile_have_no_profile_table(small):
+    computed, inputs = small
+    bare = tables(*inputs, sigma=0.005)
+    assert list(bare) == [name for name in TABLES if name != "profile"]  # the profile table only is left out
+    assert bare["tier_distribution"].to_pylist() == computed["tier_distribution"].to_pylist()
+    with pytest.raises(ValueError, match="rows"):
+        tables(*inputs, sigma=0.005, profile={"meta": {}})
+    with pytest.raises(ValueError, match="latency_p50_ms"):
+        row = {"name": "x", "kind": "classifier", "device": "cpu", "weights_mb": 1}
+        tables(*inputs, sigma=0.005, profile={"rows": [row]})
+
+
 # --- a larger set: the intervals are metrics.bootstrap's, the paired rule on real draws -----------------------------
 
 WIDE_KEYS = [f"w{n}" for n in range(10)]
@@ -442,7 +508,7 @@ def test_markdown_table_french_formatting():
 def test_write_tables_and_determinism(small, tmp_path):
     computed, inputs = small
     first = write_tables(computed, tmp_path / "one")
-    second = write_tables(tables(*inputs, sigma=0.005), tmp_path / "two")
+    second = write_tables(tables(*inputs, sigma=0.005, profile=fake_profile(inputs[2])), tmp_path / "two")
     assert [p.name for p in first] == [p.name for p in second]
     assert all(p.parent == tmp_path / "one" / "tables" for p in first)
     for a, b in zip(first, second, strict=True):
@@ -557,6 +623,8 @@ def fake_report_inputs(tmp_path: Path):
     (tmp_path / "results").mkdir()
     pq.write_table(results, tmp_path / "results" / "fake.parquet")
     (tmp_path / "results" / "fake.run.json").write_text(json.dumps(run), encoding="utf-8")
+    profile = json.dumps(fake_profile(run))
+    (tmp_path / "results" / "fake.profile.json").write_text(profile, encoding="utf-8")  # read by default
     pq.write_table(meta, tmp_path / "fake.meta.parquet")
     results_path, meta_path = tmp_path / "results" / "fake.parquet", tmp_path / "fake.meta.parquet"
     args = ["report", "--results", str(results_path), "--meta", str(meta_path), "--classifiers", str(root)]
@@ -762,6 +830,89 @@ def test_report_command_refusals(tmp_path, capsys, monkeypatch):
     assert main([*args, *out]) == 1
     assert "fake.run.json" in capsys.readouterr().err
     assert not (tmp_path / "out" / "index.md").exists()
+
+
+PROFILE_FIGURES = ("quality-vs-latency", "quality-vs-footprint")
+
+
+def _figure_names(path: Path) -> set[str]:
+    with open(path, encoding="utf-8", newline="") as f:
+        return {row["name"] for row in csv.DictReader(f)}
+
+
+def test_report_command_without_a_profile_skips_the_profile_table_and_figures(tmp_path):
+    pytest.importorskip("matplotlib")
+    from s1d1_bench.cli import main
+    from s1d1_bench.report_figures import NAMES
+
+    args, _ = fake_report_inputs(tmp_path)
+    (tmp_path / "results" / "fake.profile.json").unlink()
+    out = tmp_path / "out"
+    (out / "tables").mkdir(parents=True)
+    (out / "tables" / "profile.csv").write_text("stale", encoding="utf-8")
+    assert main([*args, "--out", str(out)]) == 0
+    assert not (out / "tables" / "profile.csv").exists()  # a stale profile table is removed
+    assert {p.stem for p in (out / "tables").glob("*.csv")} == set(TABLES) - {"profile"}
+    assert {p.stem for p in (out / "figures").glob("*.svg")} == set(NAMES) - set(PROFILE_FIGURES)
+    assert (out / "figures" / "tier-distribution.svg").is_file()  # it needs no profile
+    text = (out / "index.md").read_text(encoding="utf-8")
+    for name in PROFILE_FIGURES:
+        assert f"_Figure `{name}` non tracée : pas de profil" in text, name
+
+
+def test_report_command_reads_a_named_profile_and_refuses_a_missing_one(tmp_path, capsys):
+    pytest.importorskip("matplotlib")
+    from s1d1_bench.cli import main
+
+    args, _ = fake_report_inputs(tmp_path)
+    moved = tmp_path / "elsewhere.profile.json"
+    (tmp_path / "results" / "fake.profile.json").rename(moved)
+    out = tmp_path / "out"
+    assert main([*args, "--profile", str(moved), "--out", str(out)]) == 0
+    assert (out / "tables" / "profile.csv").is_file()
+    assert (out / "figures" / "quality-vs-latency.svg").is_file()
+    capsys.readouterr()
+    assert main([*args, "--profile", str(tmp_path / "nowhere.profile.json"), "--out", str(out)]) == 1
+    assert "nowhere.profile.json: missing (the profile of bench profile)" in capsys.readouterr().err
+
+
+def test_a_run_candidate_missing_from_the_profile_or_the_inverse_is_said(tmp_path):
+    """Review focus 3: the profile lacks a candidate and a main judge of the run, and has a model the run does not
+    know; the report says which, under the two profile figures, and draws them without those points."""
+    pytest.importorskip("matplotlib")
+    import json
+
+    from s1d1_bench.cli import main
+
+    args, (_, _, run, _) = fake_report_inputs(tmp_path)
+    profile = fake_profile(run)
+    ghost = profile["rows"][0] | {"name": "ghost-model"}
+    profile["rows"] = [r for r in profile["rows"] if r["name"] not in ("laya-rank", "j-b")] + [ghost]
+    (tmp_path / "results" / "fake.profile.json").write_text(json.dumps(profile), encoding="utf-8")
+    out = tmp_path / "out"
+    assert main([*args, "--out", str(out)]) == 0
+    text = (out / "index.md").read_text(encoding="utf-8")
+    for figure in PROFILE_FIGURES:
+        names = _figure_names(out / "figures" / f"{figure}.csv")
+        assert {"s1d1-full-int8", "notask", "j-a", "j-c"} <= names, figure
+        assert not names & {"laya-rank", "j-b", "ghost-model"}, figure
+        for name in ("laya-rank", "j-b"):
+            assert f"- figure `{figure}` : `{name}` absent du profil : pas de point" in text, (figure, name)
+        assert f"- figure `{figure}` : `ghost-model` est dans le profil mais pas dans le run : pas de point" in text
+    assert one(tables(*_inputs_of(tmp_path), profile=profile)["profile"], name="ghost-model")["role"] == (
+        "not in the run"
+    )
+
+
+def _inputs_of(tmp_path: Path):
+    """The results, meta, run record and classifiers root that `fake_report_inputs` wrote under `tmp_path`."""
+    import json
+
+    import pyarrow.parquet as pq
+
+    run = json.loads((tmp_path / "results" / "fake.run.json").read_text(encoding="utf-8"))
+    results = pq.read_table(tmp_path / "results" / "fake.parquet")
+    return results, pq.read_table(tmp_path / "fake.meta.parquet"), run, tmp_path / "classifiers"
 
 
 def test_report_without_numpy_exits_1_with_the_hint(tmp_path, capsys, monkeypatch):

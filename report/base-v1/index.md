@@ -288,6 +288,35 @@ Les mêmes candidats contre la médiane des juges principaux sans `base-v1-gemma
 Chaque paire de juges sur les ids où les deux votent (le pendant de `bench agree`) ; « même modèle (réflexion) » marque
 les deux réglages d'un même modèle, sans réflexion et réflexion plafonnée à 512 : l'effet de la réflexion.
 
+## Vitesse et empreinte
+
+![QWK contre truth_all (360 ids) contre la latence médiane par prompt (lot de 1, échelle logarithmique) ; juges principaux : QWK contre les deux autres](figures/quality-vs-latency.svg)
+
+_QWK contre truth_all (360 ids) contre la latence médiane par prompt (lot de 1, échelle logarithmique) ; juges principaux : QWK contre les deux autres._ Données : [`figures/quality-vs-latency.csv`](figures/quality-vs-latency.csv).
+
+![QWK contre truth_all (360 ids) contre le poids des fichiers de poids sur disque (échelle logarithmique) ; juges principaux : QWK contre les deux autres](figures/quality-vs-footprint.svg)
+
+_QWK contre truth_all (360 ids) contre le poids des fichiers de poids sur disque (échelle logarithmique) ; juges principaux : QWK contre les deux autres._ Données : [`figures/quality-vs-footprint.csv`](figures/quality-vs-footprint.csv). Absent de la figure : `litellm-heuristic` : pas de fichier de poids (0 Mo), hors de l'axe logarithmique : pas de point.
+
+| nom | type | rôle | appareil | latence médiane (ms) | p95 (ms) | moyenne (ms) | poids sur disque (Mo) | RSS de crête (Mo) |
+|---|---|---|---|---|---|---|---|---|
+| laya-english-tier | classifieur | candidat | mps | 25,1 | 50,8 | 30,0 | 842,6 | 2932,1 |
+| laya-multilingual-tier | classifieur | candidat | mps | 12,8 | 30,2 | 15,5 | 643,8 | 2708,9 |
+| litellm-heuristic | classifieur | candidat | cpu | 0,1 | 1,2 | 0,3 | 0,0 | 24,5 |
+| s1d1-compact-int8 | classifieur | candidat | cpu | 8,9 | 78,7 | 20,0 | 138,5 | 914,4 |
+| s1d1-full-fp16 | classifieur | candidat | mps | 8,6 | 21,9 | 10,6 | 615,1 | 937,4 |
+| s1d1-full-int8 | classifieur | candidat | cpu | 9,1 | 76,8 | 20,1 | 310,3 | 1284,6 |
+| s1d1-small-int8 | classifieur | candidat | cpu | 5,8 | 44,7 | 12,0 | 56,0 | 680,4 |
+| s1d1-tiny-int8 | classifieur | candidat | cpu | 1,6 | 12,8 | 3,5 | 24,7 | 638,4 |
+| base-v1-gemma4-cap512 | juge | juge dans la vérité | gpu-mlx | 42786,5 | 67715,4 | 44751,1 | 33763,1 | — |
+| base-v1-qwen3-cap512 | juge | juge dans la vérité | gpu-mlx | 28433,5 | 53776,9 | 30389,2 | 29501,2 | — |
+| base-v1-gptoss-cap512 | juge | juge dans la vérité | gpu-mlx | 1821,0 | 2634,6 | 1911,2 | 12076,2 | — |
+| base-v1-gemma4-off | juge | juge hors de la vérité | gpu-mlx | 12635,5 | 15700,1 | 12989,2 | 33763,1 | — |
+| base-v1-qwen3-off | juge | juge hors de la vérité | gpu-mlx | 9153,5 | 11039,8 | 9425,5 | 29501,2 | — |
+
+Le profil de `bench profile` : latence par prompt à lot de 1 après chauffe, poids des fichiers de poids sur disque et
+mémoire de crête du processus (classifieurs seulement) ; les témoins n'y sont pas.
+
 ## Par langue
 
 ![QWK contre truth_all par langue (ids de la langue), IC 95 % sur 1 000 tirages des 90 prompts de base](figures/qwk-by-language.svg)
@@ -624,6 +653,12 @@ vérité, en crans).
 | base-v1-qwen3-off | juge hors de la vérité | high | 52 | 0,731 [0,500 ; 0,958] | 0,269 [0,042 ; 0,500] |
 | base-v1-qwen3-off | juge hors de la vérité | expert | 8 | 1,000 [1,000 ; 1,000] | 0,000 [0,000 ; 0,000] |
 
+![Part des ids de chaque palier (0–1), truth_all puis chaque candidat](figures/tier-distribution.svg)
+
+_Part des ids de chaque palier (0–1), truth_all puis chaque candidat._ Données : [`figures/tier-distribution.csv`](figures/tier-distribution.csv).
+
+Part des ids de chaque palier, pour `truth_all` puis pour chaque candidat.
+
 ![Matrices de confusion normalisées par ligne : part des ids de chaque palier de truth_all (0–1)](figures/confusion.svg)
 
 _Matrices de confusion normalisées par ligne : part des ids de chaque palier de truth_all (0–1)._ Données : [`figures/confusion.csv`](figures/confusion.csv).
@@ -746,8 +781,8 @@ Trois analyses de [docs/32](../../docs/32-open-bench-kit.md) ne sont pas produit
 
 Rôles, candidats et panneaux de figure absents de ce run :
 
-Aucun : tous les rôles du rapport ont leur candidat, toutes les figures sont complètes.
+- figure `quality-vs-footprint` : `litellm-heuristic` : pas de fichier de poids (0 Mo), hors de l'axe logarithmique : pas de point
 
 ## Données brutes
 
-Tableaux : [`agreement_all.csv`](tables/agreement_all.csv), [`agreement_nogemma.csv`](tables/agreement_nogemma.csv), [`ceiling.csv`](tables/ceiling.csv), [`floor.csv`](tables/floor.csv), [`exact_vs_constant_low.csv`](tables/exact_vs_constant_low.csv), [`judge_pairs.csv`](tables/judge_pairs.csv), [`by_language.csv`](tables/by_language.csv), [`lang_change.csv`](tables/lang_change.csv), [`truth_lang_vs_all.csv`](tables/truth_lang_vs_all.csv), [`by_source.csv`](tables/by_source.csv), [`by_origin.csv`](tables/by_origin.csv), [`by_tier.csv`](tables/by_tier.csv), [`task.csv`](tables/task.csv), [`needs_tools.csv`](tables/needs_tools.csv), [`needs_tools_pr.csv`](tables/needs_tools_pr.csv), [`rank_metrics.csv`](tables/rank_metrics.csv), [`calibration.csv`](tables/calibration.csv), [`calibration_bins.csv`](tables/calibration_bins.csv), [`paired.csv`](tables/paired.csv), [`predictions.csv`](tables/predictions.csv), [`confusion.csv`](tables/confusion.csv), [`judge_spread_by_tier.csv`](tables/judge_spread_by_tier.csv), [`inputs.csv`](tables/inputs.csv), [`inputs_summary.csv`](tables/inputs_summary.csv), [`skipped.csv`](tables/skipped.csv). Chaque figure a son CSV dans `figures/`, sous le même nom.
+Tableaux : [`agreement_all.csv`](tables/agreement_all.csv), [`agreement_nogemma.csv`](tables/agreement_nogemma.csv), [`ceiling.csv`](tables/ceiling.csv), [`floor.csv`](tables/floor.csv), [`exact_vs_constant_low.csv`](tables/exact_vs_constant_low.csv), [`judge_pairs.csv`](tables/judge_pairs.csv), [`by_language.csv`](tables/by_language.csv), [`lang_change.csv`](tables/lang_change.csv), [`truth_lang_vs_all.csv`](tables/truth_lang_vs_all.csv), [`by_source.csv`](tables/by_source.csv), [`by_origin.csv`](tables/by_origin.csv), [`by_tier.csv`](tables/by_tier.csv), [`task.csv`](tables/task.csv), [`needs_tools.csv`](tables/needs_tools.csv), [`needs_tools_pr.csv`](tables/needs_tools_pr.csv), [`rank_metrics.csv`](tables/rank_metrics.csv), [`calibration.csv`](tables/calibration.csv), [`calibration_bins.csv`](tables/calibration_bins.csv), [`paired.csv`](tables/paired.csv), [`predictions.csv`](tables/predictions.csv), [`confusion.csv`](tables/confusion.csv), [`judge_spread_by_tier.csv`](tables/judge_spread_by_tier.csv), [`tier_distribution.csv`](tables/tier_distribution.csv), [`profile.csv`](tables/profile.csv), [`inputs.csv`](tables/inputs.csv), [`inputs_summary.csv`](tables/inputs_summary.csv), [`skipped.csv`](tables/skipped.csv). Chaque figure a son CSV dans `figures/`, sous le même nom.

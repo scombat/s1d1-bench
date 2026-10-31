@@ -272,6 +272,12 @@ def _report_arguments(sub: argparse.ArgumentParser) -> None:
     sub.add_argument(
         "--template", type=Path, default=Path("report/TEMPLATE.md"), help="template of index.md, with named holes"
     )
+    sub.add_argument(
+        "--profile",
+        type=Path,
+        default=None,
+        help="profile of bench profile (default: <stem>.profile.json beside --results, when it exists)",
+    )
 
 
 def _profile_arguments(sub: argparse.ArgumentParser) -> None:

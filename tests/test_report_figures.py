@@ -104,6 +104,9 @@ def test_legend_entries_are_families(small):  # noqa: F811
         "judge-spread-by-tier": [],
         "language-disagreements": [],
         "needs-tools-pr": ["s1d1", "share of positives (0/8 ids)"],
+        "quality-vs-latency": [*families_here, "main judges: each against the other two (8 votes)"],
+        "quality-vs-footprint": [*families_here, "main judges: each against the other two (8 votes)"],
+        "tier-distribution": ["trivial", "low", "medium", "high", "expert"],
     }
     # two variants of a family in the panels: still one entry for the family, no entry for the other panels
     import pyarrow as pa
@@ -124,6 +127,9 @@ REFERENCES = {
     ),
     "reliability-s1d1": (r"perfect calibration \(score = anchor\)",),
     "needs-tools-pr": (r"share of positives \(\d+/\d+ ids\)",),
+    "quality-vs-latency": (r"main judges: each against the other two \(8 votes\)",),
+    "quality-vs-footprint": (r"main judges: each against the other two \(8 votes\)",),
+    "tier-distribution": (r"trivial|low|medium|high|expert",),  # the five segments of every bar: the tiers
 }
 
 
@@ -157,3 +163,92 @@ def test_shade_and_family_colours():
     assert colour("s1d1-tiny-int8") == shade("#2a78d6", 0.6)
     assert colour("laya-multilingual-tier") == shade("#eb6834", 0.4)
     assert colour("laya-english-tier") == "#eb6834"
+
+
+def test_reading_directions_of_the_two_measure_figures(generated):
+    for name in ("quality-vs-latency", "quality-vs-footprint"):
+        text = (generated / "figures" / f"{name}.svg").read_text(encoding="utf-8")
+        assert "better ↖" in text and "higher is better →" in text and "← lower is better" in text, name
+
+
+def test_witnesses_never_get_a_point_in_the_profile_figures(small):  # noqa: F811
+    """Review focus 4: the witnesses are not models; even profiled by mistake, they get no point, and they are not
+    said missing either (the caption under the figure says they are left out)."""
+    pytest.importorskip("matplotlib")
+    import matplotlib
+    import matplotlib.figure
+    import matplotlib.lines
+    import matplotlib.patches
+    import matplotlib.ticker
+    import pyarrow as pa
+
+    from s1d1_bench.report_figures import _DRAW, WITNESSES, style
+
+    computed, _ = small
+    assert set(WITNESSES) == {"random", "length", "constant-low"}
+    agreement = computed["agreement_all"].to_pylist()
+    s1d1 = next(r for r in agreement if r["name"] == "s1d1-full-int8")
+    profile = computed["profile"].to_pylist()
+    profiled = next(r for r in profile if r["name"] == "s1d1-full-int8")
+    hacked = dict(
+        computed,
+        agreement_all=pa.Table.from_pylist(agreement + [s1d1 | {"name": w} for w in WITNESSES]),
+        profile=pa.Table.from_pylist(profile + [profiled | {"name": w} for w in WITNESSES]),
+    )
+    with style():
+        for name in ("quality-vs-latency", "quality-vs-footprint"):
+            fig, _, rows, notes = _DRAW[name](hacked, 0.005, matplotlib)
+            assert fig is not None and rows, name
+            assert not {r["name"] for r in rows} & set(WITNESSES), name
+            assert not [n for n in notes if any(w in n for w in WITNESSES)], (name, notes)
+            labels = [t.get_text() for ax in fig.axes for t in ax.texts]
+            assert not [t for t in labels if any(t.startswith(w + " ") for w in WITNESSES)], name
+
+
+def test_a_model_without_weights_is_left_out_of_the_footprint_figure_and_said(small):  # noqa: F811
+    pytest.importorskip("matplotlib")
+    import matplotlib
+    import matplotlib.figure
+    import matplotlib.lines
+    import matplotlib.patches
+    import matplotlib.ticker
+    import pyarrow as pa
+
+    from s1d1_bench.report_figures import _DRAW, style
+
+    computed, _ = small
+    profile = [r | {"weights_mb": 0.0} if r["name"] == "notask" else r for r in computed["profile"].to_pylist()]
+    with style():
+        _, _, rows, notes = _DRAW["quality-vs-footprint"](dict(computed, profile=pa.Table.from_pylist(profile)),
+                                                           0.005, matplotlib)  # fmt: skip
+        assert "notask" not in {r["name"] for r in rows}
+        assert any("`notask`" in n and "0 Mo" in n for n in notes), notes
+        _, _, rows, _ = _DRAW["quality-vs-latency"](dict(computed, profile=pa.Table.from_pylist(profile)), 0.005,
+                                                     matplotlib)  # fmt: skip
+        assert "notask" in {r["name"] for r in rows}  # its latency is still measured
+
+
+def test_point_labels_name_the_device_and_judges_by_short_name(small):  # noqa: F811
+    pytest.importorskip("matplotlib")
+    import matplotlib
+    import matplotlib.figure
+    import matplotlib.lines
+    import matplotlib.patches
+    import matplotlib.ticker
+
+    from s1d1_bench.report_figures import _DRAW, style
+
+    computed, _ = small
+    with style():
+        fig, _, rows, _ = _DRAW["quality-vs-latency"](computed, 0.005, matplotlib)
+    texts = {t.get_text() for ax in fig.axes for t in ax.texts}
+    assert "s1d1-full-int8 · CPU" in texts and "j-a · GPU (MLX)" in texts
+    judges = [r for r in rows if r["kind"].startswith("main judge")]
+    ceiling = {r["judge"]: r for r in computed["ceiling"].to_pylist()}
+    assert {r["name"] for r in judges} == {"j-a", "j-b", "j-c"}  # the main judges only, not the -off ones
+    for r in judges:  # the judge's QWK is its ceiling value: against the other two main judges, as in qwk-bars
+        assert (r["qwk"], r["lo"], r["hi"]) == (ceiling[r["name"]]["qwk"], ceiling[r["name"]]["qwk_lo"],
+                                                ceiling[r["name"]]["qwk_hi"])  # fmt: skip
+    agreement = {r["name"]: r for r in computed["agreement_all"].to_pylist()}
+    s1d1 = next(r for r in rows if r["name"] == "s1d1-full-int8")
+    assert s1d1["qwk"] == agreement["s1d1-full-int8"]["qwk"] and s1d1["device"] == "cpu"

@@ -170,6 +170,17 @@ Les mêmes candidats contre la médiane des juges principaux sans {gemma} (les d
 Chaque paire de juges sur les ids où les deux votent (le pendant de `bench agree`) ; « même modèle (réflexion) » marque
 les deux réglages d'un même modèle, sans réflexion et réflexion plafonnée à 512 : l'effet de la réflexion.
 
+## Vitesse et empreinte
+
+{figure_quality_vs_latency}
+
+{figure_quality_vs_footprint}
+
+{table_profile}
+
+Le profil de `bench profile` : latence par prompt à lot de 1 après chauffe, poids des fichiers de poids sur disque et
+mémoire de crête du processus (classifieurs seulement) ; les témoins n'y sont pas.
+
 ## Par langue
 
 {figure_qwk_by_language}
@@ -225,6 +236,10 @@ Exactitude sur les ids de chaque palier de `truth_all` et erreur signée moyenne
 vérité, en crans).
 
 {table_by_tier_judges}
+
+{figure_tier_distribution}
+
+Part des ids de chaque palier, pour `truth_all` puis pour chaque candidat.
 
 {figure_confusion}
 
