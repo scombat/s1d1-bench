@@ -50,6 +50,22 @@ def test_report_help_lists_its_options(capsys):
     assert (args.sigma, args.classifiers, args.template) == (0.005, Path("classifiers"), Path("report/TEMPLATE.md"))
 
 
+def test_classify_help_announces_no_mlx_backend_and_has_the_router_revision(capsys):
+    with pytest.raises(SystemExit):
+        main(["classify", "--help"])
+    out = capsys.readouterr().out
+    assert "--router-revision" in out and "--backend" in out
+    assert "mlx" not in out.lower()  # no `s1d1-mlx` dependency group: the backend is not advertised
+
+
+def test_run_options_take_several_values():
+    args = build_parser().parse_args(
+        ["run", "--prompts", "p.jsonl", "--judges", "j/a", "j/b", "--main", "a,b,c", "--classifiers", "c/x", "c/y"]
+        + ["--out", "o.parquet"]
+    )
+    assert (args.judges, args.classifiers) == (["j/a", "j/b"], ["c/x", "c/y"])
+
+
 def test_the_command_line_and_the_report_modules_load_without_matplotlib_nor_numpy():
     # the command line: neither (bench --help and the other commands); the report modules: matplotlib only on drawing
     code = "import sys, s1d1_bench.cli as c; c.build_parser(); assert not {'numpy', 'matplotlib'} & set(sys.modules)"

@@ -454,11 +454,13 @@ autre nom.
   ```
   uv run bench run --prompts data/prompts/base-v1.jsonl --judges 'judges/base-v1-*' \
       --main base-v1-gemma4-cap512,base-v1-qwen3-cap512,base-v1-gptoss-cap512 \
-      --classifiers 'classifiers/s1d1-*' --classifiers classifiers/laya-english-tier \
-      --classifiers classifiers/laya-multilingual-tier --classifiers classifiers/litellm-heuristic \
-      --classifiers classifiers/random --classifiers classifiers/length --classifiers classifiers/constant-low \
+      --classifiers 'classifiers/s1d1-*' classifiers/laya-english-tier classifiers/laya-multilingual-tier \
+      classifiers/litellm-heuristic classifiers/random classifiers/length classifiers/constant-low \
       --out results/base-v1.parquet
   ```
+
+  `--judges` et `--classifiers` prennent plusieurs valeurs à la suite (des globs entre apostrophes, que `bench run`
+  développe lui-même), ou l'option répétée.
 
   Les classifieurs sont listés un à un : `'classifiers/*'` chargerait aussi `laya-english` et `laya-multilingual`, qui ne
   comptent plus (voir Laya plus haut).

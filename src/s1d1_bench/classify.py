@@ -46,7 +46,10 @@ TIER_TO_LEVEL = {"SIMPLE": "low", "MEDIUM": "medium", "COMPLEX": "high", "REASON
 
 def nearest_anchor(score: float) -> str:
     """The tier whose anchor is nearest to `score`; an exact midpoint between two anchors goes to the lower tier
-    (0.375 is low, 0.875 is high). The midpoints are (a + b) / 2 of neighbouring anchors, compared with `<=`."""
+    (0.375 is low, 0.875 is high). The midpoints are (a + b) / 2 of neighbouring anchors, compared with `<=`.
+
+    Kept from the first Laya adapter: the anchors are used by the constant witness only since lot 3b
+    (`constant_labels`), and no adapter calls this function any more."""
     for lower, upper in zip(LEVELS, LEVELS[1:], strict=False):
         if score <= (ANCHORS[lower] + ANCHORS[upper]) / 2:
             return lower
@@ -214,18 +217,21 @@ def _s1d1(args, prompts: list[dict], digest: str) -> int:
     try:
         from s1d1_bench import s1d1_backend
 
-        classify, info = s1d1_backend.make_s1d1_classifier(args.model, args.revision, args.backend)
+        classify, info = s1d1_backend.make_s1d1_classifier(
+            args.model, args.revision, args.backend, args.router_revision
+        )
         results = classify([p["prompt"] for p in prompts])
     except ImportError as exc:  # a dependency group is not installed: nothing was written
         return _fail(
-            f"{exc}. The s1d1 adapter needs the s1d1 dependency group (onnx, mlx backends) or s1d1-torch (torch): "
+            f"{exc}. The s1d1 adapter needs the s1d1 dependency group (onnx backend) or s1d1-torch (torch): "
             "uv run --group s1d1 bench classify s1d1 ..., or --group s1d1-torch --group s1d1."
         )
     rows = [{"id": p["id"], **result} for p, result in zip(prompts, results, strict=True)]
     notes = (
-        f"Replay: bench classify s1d1 --model {info['model']} --revision {info['revision']} --backend {args.backend}. "
-        f"s1d1_router.py of scombat/s1d1-router@{info['router_revision']}, backend {info['backend']}, device "
-        f"{info['device']}, precision {info['quantization']}. Prompts sorted by length in characters, batches of at "
+        f"Replay: bench classify s1d1 --model {info['model']} --revision {info['revision']} --backend {args.backend} "
+        f"--router-revision {info['router_revision']}. s1d1_router.py of "
+        f"scombat/s1d1-router@{info['router_revision']}, backend {info['backend']}, device {info['device']}, "
+        f"precision {info['quantization']}. Prompts sorted by length in characters, batches of at "
         f"most {s1d1_backend.BATCH_PROMPTS} prompts or about {s1d1_backend.BATCH_TOKENS} tokens, truncated at the "
         "router's MAX_LENGTH; tier = complexity_tier of decode() (capped at high), score = complexity_score."
     )
