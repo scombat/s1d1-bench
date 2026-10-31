@@ -27,6 +27,25 @@ def _readme_section(title: str) -> str:
     return "\n".join(body)
 
 
+def _github_slug(title: str) -> str:
+    """The anchor GitHub gives a heading: lower case, punctuation dropped (but - and _), spaces to hyphens."""
+    return re.sub(r"[^\w\- ]", "", title.lower()).replace(" ", "-")
+
+
+def test_readme_internal_anchors_resolve():
+    """Each `](#anchor)` of the README is the slug of one of its headings (outside the fenced code blocks)."""
+    anchors, in_fence = set(), False
+    text = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    for line in text.splitlines():
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+        elif not in_fence and re.match(r"#{1,6} ", line):
+            anchors.add(_github_slug(line.lstrip("#").strip()))
+    links = re.findall(r"\]\(#([^)]+)\)", text)
+    assert links
+    assert [link for link in links if link not in anchors] == []
+
+
 def test_license_files_exist():
     entries = _pyproject()["project"]["license-files"]
     assert "src/s1d1_bench/vendor/litellm_heuristic/LICENSE" in entries
@@ -86,37 +105,64 @@ def _report_sentence() -> str:
     return _squash("\n".join(quote))
 
 
+RESULTS_TITLE = "Results (`base-v1`, 2026-10-30)"
+
+
 def _csv_rows(name: str, key: str) -> dict[str, dict[str, str]]:
     with (REPORT_DIR / "tables" / name).open(encoding="utf-8", newline="") as handle:
         return {row[key]: row for row in csv.DictReader(handle)}
 
 
-def _french(value: str) -> str:
-    """A CSV float as the report index writes it: three decimals, decimal comma, true minus sign."""
-    return f"{float(value):.3f}".replace(".", ",").replace("-", "\N{MINUS SIGN}")
+def _english(value: str) -> str:
+    """A CSV float as the README writes it: three decimals, decimal point, true minus sign."""
+    return f"{float(value):.3f}".replace("-", "\N{MINUS SIGN}")
+
+
+def _estimate(row: dict[str, str], metric: str) -> str:
+    """`0.807 [0.734, 0.852]` from the columns `<metric>`, `<metric>_lo`, `<metric>_hi` of a CSV row."""
+    return f"{_english(row[metric])} [{_english(row[metric + '_lo'])}, {_english(row[metric + '_hi'])}]"
+
+
+def _numbers(text: str, decimal: str) -> list[str]:
+    """The numbers of a sentence, written with `decimal` as the decimal mark, as plain `0.807` strings."""
+    return [token.replace(decimal, ".") for token in re.findall(rf"\d+(?:{re.escape(decimal)}\d+)?", text)]
+
+
+def _readme_quote(section: str) -> str:
+    """The first block quote of a README section, squashed."""
+    quote = []
+    for line in section.splitlines():
+        if line.startswith(">"):
+            quote.append(line)
+        elif quote:
+            break
+    return _squash("\n".join(quote))
 
 
 def test_readme_results_match_the_report():
-    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
-    assert _report_sentence() in _squash(readme)
+    """The README quotes the sentence of docs/32 § 5 in English: same numbers, in the same order, as the report's."""
+    results = _readme_section(RESULTS_TITLE)
+    sentence = _readme_quote(results)
+    assert sentence and "2 σ rule" in sentence
+    assert _numbers(sentence, ".") == _numbers(_report_sentence().replace("−", ""), ",")
+    assert sentence.count("\N{MINUS SIGN}") == _report_sentence().count("\N{MINUS SIGN}")
 
-    results = _readme_section("Résultats (`base-v1`, 2026-10-30)")
     candidates = _csv_rows("agreement_all.csv", "name")
     shown = ("s1d1-full-int8", "s1d1-small-int8", "length", "laya-english-tier", "laya-multilingual-tier")
     for name in (*shown, "litellm-heuristic"):
         row = candidates[name]
-        assert f"{_french(row['qwk'])} [{_french(row['qwk_lo'])} ; {_french(row['qwk_hi'])}]" in results, name
-        assert f"{_french(row['exact'])} [{_french(row['exact_lo'])} ; {_french(row['exact_hi'])}]" in results, name
+        assert _estimate(row, "qwk") in results, name
+        assert _estimate(row, "exact") in results, name
     mean = _csv_rows("ceiling.csv", "judge")["mean"]
-    assert f"{_french(mean['qwk'])} [{_french(mean['qwk_lo'])} ; {_french(mean['qwk_hi'])}]" in results
-    assert f"{_french(mean['exact'])} [{_french(mean['exact_lo'])} ; {_french(mean['exact_hi'])}]" in results
+    assert _estimate(mean, "qwk") in results
+    assert _estimate(mean, "exact") in results
 
 
 README_FIGURES = ("qwk-bars.svg", "quality-vs-latency.svg", "qwk-by-language.svg")
 
 
 def test_readme_results_show_the_three_figures_with_a_caption_and_link_the_report():
-    results = _readme_section("Résultats (`base-v1`, 2026-10-30)")
+    results = _readme_section(RESULTS_TITLE)
     places = []
     for figure in README_FIGURES:
         path = f"report/base-v1/figures/{figure}"
@@ -124,38 +170,39 @@ def test_readme_results_show_the_three_figures_with_a_caption_and_link_the_repor
         assert (REPO_ROOT / path).is_file(), figure
         places.append(results.index(f"]({path})"))
     assert places == sorted(places)  # in this order
-    # each figure is followed by its French caption, a paragraph before the next figure
+    # each figure is followed by its caption, a paragraph before the next figure
     blocks = re.split(r"!\[[^\]]*\]\(report/base-v1/figures/[^)]+\)", results)[1:]
     for figure, block in zip(README_FIGURES, blocks, strict=True):
         assert block.strip() and not block.strip().startswith("|"), figure
     assert "](report/base-v1/index.md)" in results
-    table = [line for line in results.splitlines() if line.startswith("| ") and not line.startswith("| candidat")]
+    table = [line for line in results.splitlines() if line.startswith("| ") and not line.startswith("| candidate")]
     assert len(table) == 7  # the seven lines of the table
 
 
 def _span(values: list[float], unit) -> str:
-    """'1,6 à 9,1 ms': the two ends, the unit once when they share it."""
+    """'1.6 to 9.1 ms': the two ends, the unit once when they share it."""
     low, high = unit(min(values)), unit(max(values))
     number, _, word = low.rpartition(" ")
-    return f"{number if word == high.rpartition(' ')[2] else low} à {high}"
+    return f"{number if word == high.rpartition(' ')[2] else low} to {high}"
 
 
 def _ms(value: float) -> str:
-    """A latency as the report writes it: ms under a second, s above, one decimal, decimal comma."""
+    """A latency as the README writes it: ms under a second, s above, one decimal."""
     if value < 1000:
-        return f"{value:.1f}".replace(".", ",") + " ms"
-    return f"{value / 1000:.1f}".replace(".", ",") + " s"
+        return f"{value:.1f} ms"
+    return f"{value / 1000:.1f} s"
 
 
 def _mb(value: float) -> str:
-    """A weight as the report writes it: Mo without decimal under 1 000 Mo, Go with one decimal above."""
+    """A weight as the README writes it: MB without decimal under 1,000 MB, GB with one decimal above."""
     if value < 1000:
-        return f"{value:.0f} Mo"
-    return f"{value / 1000:.1f}".replace(".", ",") + " Go"
+        return f"{value:.0f} MB"
+    return f"{value / 1000:.1f} GB"
 
 
 def test_readme_results_latency_and_weights_match_the_profile():
-    results = _readme_section("Résultats (`base-v1`, 2026-10-30)")
+    results = _readme_section(RESULTS_TITLE)
+    flat = " ".join(results.split())  # the README wraps its lines: look for phrases, not for line breaks
     profile = list(_csv_rows("profile.csv", "name").values())
     s1d1_cpu = [r for r in profile if r["name"].startswith("s1d1-") and r["device"] == "cpu"]
     s1d1 = [r for r in profile if r["name"].startswith("s1d1-")]
@@ -167,31 +214,33 @@ def test_readme_results_latency_and_weights_match_the_profile():
     assert _span([float(r["weights_mb"]) for r in judges], _mb) in results
     # the judge-level quality is said of s1d1-full-int8 alone, with its own latency and weight
     full = next(r for r in profile if r["name"] == "s1d1-full-int8")
-    assert "`s1d1-full-int8`, dont l'IC contient la moyenne du plafond" in results
+    assert "`s1d1-full-int8`, whose CI contains the ceiling mean" in flat
     assert full["device"] == "cpu"
-    assert f"répond en {_ms(float(full['latency_p50_ms']))} par prompt sur le CPU" in results
-    assert f"`s1d1-full-int8` pèse {_mb(float(full['weights_mb']))}" in results
-    assert "À QWK de l'ordre de celui d'un juge" not in results
+    assert f"answers in {_ms(float(full['latency_p50_ms']))} per prompt on the Mac's CPU" in flat
+    assert f"`s1d1-full-int8` weighs {_mb(float(full['weights_mb']))}" in flat
+    assert "At a QWK of the order of a judge's" not in flat
     # the tail of s1d1-full-int8, without a cause, and the judges' latency with and without reasoning
-    tail = f"Au 95e centile, `s1d1-full-int8` met {_ms(float(full['latency_p95_ms']))} (la cause de cette\nqueue n'est"
-    assert tail in results
+    p95 = _ms(float(full["latency_p95_ms"]))
+    tail = f"At the 95th percentile, `s1d1-full-int8` takes {p95} (the cause of this tail is not"
+    assert tail in flat
     off = [r for r in profile if r["name"].endswith("-off")]
     assert {r["name"] for r in off} == {"base-v1-gemma4-off", "base-v1-qwen3-off"}
-    assert "puis en raisonnant (réflexion plafonnée à 512 jetons)" in results
+    assert "and then reasoning (reasoning capped at 512 tokens)" in flat
     no_reasoning = _span([float(r["latency_p50_ms"]) for r in off], _ms)
-    assert f"sans réflexion, gemma4 et qwen3 mettent\n{no_reasoning}." in results
-    assert "au repos" not in _readme_section("Le rapport")  # the profile records no load of the machine
+    assert f"without reasoning, gemma4 and qwen3 take {no_reasoning}." in flat
+    report_section = _readme_section("The report")
+    assert "at rest" not in report_section and "idle" not in report_section  # no load of the machine is recorded
 
 
 def test_readme_results_by_language_match_the_report():
-    results = _readme_section("Résultats (`base-v1`, 2026-10-30)")
+    results = _readme_section(RESULTS_TITLE)
     with (REPORT_DIR / "tables" / "by_language.csv").open(encoding="utf-8", newline="") as handle:
         rows = list(csv.DictReader(handle))
     for name in ("s1d1-full-int8", "litellm-heuristic"):
         qwk = {r["lang"]: float(r["qwk_all"]) for r in rows if r["name"] == name}
         others = [v for lang, v in qwk.items() if lang != "eng"]
-        assert f"{_french(str(qwk['eng']))} en anglais" in results, name
-        assert f"{_french(str(min(others)))} à {_french(str(max(others)))}" in results, name
+        assert f"{_english(str(qwk['eng']))} in English" in results, name
+        assert f"{_english(str(min(others)))} to {_english(str(max(others)))}" in results, name
 
 
 WITNESSES = {"random", "length", "constant-low"}

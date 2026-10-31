@@ -1,10 +1,11 @@
 """`bench report`, the index: `<out>/index.md`, the template `report/TEMPLATE.md` with its named holes filled from the
 tables of `report.tables` and the figures of `report_figures.figures`.
 
-The template holds the French prose (the caveats of docs/32 § 2, the reading rules, one sentence of reading per table
-and figure); this module fills its holes `{name}` mechanically, in neutral numeric wording. A hole without a value,
-or a value without a hole, is a ValueError: nothing is left unfilled and nothing computed is dropped silently. The
-index never holds the words of a superiority claim (`FORBIDDEN`): `write_index` refuses to write one.
+The template holds the French prose (the caveats of docs/32 § 2, the reading rules, one sentence of reading per
+table and figure), but for its first section, in English; this module fills its holes `{name}` mechanically, in
+neutral numeric wording. A hole without a value, or a value without a hole, is a ValueError: nothing is left
+unfilled and nothing computed is dropped silently. The index never holds the words of a superiority claim
+(`FORBIDDEN`): `write_index` refuses to write one.
 
 The two clauses of the sentence of docs/32 § 5 are chosen by rules written here and quoted in the template:
 `position_vs_ceiling` compares the mean of the ceiling with the 95 % interval of the headline QWK, `vs_floor` reads the
@@ -42,7 +43,7 @@ from s1d1_bench.report_figures import Figure
 from s1d1_bench.rubric import LEVELS
 
 STATUS = {"json_error": "refus (json_error)", "truncated": "réponse coupée (truncated)"}  # abstentions, in prose
-FORBIDDEN = ("meilleur que", "mieux que")  # docs/34 decision 7: no such sentence, the 2 sigma rule or not
+FORBIDDEN = ("meilleur que", "mieux que", "better than")  # docs/34 decision 7: no such sentence, 2 sigma or not
 LAYA = "laya-"
 HOLE = re.compile(r"\{([a-z][a-z0-9_]*)\}")
 
@@ -171,14 +172,21 @@ def _code(name: str) -> str:
     return f"`{name}`"
 
 
-def _estimate(row: dict | None, metric: str = "qwk") -> str:
-    """`0,807 [0,734 ; 0,852]`, the value alone when it has no interval, a dash when it is undefined."""
+def _english(value) -> str:
+    """`french(value)` with the decimal point of English text: `0.807`."""
+    return french(value).replace(",", ".")
+
+
+def _estimate(row: dict | None, metric: str = "qwk", *, english: bool = False) -> str:
+    """`0,807 [0,734 ; 0,852]`, the value alone when it has no interval, a dash when it is undefined. English text
+    (the first section of the index) writes `0.807 [0.734, 0.852]`."""
     if row is None:
         return "—"
-    text = french(row[metric])
+    number, separator = (_english, ", ") if english else (french, " ; ")
+    text = number(row[metric])
     lo, hi = row.get(f"{metric}_lo"), row.get(f"{metric}_hi")
-    if text != "—" and french(lo) != "—" and french(hi) != "—":
-        text += f" [{french(lo)} ; {french(hi)}]"
+    if text != "—" and number(lo) != "—" and number(hi) != "—":
+        text += f" [{number(lo)}{separator}{number(hi)}]"
     return text
 
 
@@ -279,10 +287,10 @@ def _figures(figures: Sequence[Figure], n_ids: str, n_base: str) -> dict[str, st
     return out
 
 
-def _and(items: Sequence[str]) -> str:
-    """'a', 'a et b', 'a, b et c'."""
+def _and(items: Sequence[str], word: str = "et") -> str:
+    """'a', 'a et b', 'a, b et c' (`word` "and" for the English text)."""
     items = list(items)
-    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " et " + items[-1]
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + f" {word} " + items[-1]
 
 
 def _overlap(a: dict, b: dict) -> bool | None:
@@ -307,68 +315,70 @@ def _constant_scores(rank: Sequence[dict]) -> str:
 
 
 def _overlap_words(pairs: Sequence[tuple[str, dict, str, dict]]) -> str:
-    """'les IC de a et de b se recouvrent ; ...' for each pair (name, row, name, row)."""
+    """'the CIs of a and b overlap; ...' for each pair (name, row, name, row)."""
     words = []
     for left, a, right, b in pairs:
         found = _overlap(a, b)
-        verb = "se recouvrent" if found else "ne se recouvrent pas" if found is False else "n'ont pas tous deux d'IC"
-        words.append(f"les IC de {left} et de {right} {verb}")
-    return " ; ".join(words)
+        verb = "overlap" if found else "do not overlap" if found is False else "are not both defined"
+        words.append(f"the CIs of {left} and {right} {verb}")
+    return "; ".join(words)
 
 
 def _predictions_first(computed: dict[str, pa.Table], n_ids: str, n_base: str) -> str:
     """Prediction 2 and prediction 1 of docs/34 § 7.4: those that do not hold first (in bold, with the numbers), then
     those not evaluated, then those that hold; one line saying so when both hold. Each says that it is read on the
-    point values and whether the intervals involved overlap."""
+    point values and whether the intervals involved overlap. This is the one block of the index written in English
+    (the first section, with its numbers in English notation); `n_base` is the French count of the summary."""
+    n_base = re.sub(r"\b([\d?]+) prompts de base\b", r"\1 base prompts", n_base)
     rows = computed["predictions"].to_pylist()
     failed, absent, held = [], [], []
     p2 = {r["name"]: r for r in rows if r["prediction"] == "prediction_2"}
     floor, litellm, reference = _code(FLOOR), _code(LITELLM), _code(REFERENCE)
     if p2:
         said = (
-            f"Écrite avant les chiffres (docs/34 § 7.4), elle disait : {litellm} devait se tenir entre {floor} et "
-            f"{reference}. QWK contre `truth_all`, {n_ids}, IC 95 % sur 1 000 tirages des {n_base}."
+            f"Written before the figures (docs/34 § 7.4), it said: {litellm} should sit between {floor} and "
+            f"{reference}. QWK against `truth_all`, {n_ids}, 95% CI over 1,000 draws of the {n_base}."
         )
         point = (
-            "La vérification porte sur les valeurs ponctuelles ; "
+            "The check is made on the point values; "
             + _overlap_words(
                 [(litellm, p2[LITELLM], floor, p2[FLOOR]), (litellm, p2[LITELLM], reference, p2[REFERENCE])]
             )
             + "."
         )
-        numbers = {name: f"{_code(name)} ({_estimate(row)})" for name, row in p2.items()}
+        numbers = {name: f"{_code(name)} ({_estimate(row, english=True)})" for name, row in p2.items()}
         if next(iter(p2.values()))["verified"]:
             held.append(
-                f"La prédiction 2 est vérifiée : {numbers[LITELLM]} se tient entre {numbers[FLOOR]} et "
+                f"Prediction 2 holds: {numbers[LITELLM]} sits between {numbers[FLOOR]} and "
                 f"{numbers[REFERENCE]}. {said} {point}"
             )
         else:
             low, mid, top = (p2[n]["qwk"] for n in (FLOOR, LITELLM, REFERENCE))
             if mid < low:
-                where = f"est au-dessous de {numbers[FLOOR]}"
+                where = f"is below {numbers[FLOOR]}"
             elif mid == low:
-                where = f"est au niveau de {numbers[FLOOR]}"
+                where = f"is at the level of {numbers[FLOOR]}"
             elif mid > top:
-                where = f"est au-dessus de {numbers[REFERENCE]}"
+                where = f"is above {numbers[REFERENCE]}"
             elif mid == top:
-                where = f"est au niveau de {numbers[REFERENCE]}"
+                where = f"is at the level of {numbers[REFERENCE]}"
             else:
-                where = f"ne se tient pas entre {numbers[FLOOR]} et {numbers[REFERENCE]}"
+                where = f"does not sit between {numbers[FLOOR]} and {numbers[REFERENCE]}"
             failed.append(
-                f"**La prédiction 2 n'est pas vérifiée : {numbers[LITELLM]} {where}, au lieu de se tenir entre "
-                f"{floor} et {numbers[REFERENCE] if numbers[REFERENCE] not in where else reference}.** {said} {point}"
+                f"**Prediction 2 does not hold: {numbers[LITELLM]} {where}, instead of sitting between "
+                f"{floor} and {numbers[REFERENCE] if numbers[REFERENCE] not in where else reference}.** {said} {point}"
             )
     else:
-        absent.append("La prédiction 2 n'a pas été évaluée : un de ses candidats est absent (voir « Ce qui manque »).")
+        absent.append("Prediction 2 was not evaluated: one of its candidates is absent (see « Ce qui manque »).")
     p1 = {r["lang"]: r for r in rows if r["prediction"] == "prediction_1"}
     if p1:
         per_lang = computed["by_language"].to_pylist()
         n_lang = next((r["n_ids_all"] for r in per_lang if r["name"] == LITELLM), "?")
-        listed = " ; ".join(f"{lang} {_estimate(r)}" for lang, r in p1.items())
+        listed = "; ".join(f"{lang} {_estimate(r, english=True)}" for lang, r in p1.items())
         said = (
-            f"Écrite avant les chiffres (docs/34 § 7.4), elle disait : les listes de mots-clés de {litellm} sont "
-            f"anglaises, son QWK devait tomber en français, en russe et en chinois. QWK contre `truth_all`, {n_lang} "
-            f"ids par langue, IC 95 % sur 1 000 tirages des {n_base}."
+            f"Written before the figures (docs/34 § 7.4), it said: the keyword lists of {litellm} are "
+            f"English, its QWK should drop in French, in Russian and in Chinese. QWK against `truth_all`, {n_lang} "
+            f"ids per language, 95% CI over 1,000 draws of the {n_base}."
         )
         eng = p1.get("eng")
         others = [lang for lang in p1 if lang != "eng"]
@@ -376,34 +386,31 @@ def _predictions_first(computed: dict[str, pa.Table], n_ids: str, n_base: str) -
         apart = [lang for lang in others if eng and _overlap(p1[lang], eng) is False]
         parts = []
         if overlapping:
-            verb = "recouvre" if len(overlapping) == 1 else "recouvrent"
-            subject = "l'IC" if len(overlapping) == 1 else "les IC"
-            parts.append(f"{subject} de {_and(overlapping)} {verb} celui de eng")
+            subject, verb = ("the CI", "overlaps") if len(overlapping) == 1 else ("the CIs", "overlap")
+            parts.append(f"{subject} of {_and(overlapping, 'and')} {verb} that of eng")
         if apart:
-            verb = "ne recouvre pas" if len(apart) == 1 else "ne recouvrent pas"
-            subject = "l'IC" if len(apart) == 1 else "les IC"
-            parts.append(f"{subject} de {_and(apart)} {verb} celui de eng")
-        point = "La vérification porte sur les valeurs ponctuelles seulement"
-        point += (" : " + " ; ".join(parts) if parts else "") + " (aucun écart apparié entre langues n'est calculé)."
+            subject, verb = ("the CI", "does not overlap") if len(apart) == 1 else ("the CIs", "do not overlap")
+            parts.append(f"{subject} of {_and(apart, 'and')} {verb} that of eng")
+        point = "The check is made on the point values only"
+        point += (": " + "; ".join(parts) if parts else "") + " (no paired gap between languages is computed)."
         if next(iter(p1.values()))["verified"]:
-            held.append(f"La prédiction 1 est vérifiée : QWK de {litellm} par langue : {listed}. {point} {said}")
+            held.append(f"Prediction 1 holds: QWK of {litellm} by language: {listed}. {point} {said}")
         else:
             above = [lang for lang in others if not (eng and p1[lang]["qwk"] < eng["qwk"])]
             if not eng:
-                why = "il n'y a pas de QWK en eng"
+                why = "there is no QWK in eng"
             elif len(above) == 1:
-                why = f"le QWK en {above[0]} n'est pas au-dessous de celui en eng"
+                why = f"the QWK in {above[0]} is not below that in eng"
             else:
-                why = f"les QWK en {_and(above)} ne sont pas au-dessous de celui en eng"
+                why = f"the QWKs in {_and(above, 'and')} are not below that in eng"
             failed.append(
-                f"**La prédiction 1 n'est pas vérifiée : {why} (QWK de {litellm} par langue : {listed}).** {point} "
-                f"{said}"
+                f"**Prediction 1 does not hold: {why} (QWK of {litellm} by language: {listed}).** {point} {said}"
             )
     else:
-        absent.append(f"La prédiction 1 n'a pas été évaluée : {litellm} est absent (voir « Ce qui manque »).")
+        absent.append(f"Prediction 1 was not evaluated: {litellm} is absent (see « Ce qui manque »).")
     lines = failed + absent + held
     if not failed and not absent:
-        lines.insert(0, "Les deux prédictions se vérifient.")
+        lines.insert(0, "Both predictions hold.")
     return "\n\n".join(lines)
 
 
