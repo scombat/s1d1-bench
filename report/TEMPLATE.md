@@ -78,9 +78,10 @@ en bande : σ ≈ 0,005 QWK, repris comme nombre, pas remesuré.
   sauf le plafond ; les juges ont leurs propres tableaux, sous ceux des candidats.
 - **Les juges principaux sont dans la vérité** : {main_judges}. `truth_all` est faite de leurs votes ; leur accord avec
   elle compte donc leurs propres votes (4 sur 12 par prompt de base), et la colonne « rôle » dit « juge dans la
-  vérité ». Les autres juges ({other_judges}) sont hors de la vérité : leur accord avec `truth_all` mesure l'effet de
-  la réflexion, à côté des paires du tableau des juges. Pour `truth_all_nogemma`, {gemma} sort de la vérité : avec deux
-  juges (8 votes par prompt de base), la médiane est la moyenne des deux votes du milieu, arrondie vers le bas.
+  vérité ». Les autres juges ({other_judges}) sont hors de la vérité : leur accord avec `truth_all` se lit avec les
+  paires « même modèle » du tableau des juges, qui mesurent l'effet de la réflexion. Pour `truth_all_nogemma`, {gemma}
+  sort de la vérité : avec deux juges (8 votes par prompt de base), la médiane est la moyenne des deux votes du milieu,
+  arrondie vers le bas.
 - **Unités** : « ids » compte les versions (une par langue, {n_ids} en tout) ; « prompts de base » compte les
   `base_key` ({n_base}). Les IC tirent les prompts de base, jamais les ids.
 - **Paliers jamais prédits** : {tiers_never_predicted} ([`tables/agreement_all.csv`](tables/agreement_all.csv),
