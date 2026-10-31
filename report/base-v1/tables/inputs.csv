@@ -1,0 +1,17 @@
+name,kind,role,model,revision,date,n_ids_abstained,n_ids_null_vote,null_votes_ids
+base-v1-gemma4-cap512,judge,judge-in-truth,mlx-community/gemma-4-31b-it-8bit,f5f3dc92ab4af76724c36c21eb6bedadb3a851be,2026-10-30,0,1,e944f9b1b3bbc893-fra
+base-v1-qwen3-cap512,judge,judge-in-truth,mlx-community/Qwen3.8-27B-8bit,815b83c0df8ffd1d1b5244cf75fd6ef14fca9ef9,2026-10-30,0,0,
+base-v1-gptoss-cap512,judge,judge-in-truth,mlx-community/gpt-oss-20b-MXFP4-Q8,773a7da77e569019bb0fd17a554b263738d669a3,2026-10-30,1,1,3ce175ed3ef6b933-zho
+base-v1-gemma4-off,judge,judge-outside-truth,mlx-community/gemma-4-31b-it-8bit,f5f3dc92ab4af76724c36c21eb6bedadb3a851be,2026-10-30,0,0,
+base-v1-qwen3-off,judge,judge-outside-truth,mlx-community/Qwen3.8-27B-8bit,815b83c0df8ffd1d1b5244cf75fd6ef14fca9ef9,2026-10-30,0,0,
+constant-low,classifier,candidate,witness:constant-low,n/a,2026-10-30,,,
+laya-english-tier,classifier,candidate,convaiinnovations/laya,laya 0.4.15 convaiinnovations/laya@7b928d828b7b0e022f929d9bd2e44165aa270148,2026-10-30,,,
+laya-multilingual-tier,classifier,candidate,convaiinnovations/laya/multilingual,laya 0.4.15 convaiinnovations/laya@7b928d828b7b0e022f929d9bd2e44165aa270148,2026-10-30,,,
+length,classifier,candidate,witness:length,n/a,2026-10-30,,,
+litellm-heuristic,classifier,candidate,litellm:complexity_router:heuristic,v1.106.6 61c6ab78393ef45683dd7d963d2a315bd845e20b,2026-10-30,,,
+random,classifier,candidate,witness:random,seed 0,2026-10-30,,,
+s1d1-compact-int8,classifier,candidate,scombat/s1d1-router-6src-compact-onnx-int8,7e87870132a19d12b32dbad1f8233801b8145b9f,2026-10-30,,,
+s1d1-full-fp16,classifier,candidate,scombat/s1d1-router,7fb9a4e3d03e3d942a98648268ff76c6152c18d6,2026-10-30,,,
+s1d1-full-int8,classifier,candidate,scombat/s1d1-router-6src-full-onnx-int8,068d0d20d5901c2db6934c89fde48b87c973fed8,2026-10-30,,,
+s1d1-small-int8,classifier,candidate,scombat/s1d1-router-6src-small-onnx-int8,33c7f34a30af04735390264824d6bfa8546abb7a,2026-10-30,,,
+s1d1-tiny-int8,classifier,candidate,scombat/s1d1-router-6src-tiny-onnx-int8,dac13b5c0356864ea4501fa151d74dcd8b3ea22a,2026-10-30,,,

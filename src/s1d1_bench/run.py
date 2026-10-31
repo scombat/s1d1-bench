@@ -63,11 +63,11 @@ def _sorted_votes(levels: list[str | None]) -> list[int] | None:
     return ranks
 
 
-def lower_median(levels: list[str | None]) -> str | None:
-    """Rule R5, the median of every truth: the ordinal median of the non-null levels, rounded down: the middle vote of
-    an odd count, the mean of the two middle tier indices rounded down for an even count (docs/34 §0.3: low and high
-    give medium; two adjacent tiers give the lower one). None when the nulls are strictly more than half of the
-    votes."""
+def even_floor_median(levels: list[str | None]) -> str | None:
+    """Rule R5, the median of every truth: the ordinal median of the non-null levels, with the floor applied to an even
+    count (hence the name): the middle vote of an odd count, the mean of the two middle tier indices rounded down for an
+    even count (docs/34 §0.3: low and high give medium; two adjacent tiers give the lower one). None when the nulls are
+    strictly more than half of the votes."""
     ranks = _sorted_votes(levels)
     if ranks is None:
         return None
@@ -121,7 +121,7 @@ def truths(
     main: list[str],
     meta_rows: list[dict],
     gemma: Collection[str] = (),
-    median: Callable[[list[str | None]], str | None] = lower_median,
+    median: Callable[[list[str | None]], str | None] = even_floor_median,
 ) -> dict[str, dict]:
     """id -> truth_all, truth_lang, truth_all_nogemma, truth_lang_nogemma (each complexity, task, needs_tools),
     undecidable, spread, lang_disagreement.

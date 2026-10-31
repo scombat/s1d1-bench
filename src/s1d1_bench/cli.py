@@ -19,7 +19,11 @@ COMMANDS: dict[str, tuple[str, str]] = {
     "check": ("check", "run_check"),
     "classify": ("classify", "run_classify_cmd"),
     "run": ("run", "run_run_cmd"),
+    "report": ("report", "run_report_cmd"),
 }
+
+# subcommand -> the dependency group its module needs on import (report: numpy, which comes with matplotlib)
+_GROUPS = {"report": "report"}
 
 _HELP = {
     "pool": "build the prompt pool",
@@ -35,6 +39,7 @@ _HELP = {
         "write a classifier folder: a witness (random, length, constant) or a system (s1d1, laya, litellm-heuristic)"
     ),
     "run": "merge the judge and classifier folders of a set into one table, with the truths of the main judges",
+    "report": "write the report of a results table: tables (CSV), figures (SVG + CSV) and index.md from a template",
 }
 
 
@@ -44,6 +49,14 @@ def _handler(module: str, function: str):
         try:
             target = getattr(import_module(full_name), function)
         except ModuleNotFoundError as exc:
+            group = _GROUPS.get(args.command)
+            if exc.name != full_name and group and not (exc.name or "").startswith("s1d1_bench"):
+                print(
+                    f"bench {args.command}: {exc.name} is missing: it comes with the {group} dependency group, "
+                    f"uv run --group {group} bench {args.command} ...",
+                    file=sys.stderr,
+                )
+                return 1
             if exc.name != full_name:
                 raise
             print(f"bench {args.command}: not implemented yet", file=sys.stderr)
@@ -225,6 +238,24 @@ def _run_arguments(sub: argparse.ArgumentParser) -> None:
     )
 
 
+def _report_arguments(sub: argparse.ArgumentParser) -> None:
+    sub.add_argument(
+        "--results", type=Path, required=True, help="results table of bench run (<stem>.run.json beside it)"
+    )
+    sub.add_argument("--meta", type=Path, required=True, help="meta.parquet of the set (source, origin by id)")
+    sub.add_argument("--out", type=Path, required=True, help="report directory, report/<set> (rewritten)")
+    sub.add_argument("--sigma", type=float, default=0.005, help="seed noise of s1d1 in QWK, for the 2 sigma rule")
+    sub.add_argument(
+        "--classifiers",
+        type=Path,
+        default=Path("classifiers"),
+        help="root of the classifier folders (one per classifier of the run, random/draws.jsonl for the floor band)",
+    )
+    sub.add_argument(
+        "--template", type=Path, default=Path("report/TEMPLATE.md"), help="template of index.md, with named holes"
+    )
+
+
 # subcommand -> function adding its arguments to its parser
 _ARGUMENTS = {
     "pool": _pool_arguments,
@@ -238,6 +269,7 @@ _ARGUMENTS = {
     "check": _check_arguments,
     "classify": _classify_arguments,
     "run": _run_arguments,
+    "report": _report_arguments,
 }
 
 

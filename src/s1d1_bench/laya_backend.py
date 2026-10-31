@@ -9,13 +9,12 @@ adapter (`bench/laya_adapter.py`) calls it is kept too: `Router()` with its defa
 `predict_batch` request per prompt with `{"state": prompt, "questions": QUESTIONS, "model": "english"|"multilingual"}`,
 batches of 32 over the prompts sorted by length. `tests/test_laya_backend.py` compares the strings with that file.
 
-- Score: Laya answers the question with a probability for each of the four levels, `SIMPLE`, `MEDIUM`, `COMPLEX`,
-  `REASONING`, in the order of `CRITERIA`. The expected level is `sum(i * p_i)` with i = 0..3 and the probabilities as
-  Laya gives them (they are not renormalised); `score = expected level / 3`, in [0, 1] (0: all of SIMPLE, 1: all of
-  REASONING). Same formula as `laya_scores.py`.
-- Tier: `classify.nearest_anchor(score)` (anchors trivial 0.01, low 0.25, medium 0.50, high 0.75, expert 1.00; an exact
-  midpoint goes to the lower tier). `task` and `needs_tools` are null (Laya does not predict them) and there is no
-  `needs_tools_probability`.
+- Answer: Laya answers the question with a probability for each of the four levels, `SIMPLE`, `MEDIUM`, `COMPLEX`,
+  `REASONING`, in the order of `CRITERIA`; `classify` returns them as they come (not renormalised), under
+  `probabilities`, in that order. Nothing else is derived here but two readings of them: `most_probable` (the tier, an
+  exact tie going to the lowest name) and `expected_level` (`sum(i * p_i)` with i = 0..3, not divided). The tier names
+  are LiteLLM's and `bench classify laya` translates them name to name (`classify.TIER_TO_LEVEL`); there is no
+  nearest-anchor step and no score on the v7 scale. `task` and `needs_tools` are null (Laya does not predict them).
 - Checkpoints: `--laya-model english` is `convaiinnovations/laya` (ModernBERT-large, 512 tokens) and `multilingual` is
   its `multilingual` subfolder (mmBERT-base, 1024 tokens, written `convaiinnovations/laya/multilingual`, Laya's own
   spelling): both live in the one Hub repo `convaiinnovations/laya`, which Laya's `Router()` downloads.
@@ -29,7 +28,6 @@ batches of 32 over the prompts sorted by length. `tests/test_laya_backend.py` co
 import os
 from collections.abc import Callable
 
-from s1d1_bench.classify import nearest_anchor
 from s1d1_bench.s1d1_backend import hub_env, model_info
 
 # ---------- the question, as docs/27 reads it (bench/laya_scores.py, read on 2026-10-30) ----------
@@ -53,21 +51,27 @@ LAYA_MODELS = {"english": REPO, "multilingual": f"{REPO}/multilingual"}
 BATCH = 32  # prompts per predict_batch call, as laya_scores.py
 
 
-def expected_score(probabilities: dict[str, float]) -> float:
-    """The expected level (SIMPLE 0 .. REASONING 3, under the probabilities of Laya) normalised into [0, 1]."""
-    levels = list(CRITERIA)
-    return sum(i * probabilities[label] for i, label in enumerate(levels)) / (len(levels) - 1)
+def most_probable(probabilities: dict[str, float]) -> str:
+    """The name of `CRITERIA` with the highest probability; an exact tie goes to the lowest name in the order SIMPLE <
+    MEDIUM < COMPLEX < REASONING."""
+    return max(CRITERIA, key=lambda label: (probabilities[label], -list(CRITERIA).index(label)))
+
+
+def expected_level(probabilities: dict[str, float]) -> float:
+    """`sum(i * p_i)`, SIMPLE 0 .. REASONING 3, under the probabilities of Laya as given (not renormalised, not divided
+    by 3): a float in [0, 3] when they sum to 1."""
+    return sum(i * probabilities[label] for i, label in enumerate(CRITERIA))
 
 
 def make_laya_classifier(
     laya_model: str, revision: str | None
 ) -> tuple[Callable[[list[str]], list[dict]], dict]:
     """(classify, meta): `classify(prompts)` asks the `tier` question of the Laya checkpoint `laya_model` (`english` or
-    `multilingual`) by batches of 32 sorted by length, and returns, in the order of the prompts, dicts of `complexity`,
-    `task` (None), `needs_tools` (None) and `score`. `meta` holds `model`, `revision` (laya version and commit),
-    `laya_version`, `commit`, `device`, and `truncated`, the number of prompts Laya cut at the token budget of the
-    checkpoint (0 until `classify` has run). Raises ValueError for an unknown `laya_model`, ImportError when `laya`
-    is not installed."""
+    `multilingual`) by batches of 32 sorted by length, and returns, in the order of the prompts, dicts with one key,
+    `probabilities` (the four names of `CRITERIA`, in that order, as Laya gives them). `meta` holds `model`,
+    `revision` (laya version and commit), `laya_version`, `commit`, `device`, and `truncated`, the number of prompts
+    Laya cut at the token budget of the checkpoint (0 until `classify` has run). Raises ValueError for an unknown
+    `laya_model`, ImportError when `laya` is not installed."""
     if laya_model not in LAYA_MODELS:
         raise ValueError(f"unknown Laya model {laya_model!r}: expected one of {', '.join(LAYA_MODELS)}")
     hub_env()
@@ -94,9 +98,9 @@ def make_laya_classifier(
             batch = order[start : start + BATCH]
             requests = [{"state": prompts[i], "questions": QUESTIONS, "model": laya_model} for i in batch]
             for i, result in zip(batch, router.predict_batch(requests), strict=True):
-                score = expected_score(result["answers"]["tier"]["probabilities"])
+                given = result["answers"]["tier"]["probabilities"]
                 truncated += bool(result.get("usage", {}).get("truncated"))
-                out[i] = {"complexity": nearest_anchor(score), "task": None, "needs_tools": None, "score": score}
+                out[i] = {"probabilities": {label: given[label] for label in CRITERIA}}
         meta["truncated"] = truncated
         return out  # type: ignore[return-value]
 

@@ -1,8 +1,11 @@
 import hashlib
+import subprocess
+import sys
+from pathlib import Path
 
 import pytest
 
-from s1d1_bench.cli import main
+from s1d1_bench.cli import build_parser, main
 from s1d1_bench.rubric import LEVELS, TASKS, load_rubric
 
 # sha256 of ~/work/s1d1-model-router/docs/judge-rubric-v7.txt, the source of the packaged copy
@@ -32,3 +35,25 @@ def test_tasks_are_unique_and_in_file_order():
 
 def test_levels():
     assert LEVELS == ["trivial", "low", "medium", "high", "expert"]
+
+
+def test_report_help_lists_its_options(capsys):
+    with pytest.raises(SystemExit):
+        main(["--help"])
+    assert "report" in capsys.readouterr().out
+    with pytest.raises(SystemExit):
+        main(["report", "--help"])
+    out = capsys.readouterr().out
+    for option in ("--results", "--meta", "--out", "--sigma", "--classifiers", "--template"):
+        assert option in out
+    args = build_parser().parse_args(["report", "--results", "r.parquet", "--meta", "m.parquet", "--out", "o"])
+    assert (args.sigma, args.classifiers, args.template) == (0.005, Path("classifiers"), Path("report/TEMPLATE.md"))
+
+
+def test_the_command_line_and_the_report_modules_load_without_matplotlib_nor_numpy():
+    # the command line: neither (bench --help and the other commands); the report modules: matplotlib only on drawing
+    code = "import sys, s1d1_bench.cli as c; c.build_parser(); assert not {'numpy', 'matplotlib'} & set(sys.modules)"
+    subprocess.run([sys.executable, "-c", code], check=True)
+    code = "import sys, s1d1_bench.report, s1d1_bench.report_figures, s1d1_bench.report_index; "
+    code += "assert 'matplotlib' not in sys.modules"
+    subprocess.run([sys.executable, "-c", code], check=True)

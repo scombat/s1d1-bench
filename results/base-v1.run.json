@@ -21,13 +21,15 @@
     {
       "date": "2026-10-30",
       "model": "convaiinnovations/laya",
-      "name": "laya-english",
+      "name": "laya-english-tier",
+      "raw_decisions": true,
       "revision": "laya 0.4.15 convaiinnovations/laya@7b928d828b7b0e022f929d9bd2e44165aa270148"
     },
     {
       "date": "2026-10-30",
       "model": "convaiinnovations/laya/multilingual",
-      "name": "laya-multilingual",
+      "name": "laya-multilingual-tier",
+      "raw_decisions": true,
       "revision": "laya 0.4.15 convaiinnovations/laya@7b928d828b7b0e022f929d9bd2e44165aa270148"
     },
     {
