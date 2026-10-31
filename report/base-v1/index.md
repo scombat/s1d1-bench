@@ -4,17 +4,18 @@
 régénère : les tableaux sont dans `tables/` (CSV), les figures dans `figures/` (SVG, chacune avec son CSV). Le gabarit
 est `report/TEMPLATE.md` ; ses trous sont remplis par le code, chiffres tels qu'ils sortent.
 
-## Ce que ce rapport dit en premier
+## What this report says first
 
-Deux lectures ont été écrites avant de voir les chiffres (docs/34 § 7.4) ; celle qui ne se vérifie pas est dite en
-premier.
+Two readings were written before seeing the figures (docs/34 § 7.4); the one that does not hold is stated first.
 
-**La prédiction 2 n'est pas vérifiée : `litellm-heuristic` (0,089 [0,026 ; 0,172]) est au-dessous de `length` (0,543 [0,424 ; 0,647]), au lieu de se tenir entre `length` et `s1d1-full-int8` (0,807 [0,734 ; 0,852]).** Écrite avant les chiffres (docs/34 § 7.4), elle disait : `litellm-heuristic` devait se tenir entre `length` et `s1d1-full-int8`. QWK contre `truth_all`, 360 ids, IC 95 % sur 1 000 tirages des 90 prompts de base. La vérification porte sur les valeurs ponctuelles ; les IC de `litellm-heuristic` et de `length` ne se recouvrent pas ; les IC de `litellm-heuristic` et de `s1d1-full-int8` ne se recouvrent pas.
+**Prediction 2 does not hold: `litellm-heuristic` (0.089 [0.026, 0.172]) is below `length` (0.543 [0.424, 0.647]), instead of sitting between `length` and `s1d1-full-int8` (0.807 [0.734, 0.852]).** Written before the figures (docs/34 § 7.4), it said: `litellm-heuristic` should sit between `length` and `s1d1-full-int8`. QWK against `truth_all`, 360 ids, 95% CI over 1,000 draws of the 90 base prompts. The check is made on the point values; the CIs of `litellm-heuristic` and `length` do not overlap; the CIs of `litellm-heuristic` and `s1d1-full-int8` do not overlap.
 
-La prédiction 1 est vérifiée : QWK de `litellm-heuristic` par langue : eng 0,205 [0,094 ; 0,328] ; fra 0,044 [−0,023 ; 0,135] ; rus 0,061 [0,000 ; 0,149] ; zho 0,044 [−0,016 ; 0,132]. La vérification porte sur les valeurs ponctuelles seulement : les IC de fra, rus et zho recouvrent celui de eng (aucun écart apparié entre langues n'est calculé). Écrite avant les chiffres (docs/34 § 7.4), elle disait : les listes de mots-clés de `litellm-heuristic` sont anglaises, son QWK devait tomber en français, en russe et en chinois. QWK contre `truth_all`, 90 ids par langue, IC 95 % sur 1 000 tirages des 90 prompts de base.
+Prediction 1 holds: QWK of `litellm-heuristic` by language: eng 0.205 [0.094, 0.328]; fra 0.044 [−0.023, 0.135]; rus 0.061 [0.000, 0.149]; zho 0.044 [−0.016, 0.132]. The check is made on the point values only: the CIs of fra, rus and zho overlap that of eng (no paired gap between languages is computed). Written before the figures (docs/34 § 7.4), it said: the keyword lists of `litellm-heuristic` are English, its QWK should drop in French, in Russian and in Chinese. QWK against `truth_all`, 90 ids per language, 95% CI over 1,000 draws of the 90 base prompts.
 
-Tableaux : [`tables/predictions.csv`](tables/predictions.csv), [`tables/by_language.csv`](tables/by_language.csv) ;
-dans cette page : [Les deux prédictions, en tableau](#les-deux-prédictions-en-tableau).
+Tables: [`tables/predictions.csv`](tables/predictions.csv), [`tables/by_language.csv`](tables/by_language.csv);
+in this page: [Les deux prédictions, en tableau](#les-deux-prédictions-en-tableau).
+
+_Note: the rest of this report is in French._
 
 ## La phrase de docs/32 § 5
 

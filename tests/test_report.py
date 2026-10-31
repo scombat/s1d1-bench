@@ -684,8 +684,10 @@ def test_write_index_refuses_a_superiority_sentence(small, tmp_path):
     absent = [Figure(name, None, None, ()) for name in NAMES]
     with pytest.raises(ValueError, match="meilleur que"):  # the set name lands in the title
         write_index(tmp_path, computed, absent, run | {"prompts": "data/prompts/meilleur que.jsonl"}, TEMPLATE)
+    with pytest.raises(ValueError, match="better than"):  # the first section is in English now
+        write_index(tmp_path, computed, absent, run | {"prompts": "data/prompts/better than.jsonl"}, TEMPLATE)
     template = TEMPLATE.read_text(encoding="utf-8").lower()
-    assert "meilleur que" not in template and "mieux que" not in template
+    assert "meilleur que" not in template and "mieux que" not in template and "better than" not in template
 
 
 def test_report_command_on_the_fake_set(tmp_path, capsys):
@@ -724,7 +726,7 @@ def test_report_command_on_the_fake_set(tmp_path, capsys):
     assert "Laya english absent de ce run" in text  # an absent candidate fills its hole, said as such
     assert "La règle des 2 σ" in text and "borne basse > 2 σ = 0,010" in text
     # the absent roles and panels are said, never a crash
-    assert "La prédiction 1 n'a pas été évaluée" in text and "La prédiction 2 n'a pas été évaluée" in text
+    assert "Prediction 1 was not evaluated" in text and "Prediction 2 was not evaluated" in text
     assert "figure `confusion` : `laya-multilingual-tier` absent : pas de panneau de confusion" in text
     assert "plancher, `length` : pas de ligne de plancher" in text
     # the captions under the figures, filled from the tables and the profile (fake: s1d1 1 ms on cpu, judges 1-3 s)
@@ -999,13 +1001,14 @@ def test_predictions_wording_reads_the_point_values_and_the_overlap():
     }
     text = _predictions_first(computed, "360 ids", "90 prompts de base")
     first, second = text.split("\n\n")[:2]
-    assert first.startswith("**La prédiction 2 n'est pas vérifiée : `litellm-heuristic` (0,090 [0,030 ; 0,170]) est")
-    assert "devait se tenir entre `length` et `s1d1-full-int8`" in first
+    assert first.startswith("**Prediction 2 does not hold: `litellm-heuristic` (0.090 [0.030, 0.170]) is below")
+    assert "should sit between `length` and `s1d1-full-int8`" in first
+    assert "1,000 draws of the 90 base prompts" in first  # the French count of the summary, said in English
     assert "QWK(" not in text  # said in words, not as a formula repeated
-    assert "les IC de `litellm-heuristic` et de `length` ne se recouvrent pas" in first
-    assert second.startswith("**La prédiction 1 n'est pas vérifiée : les QWK en fra et rus ne sont pas au-dessous")
-    assert "les IC de fra et rus recouvrent celui de eng ; l'IC de zho ne recouvre pas celui de eng" in second
-    assert "−0,020" in second  # the true minus sign in prose numbers
+    assert "the CIs of `litellm-heuristic` and `length` do not overlap" in first
+    assert second.startswith("**Prediction 1 does not hold: the QWKs in fra and rus are not below")
+    assert "the CIs of fra and rus overlap that of eng; the CI of zho does not overlap that of eng" in second
+    assert "−0.020" in second  # the true minus sign in prose numbers
 
 
 def test_report_command_refuses_a_missing_template_before_computing(tmp_path, capsys, monkeypatch):
