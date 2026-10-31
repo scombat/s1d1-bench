@@ -1,6 +1,7 @@
 """The `bench` command line: one subcommand per step of the kit."""
 
 import argparse
+import os
 import sys
 from importlib import import_module
 from pathlib import Path
@@ -20,6 +21,7 @@ COMMANDS: dict[str, tuple[str, str]] = {
     "classify": ("classify", "run_classify_cmd"),
     "run": ("run", "run_run_cmd"),
     "report": ("report", "run_report_cmd"),
+    "profile": ("profile", "run_profile_cmd"),
 }
 
 # subcommand -> the dependency group its module needs on import (report: numpy, which comes with matplotlib)
@@ -40,6 +42,9 @@ _HELP = {
     ),
     "run": "merge the judge and classifier folders of a set into one table, with the truths of the main judges",
     "report": "write the report of a results table: tables (CSV), figures (SVG + CSV) and index.md from a template",
+    "profile": (
+        "time every model of a run at batch 1 after warm-up (p50, p95, mean), its peak RSS and its weights on disk"
+    ),
 }
 
 
@@ -269,6 +274,24 @@ def _report_arguments(sub: argparse.ArgumentParser) -> None:
     )
 
 
+def _profile_arguments(sub: argparse.ArgumentParser) -> None:
+    sub.add_argument("--prompts", type=Path, required=True, help="prompts file of the run (jsonl of id, prompt)")
+    sub.add_argument("--run", type=Path, required=True, help="run file of bench run, results/<set>.run.json")
+    sub.add_argument("--classifiers-dir", type=Path, default=Path("classifiers"), help="root of the classifier folders")
+    sub.add_argument("--judges-dir", type=Path, default=Path("judges"), help="root of the judge folders")
+    sub.add_argument(
+        "--models-dir",
+        type=Path,
+        default=Path(os.path.expanduser("~/mlx-models")),
+        help="folder of the judge weights, <org>--<name> (default: ~/mlx-models)",
+    )
+    sub.add_argument("--out", type=Path, required=True, help="profile file, results/<set>.profile.json (rewritten)")
+    sub.add_argument("--warmup", type=int, default=10, help="calls before the timed ones, per classifier (10)")
+    sub.add_argument(
+        "--only", default=None, help="comma-separated classifier or judge names of the run (default: all of them)"
+    )
+
+
 # subcommand -> function adding its arguments to its parser
 _ARGUMENTS = {
     "pool": _pool_arguments,
@@ -283,6 +306,7 @@ _ARGUMENTS = {
     "classify": _classify_arguments,
     "run": _run_arguments,
     "report": _report_arguments,
+    "profile": _profile_arguments,
 }
 
 

@@ -78,6 +78,9 @@ uv run --group report bench report --results results/base-v1.parquet --meta data
   des juges principaux (`results/<jeu>.parquet` et `<jeu>.run.json`).
 - `bench report` : écrit le rapport d'un jeu (`report/<jeu>/index.md`, vingt-cinq tableaux CSV, sept figures SVG avec leur
   CSV) depuis `results/<jeu>.parquet` ; voir [Le rapport](#le-rapport).
+- `bench profile` : mesure, pour chaque modèle d'un run, la latence par prompt à lot de 1 après chauffe (p50, p95,
+  moyenne), la mémoire de crête du processus et le poids des fichiers de poids (`results/<jeu>.profile.json`) ; voir
+  [Le profil](#le-profil).
 
 Installation : `uv sync --group pool --group dev` (sur Apple silicon, pour faire tourner un juge :
 `uv sync --group pool --group judge --group dev`), puis `uv run bench --help`.
@@ -581,6 +584,41 @@ prompts notés 0,70 à 0,80 que les juges mettent en `high` ou au-dessus, les co
 de confusion normalisée de la tâche), et `expert` n'a que 8 ids sur 360 (2 prompts de base) : tout ce qui touche ce
 palier est dit sur très peu de prompts. Les 360 ids ne sont pas 360 prompts indépendants : ce sont 90 prompts de base en
 quatre versions, et les IC en tiennent compte.
+
+### Le profil
+
+`results/base-v1.profile.json` est écrit par `bench profile` à partir de `results/base-v1.run.json`. Il se refait sur
+le Mac, avec les poids déjà présents en local : la commande pose `HF_HUB_OFFLINE=1`, rien n'est téléchargé, et un modèle
+absent du cache échoue au lieu de se télécharger.
+
+```
+uv run --group s1d1 --group s1d1-torch --group laya bench profile --prompts data/prompts/base-v1.jsonl \
+    --run results/base-v1.run.json --judges-dir judges --models-dir ~/mlx-models --out results/base-v1.profile.json
+```
+
+**Ce qu'il mesure.** Pour chaque classifieur du run dont le `meta.json` nomme un modèle (s1d1 ×5, Laya ×2,
+l'heuristique de LiteLLM), la commande recharge le modèle par son adaptateur, aux mêmes `model`, `revision`, backend et
+checkpoint (la ligne « Replay » de `meta.json`), dans un processus Python neuf ; elle le chauffe sur 10 appels, puis
+chronomètre un appel par prompt du fichier, un prompt par appel (lot de 1, `time.perf_counter_ns`, 360 prompts) : p50,
+p95 et moyenne en millisecondes. La mémoire de crête est le `ru_maxrss` de ce processus, lu après les appels
+chronométrés ; un processus par modèle, pour que la crête de l'un ne soit pas celle d'un autre. Le poids est la taille
+sur disque des fichiers de poids de la révision épinglée dans le cache local du Hub (le `.onnx` int8 des variantes int8,
+le `.safetensors` fp16 de `s1d1-full-fp16`, le fichier de chaque tête pour Laya ; 0 pour LiteLLM), en Mo de 10⁶ octets.
+Pour les juges, la latence vient de leur `log.jsonl` (`wall_s` des appels finis `ok`, un prompt par appel par
+construction) et le poids des fichiers de `~/mlx-models/<org>--<nom>`. Les appareils sont ceux que les adaptateurs
+rapportent : s1d1 int8 et LiteLLM sur CPU, s1d1 fp16 et Laya sur le GPU du Mac (MPS), les juges sur le GPU par MLX. Les
+témoins ne sont pas des modèles : ils sont listés dans `meta.skipped`, comme le serait un modèle qui n'a pas pu se
+charger (le fichier est alors écrit sans lui et la commande sort en code 1). `--only nom,...` restreint la mesure à des
+noms du run, les autres allant dans `meta.skipped` ; un nom hors du run est refusé. `bench validate` ne lit pas ce
+fichier.
+
+**Ce qu'il ne dit pas.** La latence d'un juge comprend la lecture de la consigne v7 (environ 1 900 jetons) et la
+génération de sa réponse, raisonnement compris : elle dit ce que coûte un juge employé comme routeur, pas la vitesse du
+modèle sur le seul prompt. La mémoire de crête comprend l'interpréteur, les bibliothèques (onnxruntime, torch,
+tokenizers) et le chargement du modèle : ce n'est pas la taille du modèle seul ; sur MPS, la mémoire tenue par le pilote
+du GPU peut y manquer ; pour les juges, elle n'est pas mesurable après coup (`null`). Les latences bougent d'une
+exécution à l'autre : le fichier est une mesure, pas un calcul, et ne se refait pas à l'octet près. Il a été mesuré une
+fois, sur un M4 Max au repos, en une minute (58 s pour les huit classifieurs et les cinq juges).
 
 ## Dépendances
 
