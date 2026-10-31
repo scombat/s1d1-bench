@@ -1,0 +1,18 @@
+{
+  "judge": "llm4b-gemma4-e4b-off",
+  "model": "mlx-community/gemma-4-e4b-it-8bit",
+  "provider": "local",
+  "revision": "4255b21bd9a9d3fc807ef7abd80373f5e3a52a73",
+  "date": "2026-10-31",
+  "temperature": 0,
+  "thinking": "off",
+  "instructions": "v7-single",
+  "prompts_sha256": "e6a6d4c12ef8b95caea942337a3a1e16ec1622cb4e75c8ee0b473ef609a32490",
+  "author": "scombat",
+  "replayable": true,
+  "licence": "CC-BY-4.0",
+  "notes": "Candidate, not a judge: a small local LLM that reads the v7 instruction like the judges (bench judge, provider local, same instruction v7-single, temperature 0, --max-tokens 1024, thinking off), kept in the judge format (log.jsonl has the time of each call) and loaded by bench run as a classifier folder; it is not in --main. Model: Gemma 4 E4B-it ('effective 4B' of the Gemma 4 family, the family of the Gemma 4 31B judge), 8-bit MLX conversion mlx-community/gemma-4-e4b-it-8bit (8.9 GB on disk), downloaded without a token at the revision above. The model card of the conversion says licence 'gemma'; its base google/gemma-4-E4B-it says Apache-2.0. Replay: HF_HUB_DISABLE_IMPLICIT_TOKEN=1 uv run --group judge bench judge --model mlx-community/gemma-4-e4b-it-8bit --prompts data/prompts/base-v1.jsonl --out classifiers/llm4b-gemma4-e4b-off --author <name> --thinking off --max-tokens 1024. Run on 2026-10-31 on an Apple M4 Max 128 GB: 360 prompts in about 7 minutes (median 1.1 s per prompt, about 2 000 prompt tokens and 20 generated tokens). 4 abstentions (json_error): the model answered with a task name that is not one of the rubric's 19 (calculation twice, mathematics, linguistic_analysis), the answer kept in log.jsonl; the 4 ids have no tier and are left out of the report's figures for this candidate (356 ids). gemma4: enable_thinking=False (the chat template prefills an empty thought channel): no reasoning.",
+  "quantization": "8bit-gs64",
+  "mlx_lm_version": "0.32.2",
+  "max_tokens": 1024
+}
