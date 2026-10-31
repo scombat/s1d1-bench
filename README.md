@@ -18,6 +18,46 @@ Les décisions citées `docs/NN` sont dans [`docs/`](docs/README.md).
   agentiques et multi-tours sont absents, le jeu est fait de premiers prompts.
 - **Non mesuré : les autres langues.** Seules les quatre langues choisies sont couvertes.
 
+## Résultats (`base-v1`, 2026-10-30)
+
+La phrase de docs/32 § 5, remplie avec les chiffres du rapport de `base-v1` (360 ids, 90 prompts de base) :
+
+> Sur 360 ids, soit 90 prompts de base en 4 langues, `s1d1-full-int8` s'accorde avec la médiane de 3 juges à QWK 0,807
+> [0,734 ; 0,852] ; le plafond inter-juges est 0,774 [0,718 ; 0,815] (chaque juge principal contre les deux autres, 8
+> votes et non 12 : `base-v1-gemma4-cap512` 0,827, `base-v1-qwen3-cap512` 0,794, `base-v1-gptoss-cap512` 0,702) ; Laya
+> english 0,405 [0,314 ; 0,490], Laya multilingual 0,119 [−0,040 ; 0,264] ; l'heuristique de LiteLLM 0,089 [0,026 ;
+> 0,172] ; la longueur du prompt 0,543 [0,424 ; 0,647]. L'IC de `s1d1-full-int8` contient la moyenne du plafond ;
+> `s1d1-full-int8` se distingue du plancher `length` selon la règle des 2 σ (écart apparié `s1d1-full-int8` −
+> `length` : 0,264 [0,159 ; 0,383]).
+
+![Accord de chaque candidat avec la médiane des juges principaux](report/base-v1/figures/qwk-bars.svg)
+
+![QWK par langue](report/base-v1/figures/qwk-by-language.svg)
+
+QWK contre `truth_all` (la médiane des trois juges principaux), IC à 95 % sur 1 000 tirages des 90 prompts de base ;
+« palier exact » est la part des ids dont le palier est celui de `truth_all` :
+
+| candidat | QWK [IC 95 %] | palier exact [IC 95 %] |
+|---|---|---|
+| s1d1 full int8 | 0,807 [0,734 ; 0,852] | 0,656 [0,569 ; 0,733] |
+| s1d1 small int8 | 0,772 [0,700 ; 0,822] | 0,650 [0,561 ; 0,731] |
+| plafond (moyenne des trois juges) | 0,774 [0,718 ; 0,815] | 0,600 [0,523 ; 0,671] |
+| longueur (témoin `length`) | 0,543 [0,424 ; 0,647] | 0,394 [0,300 ; 0,483] |
+| Laya english (`laya-english-tier`) | 0,405 [0,314 ; 0,490] | 0,311 [0,247 ; 0,386] |
+| Laya multilingual (`laya-multilingual-tier`) | 0,119 [−0,040 ; 0,264] | 0,278 [0,203 ; 0,353] |
+| LiteLLM heuristic | 0,089 [0,026 ; 0,172] | 0,342 [0,250 ; 0,436] |
+
+Les juges sont l'instrument de mesure, pas des concurrents : aucun tableau ne range un candidat face à un juge, sauf le
+plafond. Aucune phrase « meilleur que » sans la règle des 2 σ (l'IC de l'écart apparié exclut zéro et dépasse 2 σ,
+σ = 0,005) : `s1d1-full-int8` ne la passe ni contre `s1d1-full-fp16`, ni contre `small`, ni contre `compact`, les
+variantes s1d1 de cette taille ne se départagent pas (seul `tiny` est séparé). Tout le reste est dans
+[`report/base-v1/index.md`](report/base-v1/index.md) ; pour le régénérer, depuis la racine du dépôt :
+
+```
+uv run --group report bench report --results results/base-v1.parquet --meta data/prompts/base-v1.meta.parquet \
+    --classifiers classifiers --out report/base-v1
+```
+
 ## Les commandes
 
 - `bench pool` : construit le jeu de prompts à partir de jeux publics du Hub.
