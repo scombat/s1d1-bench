@@ -608,133 +608,137 @@ Pairwise agreement (`bench agree judges/base-v1-*`):
 These two tables are counts, given once here, with no interval or agreement metric; the QWKs, their confidence
 intervals and what they say are in [The report](#the-report).
 
-## Le rapport
+## The report
 
-`report/base-v1/` est écrit par `bench report` à partir de `results/base-v1.parquet` ; il est dérivé comme `results/`,
-et se régénère (même entrée, mêmes octets : le rapport est déterministe, SVG compris). Le refaire :
+`report/base-v1/` is written by `bench report` from `results/base-v1.parquet`; it is derived like `results/`,
+and regenerated (same input, same bytes: the report is deterministic, SVG included). To redo it:
 
 ```
 uv run --group report bench report --results results/base-v1.parquet --meta data/prompts/base-v1.meta.parquet \
     --classifiers classifiers --out report/base-v1
 ```
 
-`--classifiers` est la racine des dossiers : la bande du témoin aléatoire se lit dans `classifiers/random/draws.jsonl`
-(dix tirages), `results/base-v1.run.json` ne donnant que les noms. Le profil de `bench profile` est lu à côté des
-résultats (`results/base-v1.profile.json`) ou là où `--profile` le nomme ; sans profil, le tableau `profile` et les deux
-figures de vitesse et d'empreinte manquent, et le rapport le dit. Une quinzaine de secondes. La commande refuse de
-tourner (code 1, un message) si un dossier de classifieur nommé par `run.json` manque à la racine, si `run.json` n'a pas
-l'une des clés `classifiers`, `judges`, `main` ou la table méta l'une des colonnes `source`, `origin`, si le gabarit
-`report/TEMPLATE.md` est introuvable, si `--profile` nomme un fichier absent, ou si `matplotlib` (groupe `report`)
-n'est pas installé.
+`--classifiers` is the root of the folders: the band of the random witness is read from `classifiers/random/draws.jsonl`
+(ten draws), `results/base-v1.run.json` giving only the names. The `bench profile` profile is read next to the
+results (`results/base-v1.profile.json`) or where `--profile` names it; without a profile, the `profile` table and the two
+speed and footprint figures are missing, and the report says so. About fifteen seconds. The command refuses to
+run (code 1, a message) if a classifier folder named by `run.json` is missing from the root, if `run.json` lacks
+one of the keys `classifiers`, `judges` or `main` or the meta table one of the columns `source`, `origin`, if the template
+`report/TEMPLATE.md` cannot be found, if `--profile` names a missing file, or if `matplotlib` (group `report`)
+is not installed.
 
-**Ce qu'il contient.** `index.md` (lu de haut en bas : les deux prédictions de docs/34 § 7.4 d'abord, celle qui ne se
-vérifie pas en tête ; la phrase de docs/32 § 5 avec ses chiffres ; les mises en garde de docs/32 § 2 ; l'accord de chaque
-candidat et de chaque juge avec `truth_all` puis `truth_all_nogemma` ; le plafond, le plancher, les écarts appariés ; par
-langue, par source, par origine, par palier ; `task` et `needs_tools` ; les rangs et la calibration du score ; ce qui
-manque), `tables/` (vingt-sept CSV, dont `profile` et `tier_distribution`) et `figures/` (dix SVG, chacun avec le CSV
-de ses données et une légende en français dessous dans `index.md` : les sept de l'accord, plus la qualité contre la
-latence, contre le poids sur disque, et la distribution des paliers prédits). Le gabarit
-`report/TEMPLATE.md` porte les mises en garde et la phrase à trous ; le code remplit les trous avec les chiffres tels
-qu'ils sortent, et les deux clauses finales de la phrase suivent des règles écrites dans `src/s1d1_bench/report_index.py`
-et citées dans le rapport. Les intervalles sont à 95 %, par rééchantillonnage des 90 prompts de base (1 000 tirages,
-graine 0, les quatre versions suivent leur prompt de base).
+The report's language: the first section of `index.md` ("What this report says first") is in English, followed by a
+one-line note saying that the rest of the report is in French (prose, table headers and figure captions). The template
+`report/TEMPLATE.md` is in the same state, and the figures themselves are in English.
 
-**Ce qu'il dit.** Sur 360 ids (90 prompts de base en quatre langues), `s1d1-full-int8` s'accorde avec la médiane des trois
-juges principaux à QWK 0,807 [0,734 ; 0,852] et `s1d1-full-fp16` à 0,814 [0,738 ; 0,865] ; le plafond (chaque juge
-principal contre les deux autres, 8 votes) vaut 0,774 [0,718 ; 0,815] en moyenne ; le plancher informé, la longueur du
-prompt, 0,543 [0,424 ; 0,647], et le hasard −0,028 à 0,049 sur dix tirages. Laya, lu nom à nom, est à 0,405 [0,314 ; 0,490]
-(english) et 0,119 [−0,040 ; 0,264] (multilingual) ; l'heuristique de LiteLLM à 0,089 [0,026 ; 0,172]. **La prédiction 2 de
-docs/34 § 7.4 (LiteLLM entre `length` et s1d1) ne se vérifie pas** : LiteLLM est au-dessous de `length`, et sa prédiction
-de palier est `low` pour 93 % des ids, son exactitude (0,342) restant à côté de celle de `constant-low` (0,322). La
-prédiction 1 (son QWK tombe en français, russe et chinois) se vérifie sur les valeurs ponctuelles, sans que les IC se
-séparent. Chaque chiffre est dans un tableau de `report/base-v1/tables/`, cité dans `index.md`.
+**What it contains.** `index.md` (read from top to bottom: the two predictions of docs/34 § 7.4 first, the one that does not
+hold at the head; the sentence of docs/32 § 5 with its figures; the caveats of docs/32 § 2; the agreement of each
+candidate and each judge with `truth_all` then `truth_all_nogemma`; the ceiling, the floor, the paired gaps; by
+language, by source, by origin, by tier; `task` and `needs_tools`; the ranks and the calibration of the score; what is
+missing), `tables/` (twenty-seven CSVs, among them `profile` and `tier_distribution`) and `figures/` (ten SVGs, each with the CSV
+of its data and a caption below it in `index.md` (in French): the seven on agreement, plus quality against
+latency, against weight on disk, and the distribution of predicted tiers). The template
+`report/TEMPLATE.md` carries the caveats and the sentence with holes; the code fills the holes with the figures as
+they come out, and the two final clauses of the sentence follow rules written in `src/s1d1_bench/report_index.py`
+and quoted in the report. The intervals are at 95%, by resampling the 90 base prompts (1,000 draws,
+seed 0, the four versions follow their base prompt).
 
-**Ce qu'il ne prouve pas.** Il ne sépare pas `s1d1-full-int8` de `s1d1-full-fp16`, de `small` ni de `compact` : les
-écarts appariés de `fp16` et de `small` ont un IC qui contient zéro, celui de `compact` (0,048 [0,009 ; 0,089]) exclut
-zéro mais sa borne basse n'est pas au-delà de 2 σ = 0,010 (σ = 0,005, [docs/18](docs/README.md), lecture stricte écrite
-dans le rapport). Les trois juges principaux sont dans la vérité : leur accord avec elle compte leurs propres votes, et
-le chiffre qui les compare est le plafond. Gemma 4 a produit les étiquettes d'entraînement de s1d1 (docs/32 § 4.4) et
-est dans `truth_all` : le rapport donne l'accord contre la médiane sans Gemma (`truth_all_nogemma`, tableau « Sans Gemma
-4 ») ; `s1d1-full-int8` y passe de 0,807 à 0,785 (`fp16` de 0,814 à 0,794) ; parmi les candidats qui n'ont pas vu Gemma,
-`length` passe de 0,543 à 0,478 et `laya-english-tier` de 0,405 à 0,347, tandis que `litellm-heuristic` (0,089 → 0,106)
-et `laya-multilingual-tier` (0,119 → 0,115), proches du plancher, ne baissent guère. Ces écarts se lisent sur les
-valeurs ponctuelles, sans IC (aucun écart apparié entre vérités n'est calculé). Sans Gemma, la vérité est la médiane des
-8 votes de deux juges, arrondie vers le bas : `expert` disparaît (8 ids → 0), `high` passe de 52 à 28 ids, 20 des 90
-prompts de base changent de palier (18 vers le bas), et un candidat qui ne prédit jamais `expert`, comme s1d1, peut y
-perdre moins. Les deux juges restants s'accordent avec Gemma (QWK 0,879 pour Qwen 3, 0,707 pour gpt-oss, tableau des
-juges). Le tableau « Sans Gemma 4 » ne dit donc pas si s1d1 hérite des biais de Gemma. Le rapport ne mesure pas la
-grille, le routage, la distribution réelle des prompts, les prompts agentiques ou multi-tours, ni les langues autres que
-les quatre ; trois analyses de [docs/32](docs/32-open-bench-kit.md) ne sont pas produites dans ce lot (la part des
-prompts notés 0,70 à 0,80 que les juges mettent en `high` ou au-dessus, les confusions entre tâches voisines, la matrice
-de confusion normalisée de la tâche), et `expert` n'a que 8 ids sur 360 (2 prompts de base) : tout ce qui touche ce
-palier est dit sur très peu de prompts. Les 360 ids ne sont pas 360 prompts indépendants : ce sont 90 prompts de base en
-quatre versions, et les IC en tiennent compte.
+**What it says.** Over 360 ids (90 base prompts in four languages), `s1d1-full-int8` agrees with the median of the three
+main judges at QWK 0.807 [0.734, 0.852] and `s1d1-full-fp16` at 0.814 [0.738, 0.865]; the ceiling (each main
+judge against the other two, 8 votes) is 0.774 [0.718, 0.815] on average; the informed floor, the prompt
+length, is 0.543 [0.424, 0.647], and chance −0.028 to 0.049 over ten draws. Laya, read name by name, is at 0.405 [0.314, 0.490]
+(english) and 0.119 [−0.040, 0.264] (multilingual); LiteLLM's heuristic at 0.089 [0.026, 0.172]. **Prediction 2 of
+docs/34 § 7.4 (LiteLLM between `length` and s1d1) does not hold**: LiteLLM is below `length`, and its tier prediction
+is `low` for 93% of the ids, its accuracy (0.342) staying next to that of `constant-low` (0.322). Prediction 1 (its QWK
+drops in French, Russian and Chinese) holds on the point values, without the CIs
+separating. Every figure is in a table of `report/base-v1/tables/`, cited in `index.md`.
 
-### Le profil
+**What it does not prove.** It does not separate `s1d1-full-int8` from `s1d1-full-fp16`, `small` or `compact`: the
+paired gaps of `fp16` and `small` have a CI that contains zero, that of `compact` (0.048 [0.009, 0.089]) excludes
+zero but its lower bound is not beyond 2 σ = 0.010 (σ = 0.005, [docs/18](docs/README.md), strict reading written
+in the report). The three main judges are in the truth: their agreement with it counts their own votes, and
+the figure that compares them is the ceiling. Gemma 4 produced the training labels of s1d1 (docs/32 § 4.4) and
+is in `truth_all`: the report gives the agreement against the median without Gemma (`truth_all_nogemma`, "Without Gemma
+4" table); `s1d1-full-int8` goes from 0.807 to 0.785 there (`fp16` from 0.814 to 0.794); among the candidates that have not seen Gemma,
+`length` goes from 0.543 to 0.478 and `laya-english-tier` from 0.405 to 0.347, while `litellm-heuristic` (0.089 → 0.106)
+and `laya-multilingual-tier` (0.119 → 0.115), close to the floor, hardly drop. These gaps are read on the
+point values, without CI (no paired gap between truths is computed). Without Gemma, the truth is the median of the
+8 votes of two judges, rounded down: `expert` disappears (8 ids → 0), `high` goes from 52 to 28 ids, 20 of the 90
+base prompts change tier (18 downwards), and a candidate that never predicts `expert`, like s1d1, may
+lose less there. The two remaining judges agree with Gemma (QWK 0.879 for Qwen 3, 0.707 for gpt-oss, judges
+table). The "Without Gemma 4" table therefore does not say whether s1d1 inherits Gemma's biases. The report does not measure the
+rubric, routing, the real distribution of prompts, agentic or multi-turn prompts, nor languages other than
+the four; three analyses of [docs/32](docs/32-open-bench-kit.md) are not produced in this batch (the share of
+prompts scored 0.70 to 0.80 that the judges put in `high` or above, the confusions between neighbouring tasks, the normalised
+confusion matrix of the task), and `expert` has only 8 ids out of 360 (2 base prompts): everything that touches this
+tier is said on very few prompts. The 360 ids are not 360 independent prompts: they are 90 base prompts in
+four versions, and the CIs take this into account.
 
-`results/base-v1.profile.json` est écrit par `bench profile` à partir de `results/base-v1.run.json`. Il se refait sur
-le Mac, avec les poids déjà présents en local : la commande pose `HF_HUB_OFFLINE=1`, rien n'est téléchargé, et un modèle
-absent du cache échoue au lieu de se télécharger.
+### The profile
+
+`results/base-v1.profile.json` is written by `bench profile` from `results/base-v1.run.json`. It is redone on
+the Mac, with the weights already present locally: the command sets `HF_HUB_OFFLINE=1`, nothing is downloaded, and a model
+absent from the cache fails instead of being downloaded.
 
 ```
 uv run --group s1d1 --group s1d1-torch --group laya bench profile --prompts data/prompts/base-v1.jsonl \
     --run results/base-v1.run.json --judges-dir judges --models-dir ~/mlx-models --out results/base-v1.profile.json
 ```
 
-**Ce qu'il mesure.** Pour chaque classifieur du run dont le `meta.json` nomme un modèle (s1d1 ×5, Laya ×2,
-l'heuristique de LiteLLM), la commande recharge le modèle par son adaptateur, aux mêmes `model`, `revision`, backend et
-checkpoint (la ligne « Replay » de `meta.json`), dans un processus Python neuf ; elle le chauffe sur 10 appels, puis
-chronomètre un appel par prompt du fichier, un prompt par appel (lot de 1, `time.perf_counter_ns`, 360 prompts) : p50,
-p95 et moyenne en millisecondes. La mémoire de crête est le `ru_maxrss` de ce processus, lu après les appels
-chronométrés ; un processus par modèle, pour que la crête de l'un ne soit pas celle d'un autre. Le poids est la taille
-sur disque des fichiers de poids de la révision épinglée dans le cache local du Hub (le `.onnx` int8 des variantes int8,
-le `.safetensors` fp16 de `s1d1-full-fp16`, le fichier de chaque tête pour Laya ; 0 pour LiteLLM), en Mo de 10⁶ octets.
-Pour les juges, la latence vient de leur `log.jsonl` (`wall_s` des appels finis `ok`, un prompt par appel par
-construction) et le poids des fichiers de `~/mlx-models/<org>--<nom>`. Les appareils sont ceux que les adaptateurs
-rapportent : s1d1 int8 et LiteLLM sur CPU, s1d1 fp16 et Laya sur le GPU du Mac (MPS), les juges sur le GPU par MLX. Les
-témoins ne sont pas des modèles : ils sont listés dans `meta.skipped`, comme le serait un modèle qui n'a pas pu se
-charger (le fichier est alors écrit sans lui et la commande sort en code 1). `--only nom,...` restreint la mesure à des
-noms du run, les autres allant dans `meta.skipped` ; un nom hors du run est refusé. `bench validate` ne lit pas ce
-fichier.
+**What it measures.** For each classifier of the run whose `meta.json` names a model (s1d1 ×5, Laya ×2,
+LiteLLM's heuristic), the command reloads the model through its adapter, with the same `model`, `revision`, backend and
+checkpoint (the "Replay" line of `meta.json`), in a fresh Python process; it warms it up on 10 calls, then
+times one call per prompt of the file, one prompt per call (batch of 1, `time.perf_counter_ns`, 360 prompts): p50,
+p95 and mean in milliseconds. The peak memory is the `ru_maxrss` of this process, read after the timed calls;
+one process per model, so that one's peak is not another's. The weight is the size on disk of the weight files of the
+revision pinned in the Hub's local cache (the int8 `.onnx` of the int8 variants, the fp16 `.safetensors` of `s1d1-full-fp16`,
+the file of each head for Laya; 0 for LiteLLM), in MB of 10⁶ bytes.
+For the judges, the latency comes from their `log.jsonl` (`wall_s` of the calls finished `ok`, one prompt per call by
+construction) and the weight from the files of `~/mlx-models/<org>--<name>`. The devices are those the adapters
+report: s1d1 int8 and LiteLLM on CPU, s1d1 fp16 and Laya on the Mac's GPU (MPS), the judges on the GPU through MLX. The
+witnesses are not models: they are listed in `meta.skipped`, as a model that could not be
+loaded would be (the file is then written without it and the command exits with code 1). `--only name,...` restricts the measurement to
+names of the run, the others going into `meta.skipped`; a name outside the run is refused. `bench validate` does not read this
+file.
 
-**Ce qu'il ne dit pas.** La latence d'un juge comprend la lecture de la consigne v7 (environ 1 900 jetons) et la
-génération de sa réponse, raisonnement compris : elle dit ce que coûte un juge employé comme routeur, pas la vitesse du
-modèle sur le seul prompt. La mémoire de crête comprend l'interpréteur, les bibliothèques (onnxruntime, torch,
-tokenizers) et le chargement du modèle : ce n'est pas la taille du modèle seul ; sur MPS, la mémoire tenue par le pilote
-du GPU peut y manquer ; pour les juges, elle n'est pas mesurable après coup (`null`). Les latences bougent d'une
-exécution à l'autre : le fichier est une mesure, pas un calcul, et ne se refait pas à l'octet près. Il a été mesuré une
-fois, sur un M4 Max, en une minute (58 s pour les huit classifieurs et les cinq juges).
+**What it does not say.** A judge's latency includes reading the v7 instructions (about 1,900 tokens) and the
+generation of its answer, reasoning included: it says what a judge costs when used as a router, not the speed of the
+model on the prompt alone. The peak memory includes the interpreter, the libraries (onnxruntime, torch,
+tokenizers) and the loading of the model: it is not the size of the model alone; on MPS, the memory held by the GPU
+driver may be missing from it; for the judges, it cannot be measured after the fact (`null`). The latencies move from one
+run to the next: the file is a measurement, not a computation, and is not redone to the byte. It was measured
+once, on an M4 Max, in one minute (58 s for the eight classifiers and the five judges).
 
-## Dépendances
+## Dependencies
 
-| Dépendance | Groupe | Raison |
+| Dependency | Group | Reason |
 |---|---|---|
-| `pyarrow` | principal | lecture et écriture des fichiers parquet du jeu de prompts |
-| `datasets` | `pool` | lecture des jeux publics dont le jeu de prompts est tiré |
-| `huggingface_hub` | `pool` | accès en lecture seule aux jeux publics du Hub, sans jeton |
-| `mlx-lm` | `judge` | exécution locale des juges sur Apple silicon |
-| `onnxruntime`, `tokenizers`, `numpy`, `huggingface_hub` | `s1d1` | classifieur s1d1 en ONNX int8 (CPU) |
-| `torch`, `transformers` | `s1d1-torch` | classifieur s1d1 en PyTorch fp16 |
-| `laya` (0.4.15) | `laya` | classifieur Laya |
-| `matplotlib` (et `numpy`, qu'il apporte) | `report` | figures SVG de `bench report` et statistiques de `metrics.py` |
-| aucune | aucun | classifieur `litellm-heuristic` : code de LiteLLM copié dans le dépôt, sans le paquet `litellm` |
-| `pytest` | `dev` | tests, sans réseau et sans modèle |
-| `ruff` | `dev` | lint et tri des imports |
+| `pyarrow` | main | reading and writing the parquet files of the prompt set |
+| `datasets` | `pool` | reading the public datasets the prompt set is drawn from |
+| `huggingface_hub` | `pool` | read-only access to the Hub's public datasets, no token |
+| `mlx-lm` | `judge` | local execution of the judges on Apple silicon |
+| `onnxruntime`, `tokenizers`, `numpy`, `huggingface_hub` | `s1d1` | s1d1 classifier in ONNX int8 (CPU) |
+| `torch`, `transformers` | `s1d1-torch` | s1d1 classifier in PyTorch fp16 |
+| `laya` (0.4.15) | `laya` | Laya classifier |
+| `matplotlib` (and `numpy`, which it brings) | `report` | SVG figures of `bench report` and statistics of `metrics.py` |
+| none | none | `litellm-heuristic` classifier: LiteLLM code copied into the repository, without the `litellm` package |
+| `pytest` | `dev` | tests, no network and no model |
+| `ruff` | `dev` | lint and import sorting |
 
 ## Licences
 
-- Code : [Apache-2.0](LICENSE), **sauf** `src/s1d1_bench/vendor/litellm_heuristic/`, copie mot pour mot du scorer
-  heuristique de LiteLLM au tag v1.106.6, sous licence MIT (licence et notice des changements dans le dossier).
-- Prompts d'autres jeux publics : les prompts de `data/pool/*`, de `data/prompts/trial-50.*` et des lots sont repris
-  tels quels de Dolly (CC-BY-SA-3.0), d'OASST2 et de m-ArenaHard (Apache-2.0) ; chacun garde sa licence, donnée ligne
-  par ligne dans la colonne `licence` de `pool.parquet` et de `<jeu>.meta.parquet`. Le détail est dans
+- Code: [Apache-2.0](LICENSE), **except** `src/s1d1_bench/vendor/litellm_heuristic/`, a word-for-word copy of LiteLLM's
+  heuristic scorer at tag v1.106.6, under the MIT licence (licence and notice of changes in the folder).
+- Prompts from other public datasets: the prompts of `data/pool/*`, of `data/prompts/trial-50.*` and of the batches are taken
+  as they are from Dolly (CC-BY-SA-3.0), OASST2 and m-ArenaHard (Apache-2.0); each keeps its licence, given line
+  by line in the `licence` column of `pool.parquet` and of `<set>.meta.parquet`. The detail is in
   [data/README.md](data/README.md).
-- Arena-Hard : les prompts anglais d'Arena-Hard viennent d'`arena-hard-auto` v0.1 (lmarena, Apache-2.0, prompts
-  d'utilisateurs de Chatbot Arena) et leurs traductions de `CohereLabs/m-ArenaHard` (Apache-2.0) ; les conditions de la
-  collecte amont auprès des utilisateurs de Chatbot Arena ne sont pas vérifiables en aval.
-- [CC-BY-4.0](data/LICENSE) (`data/LICENSE`) : les prompts écrits à la main et leurs traductions, les fichiers de juges
-  (`judges/`), les fichiers de classifieurs (`classifiers/`), les résultats (`results/`), le rapport (`report/<jeu>/`),
-  la rubrique `src/s1d1_bench/rubric/judge-rubric-v7.txt`, les consignes `consigne/`, les vérifications
-  (`data/checks/`), les documents copiés dans `docs/` (voir [docs/README.md](docs/README.md)), la liste d'exclusion
-  et les statistiques. Les traductions des prompts d'un jeu public sont des
-  œuvres dérivées et gardent la licence de la ligne (colonne `licence` de `meta.parquet`).
+- Arena-Hard: the English Arena-Hard prompts come from `arena-hard-auto` v0.1 (lmarena, Apache-2.0, prompts
+  from Chatbot Arena users) and their translations from `CohereLabs/m-ArenaHard` (Apache-2.0); the conditions of the
+  upstream collection from Chatbot Arena users cannot be verified downstream.
+- [CC-BY-4.0](data/LICENSE) (`data/LICENSE`): the handwritten prompts and their translations, the judge files
+  (`judges/`), the classifier files (`classifiers/`), the results (`results/`), the report (`report/<set>/`),
+  the rubric `src/s1d1_bench/rubric/judge-rubric-v7.txt`, the instructions `consigne/`, the checks
+  (`data/checks/`), the documents copied into `docs/` (see [docs/README.md](docs/README.md)), the exclusion list
+  and the statistics. The translations of the prompts of a public dataset are
+  derivative works and keep the licence of the line (`licence` column of `meta.parquet`).
