@@ -110,68 +110,70 @@ uv run --group report bench report --results results/base-v1.parquet --meta data
     --classifiers classifiers --out report/base-v1
 ```
 
-## Les commandes
+## The commands
 
-- `bench pool` : construit le jeu de prompts à partir de jeux publics du Hub.
-- `bench export` : exporte les prompts à faire juger.
-- `bench judge` : fait juger les prompts par un modèle local (MLX) avec la grille v7.
-- `bench validate` : vérifie qu'un dossier de juge est complet et cohérent avec les prompts.
-- `bench agree` : calcule l'accord deux à deux entre des dossiers de juges (tableau en markdown).
-- `bench draw` : tire les prompts de base par strates (tirage aléatoire à graine fixe sur un dossier de pré-tri).
-- `bench translate` : traduit un fichier de prompts dans une langue (fra, rus, zho) avec un modèle local (MLX).
-- `bench witness` : récupère les traductions m-ArenaHard (Google) des prompts Arena-Hard d'un jeu, comme témoins.
-- `bench check` : signale les traductions à relire (`structure`, `labels`, `request`) et écrit la feuille de relecture (`review`).
-- `bench classify` : fait classer les prompts par un classifieur et écrit un dossier `classifiers/<nom>` au format d'un juge,
-  plus le score quand il est sur l'échelle v7. Six adaptateurs : trois témoins (`random`, `length`, `constant`) et trois
-  systèmes à l'essai (`s1d1`, poids du Hub ; `laya` ; `litellm-heuristic`, le scorer à règles de LiteLLM, sans modèle), ce
-  dernier et `laya` gardant leurs décisions brutes à part dans `decisions.jsonl` (palier nom à nom, sans `score` dans
-  `labels.jsonl`).
-- `bench run` : réunit les dossiers de juges et de classifieurs d'un jeu en un tableau, une ligne par id, avec les vérités
-  des juges principaux (`results/<jeu>.parquet` et `<jeu>.run.json`).
-- `bench report` : écrit le rapport d'un jeu (`report/<jeu>/index.md`, vingt-sept tableaux CSV, dix figures SVG avec
-  leur CSV) depuis `results/<jeu>.parquet` et, s'il existe, `results/<jeu>.profile.json` ; voir
-  [Le rapport](#le-rapport).
-- `bench profile` : mesure, pour chaque modèle d'un run, la latence par prompt à lot de 1 après chauffe (p50, p95,
-  moyenne), la mémoire de crête du processus et le poids des fichiers de poids (`results/<jeu>.profile.json`) ; voir
-  [Le profil](#le-profil).
+- `bench pool`: builds the prompt pool from public Hub datasets.
+- `bench export`: exports the prompts to be judged.
+- `bench judge`: has a local model (MLX) judge the prompts with the v7 rubric.
+- `bench validate`: checks that a judge folder is complete and consistent with the prompts.
+- `bench agree`: computes the pairwise agreement between judge folders (markdown table).
+- `bench draw`: draws the base prompts by stratum (random draw with a fixed seed over a presort folder).
+- `bench translate`: translates a prompts file into a language (fra, rus, zho) with a local model (MLX).
+- `bench witness`: fetches the m-ArenaHard (Google) translations of a set's Arena-Hard prompts, as witnesses.
+- `bench check`: flags the translations to proofread (`structure`, `labels`, `request`) and writes the review sheet
+  (`review`).
+- `bench classify`: has a classifier classify the prompts and writes a `classifiers/<name>` folder in the format of a
+  judge, plus the score when it is on the v7 scale. Six adapters: three witnesses (`random`, `length`, `constant`) and
+  three systems under test (`s1d1`, weights from the Hub; `laya`; `litellm-heuristic`, LiteLLM's rule-based scorer,
+  with no model), the last one and `laya` keeping their raw decisions apart in `decisions.jsonl` (tier name by name,
+  no `score` in `labels.jsonl`).
+- `bench run`: gathers the judge and classifier folders of a set into one table, one row per id, with the truths of the
+  main judges (`results/<set>.parquet` and `<set>.run.json`).
+- `bench report`: writes the report of a set (`report/<set>/index.md`, twenty-seven CSV tables, ten SVG figures with
+  their CSV) from `results/<set>.parquet` and, when it exists, `results/<set>.profile.json`; see
+  [The report](#the-report).
+- `bench profile`: measures, for each model of a run, the latency per prompt at batch 1 after warm-up (p50, p95, mean),
+  the peak memory of the process and the size of the weight files (`results/<set>.profile.json`); see
+  [The profile](#the-profile).
 
-Installation : `uv sync --group pool --group dev` (sur Apple silicon, pour faire tourner un juge :
-`uv sync --group pool --group judge --group dev`), puis `uv run bench --help`.
+Installation: `uv sync --group pool --group dev` (on Apple silicon, to run a judge:
+`uv sync --group pool --group judge --group dev`), then `uv run bench --help`.
 
-## Reproduire l'essai
+## Reproducing the trial
 
-L'essai fait juger 50 prompts par trois modèles locaux, chacun avec le raisonnement coupé (`off`) et plafonné à 512
-jetons (`cap:512`), soit six exécutions ; cinq dossiers `judges/trial-*` sont gardés (gpt-oss `off` n'a pas pu étiqueter un prompt et a été retiré). Les résultats et les durées sont dans
-[judges/TRIAL.md](judges/TRIAL.md) : c'est un essai de l'outillage sur 50 prompts, pas un résultat du banc. Les trois
-modèles, leurs révisions et la façon dont `bench judge` coupe ou plafonne leur raisonnement sont dans
-[judges/MODELS.md](judges/MODELS.md) ; le format des dossiers de juges est dans [judges/README.md](judges/README.md).
+The trial has three local models judge 50 prompts, each with reasoning turned off (`off`) and capped at 512 tokens
+(`cap:512`), that is six runs; five `judges/trial-*` folders are kept (gpt-oss `off` could not label one prompt and was
+removed). The results and the durations are in
+[judges/TRIAL.md](judges/TRIAL.md): it is a trial of the tooling on 50 prompts, not a result of the bench. The three
+models, their revisions and the way `bench judge` turns off or caps their reasoning are in
+[judges/MODELS.md](judges/MODELS.md); the format of the judge folders is in [judges/README.md](judges/README.md).
 
-Toutes les commandes se lancent depuis la racine du dépôt. Les étapes 4 et 5 demandent un Mac Apple silicon et
-`uv sync --group pool --group judge --group dev` (ou `uv run --group judge`), un seul modèle tourne à la fois.
+All commands are run from the repository root. Steps 4 and 5 need an Apple silicon Mac and
+`uv sync --group pool --group judge --group dev` (or `uv run --group judge`); only one model runs at a time.
 
-1. **Liste d'exclusion** (`data/exclusions/s1d1-seen-keys.txt`). Elle est produite par le dépôt de recherche privé
-   s1d1-model-router, sur sa branche `seen-keys` (`pipeline/13_seen_keys.py`). La commande se lance dans ce dépôt de
-   recherche ; `--out` est le chemin de la liste dans ce dépôt-ci (écrit ici en relatif, à adapter) :
+1. **Exclusion list** (`data/exclusions/s1d1-seen-keys.txt`). It is produced by the private research repository
+   s1d1-model-router, on its `seen-keys` branch (`pipeline/13_seen_keys.py`). The command is run in that research
+   repository; `--out` is the path of the list in this repository (written here as a relative path, to adapt):
 
    ```
    uv run python -I pipeline/13_seen_keys.py --inputs 'dataset/final/*.parquet' \
        --out data/exclusions/s1d1-seen-keys.txt
    ```
 
-   Sans accès à ce dépôt, le fichier déjà commité suffit : [data/exclusions/README.md](data/exclusions/README.md) dit
-   ce qu'il contient (des clés de hachage, aucun texte de prompt).
+   Without access to that repository, the file already committed is enough: [data/exclusions/README.md](data/exclusions/README.md)
+   says what it contains (hash keys, no prompt text).
 
-2. **Le jeu de prompts.** Jeux publics du Hub, sans jeton (`HF_HUB_DISABLE_IMPLICIT_TOKEN=1` est posé par la commande
-   elle-même) :
+2. **The prompt pool.** Public Hub datasets, no token (`HF_HUB_DISABLE_IMPLICIT_TOKEN=1` is set by the command
+   itself):
 
    ```
    uv run --group pool bench pool
    ```
 
-   Sortie : `data/pool/pool.parquet`, `data/pool/pool.stats.json`, `data/pool/candidates-eng.jsonl`.
+   Output: `data/pool/pool.parquet`, `data/pool/pool.stats.json`, `data/pool/candidates-eng.jsonl`.
 
-3. **Les 50 prompts de l'essai.** Le tirage (graine 0 ; 17 Dolly, 17 OASST2 puis 16 Arena-Hard)
-   écrit la liste de clés `data/prompts/trial-50.select.txt`, puis `bench export` fabrique le fichier de prompts :
+3. **The 50 prompts of the trial.** The draw (seed 0; 17 Dolly, 17 OASST2, then 16 Arena-Hard)
+   writes the key list `data/prompts/trial-50.select.txt`, then `bench export` makes the prompts file:
 
    ```
    uv run python -I - <<'PY'
@@ -199,37 +201,37 @@ Toutes les commandes se lancent depuis la racine du dépôt. Les étapes 4 et 5 
        --name trial-50 --seed 0
    ```
 
-4. **Les modèles**, dans `~/mlx-models/<org>--<nom>` (jamais dans un dépôt). `bench judge` affiche la commande exacte
-   s'il en manque un ; les identifiants et les révisions à utiliser sont dans [judges/MODELS.md](judges/MODELS.md) :
+4. **The models**, in `~/mlx-models/<org>--<name>` (never in a repository). `bench judge` prints the exact command
+   if one is missing; the identifiers and revisions to use are in [judges/MODELS.md](judges/MODELS.md):
 
    ```
-   HF_HUB_DISABLE_IMPLICIT_TOKEN=1 uv run --group pool hf download <org>/<nom> --revision <révision> \
-       --local-dir ~/mlx-models/<org>--<nom>
+   HF_HUB_DISABLE_IMPLICIT_TOKEN=1 uv run --group pool hf download <org>/<name> --revision <revision> \
+       --local-dir ~/mlx-models/<org>--<name>
    ```
 
-   à faire pour `mlx-community/gemma-4-31b-it-8bit`, `mlx-community/Qwen3.8-27B-8bit` et
+   to be done for `mlx-community/gemma-4-31b-it-8bit`, `mlx-community/Qwen3.8-27B-8bit` and
    `mlx-community/gpt-oss-20b-MXFP4-Q8`.
 
-5. **Les juges**, l'un après l'autre (provider `local`, MLX, Apple silicon seulement). Pour chaque famille,
-   `--thinking off` puis `--thinking cap:512` ; `--author` reçoit votre nom :
+5. **The judges**, one after the other (provider `local`, MLX, Apple silicon only). For each family,
+   `--thinking off` then `--thinking cap:512`; `--author` takes your name:
 
    ```
    export HF_HUB_DISABLE_IMPLICIT_TOKEN=1
    uv run --group judge bench judge --model mlx-community/gpt-oss-20b-MXFP4-Q8 --prompts data/prompts/trial-50.jsonl \
-       --out judges/trial-gptoss-cap512 --author <nom> --thinking cap:512 --max-tokens 1024
+       --out judges/trial-gptoss-cap512 --author <name> --thinking cap:512 --max-tokens 1024
    uv run --group judge bench judge --model mlx-community/Qwen3.8-27B-8bit --prompts data/prompts/trial-50.jsonl \
-       --out judges/trial-qwen3-off --author <nom> --thinking off --max-tokens 1024
+       --out judges/trial-qwen3-off --author <name> --thinking off --max-tokens 1024
    uv run --group judge bench judge --model mlx-community/Qwen3.8-27B-8bit --prompts data/prompts/trial-50.jsonl \
-       --out judges/trial-qwen3-cap512 --author <nom> --thinking cap:512 --max-tokens 1024
+       --out judges/trial-qwen3-cap512 --author <name> --thinking cap:512 --max-tokens 1024
    uv run --group judge bench judge --model mlx-community/gemma-4-31b-it-8bit --prompts data/prompts/trial-50.jsonl \
-       --out judges/trial-gemma4-off --author <nom> --thinking off --max-tokens 1024
+       --out judges/trial-gemma4-off --author <name> --thinking off --max-tokens 1024
    uv run --group judge bench judge --model mlx-community/gemma-4-31b-it-8bit --prompts data/prompts/trial-50.jsonl \
-       --out judges/trial-gemma4-cap512 --author <nom> --thinking cap:512 --max-tokens 1024
+       --out judges/trial-gemma4-cap512 --author <name> --thinking cap:512 --max-tokens 1024
    ```
 
-   Une exécution interrompue se reprend avec `--resume`.
+   An interrupted run is resumed with `--resume`.
 
-6. **Vérifier et comparer** :
+6. **Validate and compare**:
 
    ```
    for d in judges/*/; do uv run bench validate "$d"; done
