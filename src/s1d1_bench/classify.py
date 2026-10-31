@@ -23,7 +23,10 @@ heuristic, and its expected level and four probabilities stay in `decisions.json
 which is not on the v7 scale, stays in `decisions.jsonl` and never reaches `labels.jsonl`) and `routellm` (a published
 router of RouteLLM, see `routellm_backend`: its output is the probability that the strong model wins, kept as it is as
 `score`, and read onto the five tiers by equal bounds of 0.2; the raw output stays in `decisions.jsonl`; `task` and
-`needs_tools` are null).
+`needs_tools` are null) and `nvidia` (NVIDIA's prompt-task-and-complexity-classifier, see `nvidia_backend`: English
+only, so it is run on the `eng` ids and the other ids are written as not predicted, the three fields null and no score;
+its `prompt_complexity_score` is kept as it is as `score` and read onto the five tiers by equal bounds of 0.2, all its
+heads stay in `decisions.jsonl`; `task` and `needs_tools` are null).
 """
 
 import datetime
@@ -373,6 +376,84 @@ def _routellm(args, prompts: list[dict], digest: str) -> int:
     )
 
 
+def _languages(prompts_path: Path, ids: list[str]) -> dict[str, str]:
+    """id -> language: the `lang` column of the `.meta.parquet` beside the prompts file when it exists (every id must be
+    in it), else the suffix of the id after the last '-' (as the length witness reads it)."""
+    meta = prompts_path.with_name(prompts_path.stem + ".meta.parquet")
+    if not meta.is_file():
+        return {i: _language(i) for i in ids}
+    import pyarrow.parquet as pq
+
+    table = pq.read_table(meta, columns=["id", "lang"]).to_pydict()
+    found = dict(zip(table["id"], table["lang"], strict=True))
+    missing = [i for i in ids if i not in found]
+    if missing:
+        raise ValueError(f"{meta.name} has no language for id {missing[0]!r} ({len(missing)} id(s) missing)")
+    return {i: found[i] for i in ids}
+
+
+def _nvidia(args, prompts: list[dict], digest: str) -> int:
+    try:
+        from s1d1_bench import nvidia_backend
+
+        languages = _languages(Path(args.prompts), [p["id"] for p in prompts])
+        todo = [p for p in prompts if nvidia_backend.covered(languages[p["id"]])]
+        if not todo:
+            raise ValueError(f"no prompt in {'/'.join(nvidia_backend.COVERED_LANGUAGES)}: nothing to classify")
+        classify, info = nvidia_backend.make_nvidia_classifier(args.revision)
+        results = dict(zip((p["id"] for p in todo), classify([p["prompt"] for p in todo]), strict=True))
+    except (
+        ImportError
+    ) as exc:  # the routellm dependency group (torch, transformers) is not installed: nothing was written
+        return _fail(
+            f"{exc}. The nvidia adapter needs the routellm dependency group (torch, transformers, numpy, "
+            "huggingface_hub): uv run --group routellm bench classify nvidia ..."
+        )
+    rows, raw = [], []
+    for p in prompts:
+        heads = results.get(p["id"])
+        if heads is None:  # a language the model does not cover: not predicted, not run
+            rows.append({"id": p["id"], "complexity": None, "task": None, "needs_tools": None})
+            raw.append({"id": p["id"], "tier": None, "score": None, "not_predicted": "language not covered"})
+            continue
+        score = heads["prompt_complexity_score"]
+        tier = nvidia_backend.tier_of_score(score)
+        rows.append({"id": p["id"], "complexity": tier, "task": None, "needs_tools": None, "score": score})
+        raw.append({"id": p["id"], "tier": tier, "score": score, **heads})
+    notes = (
+        f"Replay: uv run --group routellm bench classify nvidia --revision {info['revision']} "
+        f"(device {info['device']}, {info['precision']}). NVIDIA's {info['model']} (NemoCurator Prompt Task and "
+        "Complexity Classifier v1.1, DeBERTa-v3-base with eight classification heads), rebuilt from the CustomModel "
+        "code of its card at "
+        f"{nvidia_backend.CARD_REVISION}, the backbone built from the config of {info['backbone']}@"
+        f"{info['backbone_revision']} (config only) and the card repo's weights loaded over it with strict=True: one "
+        f"prompt per call, tokenizer padding to {info['max_length']} tokens with truncation, mean pooling, softmax "
+        "per head. English only: the model is English (its card says so), so only the ids whose language is eng are "
+        f"classified ({len(results)} of {len(prompts)}); the others are written as not predicted, with complexity, "
+        "task and needs_tools null and no score (and tier and score null in decisions.jsonl), never run. score = "
+        "prompt_complexity_score as the model gives it, in [0 ; 1] (the weighted sum 0.35 creativity + 0.25 reasoning "
+        "+ 0.15 constraints + 0.15 domain knowledge + 0.05 contextual knowledge + 0.05 few shots; no calibration). It "
+        "is not a v7 tier. Tier = five equal bounds fixed in advance, as for the RouteLLM routers: trivial [0 ; 0.2), "
+        "low [0.2 ; 0.4), medium [0.4 ; 0.6), high [0.6 ; 0.8), expert [0.8 ; 1] (0.2 is low, 0.8 is expert, 1.0 is "
+        "expert). task and needs_tools are null in this folder: the eleven task types of the model are not the 19 "
+        "tasks of the rubric. decisions.jsonl holds, by id, the tier, the score and every head as the card's code "
+        "returns it (task_type_1, task_type_2, task_type_prob, creativity_scope, reasoning, contextual_knowledge, "
+        "number_of_few_shots, domain_knowledge, no_label_reason, constraint_ct, prompt_complexity_score). The prompt "
+        f"is given as it is, without the 'Prompt: ' prefix of the card's code sample. {info['truncated']} prompts "
+        "truncated."
+    )
+    return write_run(
+        args,
+        digest,
+        rows,
+        model=info["model"],
+        revision=info["revision"],
+        notes=notes,
+        extra={"decisions.jsonl": raw},
+        quantization=info["precision"],
+    )
+
+
 # adapter -> function (args, prompts, sha256 of the prompts file) -> exit code
 ADAPTERS: dict[str, Callable[[object, list[dict], str], int]] = {
     "random": _random,
@@ -382,6 +463,7 @@ ADAPTERS: dict[str, Callable[[object, list[dict], str], int]] = {
     "laya": _laya,
     "litellm-heuristic": _litellm_heuristic,
     "routellm": _routellm,
+    "nvidia": _nvidia,
 }
 
 

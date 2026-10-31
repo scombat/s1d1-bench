@@ -39,6 +39,11 @@ laya-multilingual-tier,candidate,low,224,360,0.6222222222222222
 laya-multilingual-tier,candidate,medium,29,360,0.08055555555555556
 laya-multilingual-tier,candidate,high,79,360,0.21944444444444444
 laya-multilingual-tier,candidate,expert,28,360,0.07777777777777778
+nvidia-ptcc-eng,candidate,trivial,44,90,0.4888888888888889
+nvidia-ptcc-eng,candidate,low,40,90,0.4444444444444444
+nvidia-ptcc-eng,candidate,medium,6,90,0.06666666666666667
+nvidia-ptcc-eng,candidate,high,0,90,0.0
+nvidia-ptcc-eng,candidate,expert,0,90,0.0
 routellm-bert,candidate,trivial,10,360,0.027777777777777776
 routellm-bert,candidate,low,110,360,0.3055555555555556
 routellm-bert,candidate,medium,194,360,0.5388888888888889

@@ -406,9 +406,10 @@ def test_tables_without_a_profile_have_no_profile_table(small):
 WIDE_KEYS = [f"w{n}" for n in range(10)]
 
 
-def wide_set(tmp_path):
+def wide_set(tmp_path, partial=False):
     """Ten keys, truth tier n % 5 for key wn (every judge agrees). Candidates: s1d1-full-int8 one tier off on w1,
-    `twin` one tier off on w2 (the paired difference straddles 0), `flat` low everywhere (far below), score 0.25."""
+    `twin` one tier off on w2 (the paired difference straddles 0), `flat` low everywhere (far below), score 0.25;
+    with `partial`, `english` also: the truth on the English ids, no prediction (nulls) on the other languages."""
     ids = ids_of(WIDE_KEYS)
     votes = {j: {i: label(LEVELS[int(i[1]) % 5]) for i in ids} for j in MAIN}
 
@@ -423,6 +424,13 @@ def wide_set(tmp_path):
         "twin": tiers("w2"),
         "flat": {i: label("low", score=0.25) for i in ids},
     }
+    if partial:  # the reference also errs on w3 in the languages the partial candidate does not cover
+        preds["s1d1-full-int8"] |= {
+            i: label(LEVELS[min(int(i[1]) % 5 + 1, 4)]) for i in ids if i.startswith("w3-") and not i.endswith("-eng")
+        }
+        preds["english"] = {
+            i: label(LEVELS[int(i[1]) % 5] if i.endswith("-eng") else None, task=None, needs_tools=None) for i in ids
+        }
     return build(tmp_path, WIDE_KEYS, votes, preds)
 
 
@@ -448,6 +456,40 @@ def test_intervals_are_those_of_metrics_bootstrap(tmp_path):
         found = one(computed["paired"], candidate=other)
         expected = metrics.paired_difference(keys, groups, qwk_of("s1d1-full-int8"), qwk_of(other))
         assert (found["difference"], found["lo"], found["hi"]) == pytest.approx(expected)
+
+
+def test_paired_difference_is_taken_on_the_ids_both_have(tmp_path):
+    results, meta, run, root = wide_set(tmp_path, partial=True)
+    computed = tables(results, meta, run, root, sigma=0.005)
+    truth = np.array([LEVELS.index(v) for v in results["truth_all.complexity"].to_pylist()])
+    reference = np.array([LEVELS.index(v) for v in results["s1d1-full-int8.complexity"].to_pylist()])
+    partial = results["english.complexity"].to_pylist()
+    base = results["base_key"].to_pylist()
+    ids = results["id"].to_pylist()
+    common = [i for i, level in enumerate(partial) if level is not None]
+    assert len(common) == 10 and all(ids[i].endswith("-eng") for i in common)
+    candidate = np.array([-1 if level is None else LEVELS.index(level) for level in partial])
+    keys = list(dict.fromkeys(base))
+    groups = {k: [i for i in common if base[i] == k] for k in keys}  # one English id per base prompt
+    expected = metrics.paired_difference(
+        keys,
+        groups,
+        lambda idx: metrics.qwk(truth[idx], reference[idx]),
+        lambda idx: metrics.qwk(truth[idx], candidate[idx]),
+    )
+    found = one(computed["paired"], candidate="english")
+    assert found["n_common"] == 10
+    assert (found["difference"], found["lo"], found["hi"]) == pytest.approx(expected)
+    # the reference is measured on those 10 ids too: against all 40 ids it would be another number
+    on_all = metrics.qwk(truth, reference) - metrics.qwk(truth[common], candidate[common])
+    assert found["difference"] != pytest.approx(on_all)
+    # a complete candidate keeps every id, and its row is the same as before the column
+    assert {r["candidate"]: r["n_common"] for r in computed["paired"].to_pylist()} == {
+        "twin": 40,
+        "flat": 40,
+        "english": 10,
+    }
+    assert "n_common" in computed["paired"].column_names
 
 
 def test_paired_rule_on_real_draws(tmp_path):

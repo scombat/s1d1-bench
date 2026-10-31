@@ -1,0 +1,16 @@
+{
+  "judge": "nvidia-ptcc-eng",
+  "model": "nvidia/prompt-task-and-complexity-classifier",
+  "provider": "system",
+  "revision": "fea1121511eafabaf7dd6fc66863dcb04f74defb",
+  "date": "2026-10-31",
+  "temperature": 0,
+  "thinking": "none",
+  "instructions": "none",
+  "prompts_sha256": "e6a6d4c12ef8b95caea942337a3a1e16ec1622cb4e75c8ee0b473ef609a32490",
+  "author": "scombat",
+  "replayable": true,
+  "licence": "CC-BY-4.0",
+  "notes": "Replay: uv run --group routellm bench classify nvidia --revision fea1121511eafabaf7dd6fc66863dcb04f74defb (device cpu, float32). NVIDIA's nvidia/prompt-task-and-complexity-classifier (NemoCurator Prompt Task and Complexity Classifier v1.1, DeBERTa-v3-base with eight classification heads), rebuilt from the CustomModel code of its card at fea1121511eafabaf7dd6fc66863dcb04f74defb, the backbone built from the config of microsoft/deberta-v3-base@8ccc9b6f36199bec6961081d44eb72fb3f7353f3 (config only) and the card repo's weights loaded over it with strict=True: one prompt per call, tokenizer padding to 512 tokens with truncation, mean pooling, softmax per head. English only: the model is English (its card says so), so only the ids whose language is eng are classified (90 of 360); the others are written as not predicted, with complexity, task and needs_tools null and no score (and tier and score null in decisions.jsonl), never run. score = prompt_complexity_score as the model gives it, in [0 ; 1] (the weighted sum 0.35 creativity + 0.25 reasoning + 0.15 constraints + 0.15 domain knowledge + 0.05 contextual knowledge + 0.05 few shots; no calibration). It is not a v7 tier. Tier = five equal bounds fixed in advance, as for the RouteLLM routers: trivial [0 ; 0.2), low [0.2 ; 0.4), medium [0.4 ; 0.6), high [0.6 ; 0.8), expert [0.8 ; 1] (0.2 is low, 0.8 is expert, 1.0 is expert). task and needs_tools are null in this folder: the eleven task types of the model are not the 19 tasks of the rubric. decisions.jsonl holds, by id, the tier, the score and every head as the card's code returns it (task_type_1, task_type_2, task_type_prob, creativity_scope, reasoning, contextual_knowledge, number_of_few_shots, domain_knowledge, no_label_reason, constraint_ct, prompt_complexity_score). The prompt is given as it is, without the 'Prompt: ' prefix of the card's code sample. 3 prompts truncated. Run on 2026-10-31 on an Apple M4 Max 128 GB, on the CPU, float32, torch and transformers of the routellm group; the 90 English ids in about 14 s with the model load, weights already in the Hub cache. Weights: public ungated repo, 735 MB safetensors, licence NVIDIA Open Model License Agreement, June 2024 (the card says license: other and links that agreement); the bench downloads them read only, without a token, and does not redistribute them. This folder holds the model's outputs only, published under CC-BY-4.0 (the outputs are not derivative works of the model under sections 1.1 and 2.4 of that licence, as read by the repository owner). Not checked against the card: its second table (the antibiotics prompt) is not reproduced by this code, with or without the 'Prompt: ' prefix; the code sample and the first table (the mystery prompt) are reproduced digit for digit (tests/test_nvidia_backend.py, slow test). The model is a prompt labeller, not a router: see the report.",
+  "quantization": "float32"
+}

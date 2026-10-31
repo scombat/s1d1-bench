@@ -52,6 +52,13 @@
       "revision": "4255b21bd9a9d3fc807ef7abd80373f5e3a52a73"
     },
     {
+      "date": "2026-10-31",
+      "model": "nvidia/prompt-task-and-complexity-classifier",
+      "name": "nvidia-ptcc-eng",
+      "raw_decisions": true,
+      "revision": "fea1121511eafabaf7dd6fc66863dcb04f74defb"
+    },
+    {
       "date": "2026-10-30",
       "model": "witness:random",
       "name": "random",

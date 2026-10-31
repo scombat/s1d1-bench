@@ -160,6 +160,10 @@ def test_classifier_spec_reads_the_replay_line_of_the_real_folders():
         "router": "bert",
         "revision": "86237e3df400762178ea98379477b8296e66d5e4",
     }
+    assert profile.classifier_spec(_meta("nvidia-ptcc-eng")) == {
+        "adapter": "nvidia",
+        "revision": "fea1121511eafabaf7dd6fc66863dcb04f74defb",
+    }
     for witness in ("random", "length", "constant-low"):
         assert profile.classifier_spec(_meta(witness)) is None
 
@@ -259,6 +263,41 @@ def test_profile_reloads_a_routellm_router_by_its_adapter(tmp_path, monkeypatch)
     assert calls[0]["adapter"] == "routellm" and calls[0]["router"] == "bert" and calls[0]["revision"] == "a" * 40
     (row,) = json.loads(setup["out"].read_text(encoding="utf-8"))["rows"]
     assert (row["name"], row["kind"], row["model"]) == ("routellm-bert", "classifier", ROUTELLM["model"])
+
+
+NVIDIA = {"model": "nvidia/prompt-task-and-complexity-classifier", "revision": "b" * 40, "notes": "Replay: ..."}
+
+
+def test_profile_reloads_the_nvidia_classifier_by_its_adapter(tmp_path, monkeypatch):
+    setup = _setup(tmp_path, {"nvidia-ptcc-eng": NVIDIA}, judges=())
+    calls: list = []
+    monkeypatch.setattr(profile, "run_worker", _fake_worker(calls))
+    assert main(setup["argv"]) == 0
+    assert calls[0]["adapter"] == "nvidia" and calls[0]["revision"] == "b" * 40
+    (row,) = json.loads(setup["out"].read_text(encoding="utf-8"))["rows"]
+    assert (row["name"], row["kind"], row["model"]) == ("nvidia-ptcc-eng", "classifier", NVIDIA["model"])
+    with pytest.raises(ValueError, match="full revision"):
+        profile.classifier_spec({**NVIDIA, "revision": "main"})
+
+
+def test_the_nvidia_classifier_is_timed_on_the_english_prompts_only(tmp_path, monkeypatch):
+    prompts = tmp_path / "p.jsonl"
+    write_jsonl(
+        prompts,
+        [{"id": f"k{i}-{lang}", "prompt": f"{lang} {i}"} for i in range(2) for lang in ("eng", "fra", "rus", "zho")],
+    )
+    timed: list = []
+
+    def fake_load(spec):
+        return (lambda batch: timed.append(batch[0]) or [{}]), {"device": "cpu"}
+
+    monkeypatch.setattr(profile, "_load", fake_load)
+    monkeypatch.setattr(profile, "peak_rss_mb", lambda: 1.0)
+    result = profile.run_in_process({"adapter": "nvidia", "prompts": str(prompts), "warmup": 0})
+    assert timed == ["eng 0", "eng 1"] and result["n"] == 2  # the other languages are never run, so never timed
+    timed.clear()
+    result = profile.run_in_process({"adapter": "routellm", "prompts": str(prompts), "warmup": 0})
+    assert result["n"] == 8  # the other adapters are timed on every prompt, as before
 
 
 def test_profile_times_a_judge_format_candidate_from_its_log_and_keeps_it_a_candidate(tmp_path, monkeypatch):

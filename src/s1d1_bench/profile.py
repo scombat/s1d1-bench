@@ -21,6 +21,8 @@ latencies move a little from one run to the next: it is a measurement, not a com
   folder only (Laya's english head is the root of its repo, its multilingual head the `multilingual` subfolder);
   LiteLLM's heuristic has none (0).
 - Routers of RouteLLM (`routellm/...` models) are reloaded by the routellm adapter, on the CPU, like the others.
+- NVIDIA's classifier (`nvidia/...`, English only) is reloaded by the nvidia adapter, on the CPU, and timed on the
+  English prompts of the file only (the ids ending `-eng`), the languages it does not cover being never run.
 - A candidate in the judge format (`provider: local` in its `meta.json`: a small LLM that reads the v7 instruction
   through `bench judge`) is profiled like a judge, from its `log.jsonl` and its weights in `<models-dir>`, but its row
   says `kind: classifier`: it is a candidate of the report, not an instrument.
@@ -196,6 +198,10 @@ def classifier_spec(meta: dict) -> dict | None:
         if not (router and re.fullmatch(FULL_SHA, revision)):
             raise ValueError(f"{model}: meta.json does not give the RouteLLM router and a full revision")
         return {"adapter": "routellm", "router": router, "revision": revision}
+    if model.startswith("nvidia/"):
+        if not re.fullmatch(FULL_SHA, revision):
+            raise ValueError(f"{model}: meta.json does not give a full revision")
+        return {"adapter": "nvidia", "revision": revision}
     raise ValueError(f"no adapter for the model {model!r}")
 
 
@@ -257,6 +263,15 @@ def _load(spec: dict) -> tuple[Callable[[list[str]], list], dict]:
             "device": info["device"], "quantization": info["precision"],
             "work": "tokenisation, forward pass, softmax of the three logits",
         }  # fmt: skip
+    elif spec["adapter"] == "nvidia":
+        from s1d1_bench import nvidia_backend
+
+        classify, info = nvidia_backend.make_nvidia_classifier(spec["revision"])
+        folder = _local_snapshot(nvidia_backend.REPO, info["revision"])
+        facts = {
+            "device": info["device"], "quantization": info["precision"],
+            "work": "tokenisation padded to 512 tokens, forward pass, softmax of the eight heads",
+        }  # fmt: skip
     else:
         raise ValueError(f"unknown adapter {spec['adapter']!r}")
     facts.update(weights_bytes=weights_bytes(folder), weight_files=[p.name for p in weight_files(folder)])
@@ -266,7 +281,12 @@ def _load(spec: dict) -> tuple[Callable[[list[str]], list], dict]:
 def run_in_process(spec: dict) -> dict:
     """Load the classifier of `spec`, time it on the prompts of `spec["prompts"]`: the facts of `_load` and the
     figures of `profile_classifier`."""
-    prompts = [row["prompt"] for row in read_jsonl(Path(spec["prompts"]))]
+    rows = read_jsonl(Path(spec["prompts"]))
+    if spec["adapter"] == "nvidia":  # English only: the other languages are never run, so never timed
+        from s1d1_bench import nvidia_backend
+
+        rows = [row for row in rows if nvidia_backend.covered(row["id"].rsplit("-", 1)[-1])]
+    prompts = [row["prompt"] for row in rows]
     classify, facts = _load(spec)
     return {**facts, **profile_classifier(classify, prompts, spec["warmup"])}
 

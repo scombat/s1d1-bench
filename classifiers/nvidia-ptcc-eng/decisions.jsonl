@@ -1,0 +1,360 @@
+{"id": "634638dbcf710d07-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "dff3a71af8b7ad08-eng", "tier": "trivial", "score": 0.08512, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.862, "creativity_scope": 0.0201, "reasoning": 0.0369, "contextual_knowledge": 0.68, "number_of_few_shots": 0.0852, "domain_knowledge": 0.1928, "no_label_reason": 0.0, "constraint_ct": 0.0112, "prompt_complexity_score": 0.08512}
+{"id": "cfae448b364f0ee7-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "915439339b6f5df7-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "984977c869981dfe-eng", "tier": "low", "score": 0.20598, "task_type_1": "Open QA", "task_type_2": "Closed QA", "task_type_prob": 0.875, "creativity_scope": 0.0025, "reasoning": 0.3003, "contextual_knowledge": 0.0323, "number_of_few_shots": 0, "domain_knowledge": 0.6291, "no_label_reason": 0.0, "constraint_ct": 0.227, "prompt_complexity_score": 0.20598}
+{"id": "d50168e5362628b5-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "b95b44ab9478da78-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "c42d59de0ccacbaf-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "f577665b0660a238-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "4930873de93f0233-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "4930873de93f0233-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "ee7c601fb399580f-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "eaa58b6e7985ae82-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "e2a06fc58c1c4d59-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "1838bc7ccbe31bce-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "c13fad5029d32ee6-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "2c89e7c0cef84abd-eng", "tier": "trivial", "score": 0.09099, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.928, "creativity_scope": 0.0069, "reasoning": 0.014, "contextual_knowledge": 0.0561, "number_of_few_shots": 0.0543, "domain_knowledge": 0.3355, "no_label_reason": 0.0, "constraint_ct": 0.1949, "prompt_complexity_score": 0.09099}
+{"id": "f792a90b8343a121-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "ce98ec525470ad48-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "3a8cfac3789a62f1-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "e33b2fefb6a1da52-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "a130c6ea53a902d2-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "3f2b5dc0588d12e0-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "36c29280ca25d905-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "f61b1eac812bcd9f-eng", "tier": "low", "score": 0.38904, "task_type_1": "Text Generation", "task_type_2": "NA", "task_type_prob": 0.744, "creativity_scope": 0.8934, "reasoning": 0.0411, "contextual_knowledge": 0.1405, "number_of_few_shots": 0, "domain_knowledge": 0.2845, "no_label_reason": 0.0, "constraint_ct": 0.1092, "prompt_complexity_score": 0.38904}
+{"id": "99ffc444a29d0a5d-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "2bbd145263ec23e4-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "3e893d41daf6c8e5-eng", "tier": "low", "score": 0.28891, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.977, "creativity_scope": 0.0203, "reasoning": 0.1262, "contextual_knowledge": 0.0531, "number_of_few_shots": 0, "domain_knowledge": 0.8257, "no_label_reason": 0.0, "constraint_ct": 0.825, "prompt_complexity_score": 0.28891}
+{"id": "c8931cad47554d9e-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "86811c719f4f32da-eng", "tier": "low", "score": 0.33413, "task_type_1": "Code Generation", "task_type_2": "Closed QA", "task_type_prob": 0.501, "creativity_scope": 0.0783, "reasoning": 0.0943, "contextual_knowledge": 0.091, "number_of_few_shots": 0.1381, "domain_knowledge": 0.9942, "no_label_reason": 0.0, "constraint_ct": 0.8171, "prompt_complexity_score": 0.33413}
+{"id": "e3d93822b841edca-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "1a8c036081a4d1ff-eng", "tier": "trivial", "score": 0.1958, "task_type_1": "Code Generation", "task_type_2": "NA", "task_type_prob": 0.955, "creativity_scope": 0.0424, "reasoning": 0.0248, "contextual_knowledge": 0.0761, "number_of_few_shots": 0.0543, "domain_knowledge": 0.9906, "no_label_reason": 0.0, "constraint_ct": 0.131, "prompt_complexity_score": 0.1958}
+{"id": "ce98ec525470ad48-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "a17fe8e97531047b-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "ee7c601fb399580f-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "9b4d1c67e687db74-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "9502863b1de1ca21-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "976852f28de3d18b-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "6e7d994aa2a97e2d-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "6633824d10f9c6ca-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "0c829b1d1e01ce98-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "f792a90b8343a121-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "057ae32a943e952c-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "7915924b01f364ce-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "445c95d7f7615499-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "b7fed5cb6ec22d9f-eng", "tier": "low", "score": 0.33904, "task_type_1": "Text Generation", "task_type_2": "NA", "task_type_prob": 0.916, "creativity_scope": 0.4872, "reasoning": 0.0087, "contextual_knowledge": 0.0733, "number_of_few_shots": 0, "domain_knowledge": 0.9805, "no_label_reason": 0.0, "constraint_ct": 0.104, "prompt_complexity_score": 0.33904}
+{"id": "27375c7c51aff034-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "167e908a99a5efc5-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "64ca9045d1ff6687-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "99ffc444a29d0a5d-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "445c95d7f7615499-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "aecaf7ffb68dfaec-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "445c95d7f7615499-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "3a8cfac3789a62f1-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "e944f9b1b3bbc893-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "3f2b5dc0588d12e0-eng", "tier": "medium", "score": 0.41434, "task_type_1": "Open QA", "task_type_2": "Closed QA", "task_type_prob": 0.71, "creativity_scope": 0.0225, "reasoning": 0.6212, "contextual_knowledge": 0.0992, "number_of_few_shots": 0, "domain_knowledge": 0.9037, "no_label_reason": 0.0, "constraint_ct": 0.7377, "prompt_complexity_score": 0.41434}
+{"id": "3a8cfac3789a62f1-eng", "tier": "low", "score": 0.35828, "task_type_1": "Text Generation", "task_type_2": "Code Generation", "task_type_prob": 0.592, "creativity_scope": 0.1717, "reasoning": 0.097, "contextual_knowledge": 0.1555, "number_of_few_shots": 0, "domain_knowledge": 0.9828, "no_label_reason": 0.0, "constraint_ct": 0.7916, "prompt_complexity_score": 0.35828}
+{"id": "634638dbcf710d07-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "290054e2e28827cc-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "99ffc444a29d0a5d-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "f577665b0660a238-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "ffe2d47a0e1337e1-eng", "tier": "low", "score": 0.23319, "task_type_1": "Closed QA", "task_type_2": "NA", "task_type_prob": 0.897, "creativity_scope": 0.0038, "reasoning": 0.4434, "contextual_knowledge": 0.0263, "number_of_few_shots": 0, "domain_knowledge": 0.699, "no_label_reason": 0.0, "constraint_ct": 0.099, "prompt_complexity_score": 0.23319}
+{"id": "37c9e9ab7852f809-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "f577665b0660a238-eng", "tier": "trivial", "score": 0.06702, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.993, "creativity_scope": 0.0068, "reasoning": 0.0109, "contextual_knowledge": 0.0626, "number_of_few_shots": 0, "domain_knowledge": 0.3838, "no_label_reason": 0.0, "constraint_ct": 0.0081, "prompt_complexity_score": 0.06702}
+{"id": "2add77797edca382-eng", "tier": "trivial", "score": 0.09162, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.885, "creativity_scope": 0.0201, "reasoning": 0.0558, "contextual_knowledge": 0.7639, "number_of_few_shots": 0.0823, "domain_knowledge": 0.1821, "no_label_reason": 0.0, "constraint_ct": 0.0067, "prompt_complexity_score": 0.09162}
+{"id": "c1c19511ec96d66f-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "c1b0cc268c6f4a3e-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "cfae448b364f0ee7-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "1a8c036081a4d1ff-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "b7fed5cb6ec22d9f-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "f61b1eac812bcd9f-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "eb50da7f71f99591-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "0c829b1d1e01ce98-eng", "tier": "low", "score": 0.32774, "task_type_1": "Closed QA", "task_type_2": "Open QA", "task_type_prob": 0.584, "creativity_scope": 0.0185, "reasoning": 0.0935, "contextual_knowledge": 0.1013, "number_of_few_shots": 0, "domain_knowledge": 0.9785, "no_label_reason": 0.0, "constraint_ct": 0.9737, "prompt_complexity_score": 0.32774}
+{"id": "b96d0705e267fafb-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "baeba6101b4316a8-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "9abe2d760044d6ed-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "1838bc7ccbe31bce-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "a17fe8e97531047b-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "634638dbcf710d07-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "c42d59de0ccacbaf-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "52af72f21cf65e35-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "057ae32a943e952c-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "d756a9b1ff9e2bff-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "eb3d0a335d372b07-eng", "tier": "low", "score": 0.23437, "task_type_1": "Closed QA", "task_type_2": "Open QA", "task_type_prob": 0.511, "creativity_scope": 0.002, "reasoning": 0.2427, "contextual_knowledge": 0.2578, "number_of_few_shots": 0, "domain_knowledge": 0.9712, "no_label_reason": 0.0, "constraint_ct": 0.0962, "prompt_complexity_score": 0.23437}
+{"id": "e3d93822b841edca-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "2c89e7c0cef84abd-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "1838bc7ccbe31bce-eng", "tier": "low", "score": 0.21305, "task_type_1": "Classification", "task_type_2": "Summarization", "task_type_prob": 0.477, "creativity_scope": 0.0035, "reasoning": 0.045, "contextual_knowledge": 0.0414, "number_of_few_shots": 0, "domain_knowledge": 0.8488, "no_label_reason": 0.0, "constraint_ct": 0.4746, "prompt_complexity_score": 0.21305}
+{"id": "c8fa588ef977c084-eng", "tier": "low", "score": 0.2635, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.95, "creativity_scope": 0.2511, "reasoning": 0.2757, "contextual_knowledge": 0.2519, "number_of_few_shots": 0, "domain_knowledge": 0.2423, "no_label_reason": 0.0, "constraint_ct": 0.385, "prompt_complexity_score": 0.2635}
+{"id": "a98bc09f95f4204f-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "c42d59de0ccacbaf-eng", "tier": "low", "score": 0.20876, "task_type_1": "Code Generation", "task_type_2": "NA", "task_type_prob": 0.881, "creativity_scope": 0.0244, "reasoning": 0.0123, "contextual_knowledge": 0.1146, "number_of_few_shots": 0, "domain_knowledge": 0.9954, "no_label_reason": 0.0, "constraint_ct": 0.2807, "prompt_complexity_score": 0.20876}
+{"id": "c1c19511ec96d66f-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "8c161a5eba50a639-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "deceb9dbf43c77c9-eng", "tier": "trivial", "score": 0.18452, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.851, "creativity_scope": 0.004, "reasoning": 0.0292, "contextual_knowledge": 0.08, "number_of_few_shots": 0, "domain_knowledge": 0.9911, "no_label_reason": 0.0, "constraint_ct": 0.1544, "prompt_complexity_score": 0.18452}
+{"id": "52af72f21cf65e35-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "b96d0705e267fafb-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "c13fad5029d32ee6-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "7180ab512da7263a-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "c1c19511ec96d66f-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "2bbd145263ec23e4-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "7ef9a2da3786930d-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "64ca9045d1ff6687-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "9abe2d760044d6ed-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "99ffc444a29d0a5d-eng", "tier": "trivial", "score": 0.12133, "task_type_1": "Open QA", "task_type_2": "Rewrite", "task_type_prob": 0.482, "creativity_scope": 0.0318, "reasoning": 0.0083, "contextual_knowledge": 0.5455, "number_of_few_shots": 0, "domain_knowledge": 0.0757, "no_label_reason": 0.0, "constraint_ct": 0.4633, "prompt_complexity_score": 0.12133}
+{"id": "0a5825c01c07dcf2-eng", "tier": "trivial", "score": 0.09161, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.984, "creativity_scope": 0.0092, "reasoning": 0.0207, "contextual_knowledge": 0.12, "number_of_few_shots": 0, "domain_knowledge": 0.5053, "no_label_reason": 0.0, "constraint_ct": 0.0095, "prompt_complexity_score": 0.09161}
+{"id": "deceb9dbf43c77c9-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "167e908a99a5efc5-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "d40e4882e7f7fe7f-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "591df8610c4c0186-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "3ce175ed3ef6b933-eng", "tier": "low", "score": 0.28226, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.962, "creativity_scope": 0.0541, "reasoning": 0.1246, "contextual_knowledge": 0.1676, "number_of_few_shots": 0, "domain_knowledge": 0.8643, "no_label_reason": 0.0, "constraint_ct": 0.6277, "prompt_complexity_score": 0.28226}
+{"id": "3f542e8df9a624c4-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "5649f92a19700204-eng", "tier": "low", "score": 0.36175, "task_type_1": "Open QA", "task_type_2": "Closed QA", "task_type_prob": 0.56, "creativity_scope": 0.0333, "reasoning": 0.2284, "contextual_knowledge": 0.0417, "number_of_few_shots": 0, "domain_knowledge": 0.9594, "no_label_reason": 0.0, "constraint_ct": 0.98, "prompt_complexity_score": 0.36175}
+{"id": "5649f92a19700204-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "b95b44ab9478da78-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "ffe2d47a0e1337e1-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "976852f28de3d18b-eng", "tier": "trivial", "score": 0.0566, "task_type_1": "Closed QA", "task_type_2": "NA", "task_type_prob": 0.901, "creativity_scope": 0.0038, "reasoning": 0.0251, "contextual_knowledge": 0.0097, "number_of_few_shots": 0, "domain_knowledge": 0.2868, "no_label_reason": 0.0, "constraint_ct": 0.0366, "prompt_complexity_score": 0.0566}
+{"id": "fdf1ac96b7525832-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "9b4d1c67e687db74-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "984977c869981dfe-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "e33b2fefb6a1da52-eng", "tier": "low", "score": 0.20817, "task_type_1": "Open QA", "task_type_2": "Brainstorming", "task_type_prob": 0.356, "creativity_scope": 0.0931, "reasoning": 0.0439, "contextual_knowledge": 0.0244, "number_of_few_shots": 0, "domain_knowledge": 0.8473, "no_label_reason": 0.0, "constraint_ct": 0.242, "prompt_complexity_score": 0.20817}
+{"id": "3ce175ed3ef6b933-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "52af72f21cf65e35-eng", "tier": "low", "score": 0.31536, "task_type_1": "Open QA", "task_type_2": "Chatbot", "task_type_prob": 0.467, "creativity_scope": 0.3805, "reasoning": 0.0508, "contextual_knowledge": 0.0909, "number_of_few_shots": 0, "domain_knowledge": 0.3648, "no_label_reason": 0.0, "constraint_ct": 0.7348, "prompt_complexity_score": 0.31536}
+{"id": "6e7d994aa2a97e2d-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "b95b44ab9478da78-eng", "tier": "trivial", "score": 0.07296, "task_type_1": "Open QA", "task_type_2": "Other", "task_type_prob": 0.529, "creativity_scope": 0.0583, "reasoning": 0.0403, "contextual_knowledge": 0.4257, "number_of_few_shots": 0, "domain_knowledge": 0.0551, "no_label_reason": 0.0, "constraint_ct": 0.0862, "prompt_complexity_score": 0.07296}
+{"id": "290054e2e28827cc-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "3a8cfac3789a62f1-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "18443ed0f794acf1-eng", "tier": "medium", "score": 0.4094, "task_type_1": "Closed QA", "task_type_2": "Open QA", "task_type_prob": 0.415, "creativity_scope": 0.0577, "reasoning": 0.3819, "contextual_knowledge": 0.0283, "number_of_few_shots": 0.1698, "domain_knowledge": 0.9923, "no_label_reason": 0.0, "constraint_ct": 0.8999, "prompt_complexity_score": 0.4094}
+{"id": "dff3a71af8b7ad08-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "915439339b6f5df7-eng", "tier": "low", "score": 0.20018, "task_type_1": "Open QA", "task_type_2": "Brainstorming", "task_type_prob": 0.847, "creativity_scope": 0.0204, "reasoning": 0.0372, "contextual_knowledge": 0.095, "number_of_few_shots": 0, "domain_knowledge": 0.7628, "no_label_reason": 0.0, "constraint_ct": 0.4305, "prompt_complexity_score": 0.20018}
+{"id": "7ef9a2da3786930d-eng", "tier": "trivial", "score": 0.19889, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.862, "creativity_scope": 0.0139, "reasoning": 0.0243, "contextual_knowledge": 0.0695, "number_of_few_shots": 0, "domain_knowledge": 0.9166, "no_label_reason": 0.0, "constraint_ct": 0.3132, "prompt_complexity_score": 0.19889}
+{"id": "a130c6ea53a902d2-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "e7f0af72d0d0850e-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "d50168e5362628b5-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "4930873de93f0233-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "a982e7d5513ddc67-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "aecaf7ffb68dfaec-eng", "tier": "low", "score": 0.23854, "task_type_1": "Closed QA", "task_type_2": "Open QA", "task_type_prob": 0.63, "creativity_scope": 0.0069, "reasoning": 0.1613, "contextual_knowledge": 0.0427, "number_of_few_shots": 0, "domain_knowledge": 0.9387, "no_label_reason": 0.0, "constraint_ct": 0.3524, "prompt_complexity_score": 0.23854}
+{"id": "19fe52c75a0571ec-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "7cb601680dac7892-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "36c29280ca25d905-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "3e893d41daf6c8e5-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "d40e4882e7f7fe7f-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "2add77797edca382-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "19fe52c75a0571ec-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "f792a90b8343a121-eng", "tier": "trivial", "score": 0.06737, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.989, "creativity_scope": 0.0057, "reasoning": 0.0053, "contextual_knowledge": 0.113, "number_of_few_shots": 0, "domain_knowledge": 0.3794, "no_label_reason": 0.0, "constraint_ct": 0.0099, "prompt_complexity_score": 0.06737}
+{"id": "9af7884bcfeb25c1-eng", "tier": "medium", "score": 0.43016, "task_type_1": "Text Generation", "task_type_2": "NA", "task_type_prob": 0.808, "creativity_scope": 0.6924, "reasoning": 0.0557, "contextual_knowledge": 0.0805, "number_of_few_shots": 0.05, "domain_knowledge": 0.837, "no_label_reason": 0.0, "constraint_ct": 0.2788, "prompt_complexity_score": 0.43016}
+{"id": "e2a06fc58c1c4d59-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "b96d0705e267fafb-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "ffe2d47a0e1337e1-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "5649f92a19700204-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "7ef9a2da3786930d-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "7180ab512da7263a-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "1a8c036081a4d1ff-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "8c161a5eba50a639-eng", "tier": "trivial", "score": 0.18967, "task_type_1": "Open QA", "task_type_2": "Other", "task_type_prob": 0.234, "creativity_scope": 0.0029, "reasoning": 0.0105, "contextual_knowledge": 0.7422, "number_of_few_shots": 0, "domain_knowledge": 0.9687, "no_label_reason": 0.0, "constraint_ct": 0.0241, "prompt_complexity_score": 0.18967}
+{"id": "3f542e8df9a624c4-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "a98bc09f95f4204f-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "37c9e9ab7852f809-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "64ca9045d1ff6687-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "9502863b1de1ca21-eng", "tier": "trivial", "score": 0.0856, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.992, "creativity_scope": 0.0052, "reasoning": 0.0327, "contextual_knowledge": 0.0785, "number_of_few_shots": 0.05, "domain_knowledge": 0.4453, "no_label_reason": 0.0, "constraint_ct": 0.0159, "prompt_complexity_score": 0.0856}
+{"id": "d756a9b1ff9e2bff-eng", "tier": "trivial", "score": 0.11474, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.987, "creativity_scope": 0.0082, "reasoning": 0.0394, "contextual_knowledge": 0.1134, "number_of_few_shots": 0, "domain_knowledge": 0.6196, "no_label_reason": 0.0, "constraint_ct": 0.0227, "prompt_complexity_score": 0.11474}
+{"id": "9af7884bcfeb25c1-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "057ae32a943e952c-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "212d98bb321a83dd-eng", "tier": "trivial", "score": 0.07053, "task_type_1": "Closed QA", "task_type_2": "Open QA", "task_type_prob": 0.4, "creativity_scope": 0.0106, "reasoning": 0.0428, "contextual_knowledge": 0.0263, "number_of_few_shots": 0, "domain_knowledge": 0.236, "no_label_reason": 0.0, "constraint_ct": 0.1294, "prompt_complexity_score": 0.07053}
+{"id": "e33b2fefb6a1da52-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "976852f28de3d18b-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "c8931cad47554d9e-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "2bbd145263ec23e4-eng", "tier": "trivial", "score": 0.1536, "task_type_1": "Text Generation", "task_type_2": "Open QA", "task_type_prob": 0.243, "creativity_scope": 0.0374, "reasoning": 0.0131, "contextual_knowledge": 0.0304, "number_of_few_shots": 0, "domain_knowledge": 0.7419, "no_label_reason": 0.0, "constraint_ct": 0.1629, "prompt_complexity_score": 0.1536}
+{"id": "6633824d10f9c6ca-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "3ce175ed3ef6b933-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "ce98ec525470ad48-eng", "tier": "low", "score": 0.2458, "task_type_1": "Open QA", "task_type_2": "Brainstorming", "task_type_prob": 0.591, "creativity_scope": 0.1189, "reasoning": 0.0221, "contextual_knowledge": 0.063, "number_of_few_shots": 0, "domain_knowledge": 0.3748, "no_label_reason": 0.0, "constraint_ct": 0.9286, "prompt_complexity_score": 0.2458}
+{"id": "1f80abd87bd8de31-eng", "tier": "trivial", "score": 0.08394, "task_type_1": "Open QA", "task_type_2": "Brainstorming", "task_type_prob": 0.793, "creativity_scope": 0.067, "reasoning": 0.0062, "contextual_knowledge": 0.0446, "number_of_few_shots": 0, "domain_knowledge": 0.3398, "no_label_reason": 0.0, "constraint_ct": 0.0383, "prompt_complexity_score": 0.08394}
+{"id": "0c829b1d1e01ce98-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "27375c7c51aff034-eng", "tier": "trivial", "score": 0.0724, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.787, "creativity_scope": 0.0128, "reasoning": 0.0114, "contextual_knowledge": 0.1119, "number_of_few_shots": 0.051, "domain_knowledge": 0.2509, "no_label_reason": 0.0, "constraint_ct": 0.1286, "prompt_complexity_score": 0.0724}
+{"id": "baeba6101b4316a8-eng", "tier": "low", "score": 0.29289, "task_type_1": "Text Generation", "task_type_2": "NA", "task_type_prob": 0.78, "creativity_scope": 0.5815, "reasoning": 0.023, "contextual_knowledge": 0.1246, "number_of_few_shots": 0, "domain_knowledge": 0.0796, "no_label_reason": 0.0, "constraint_ct": 0.4363, "prompt_complexity_score": 0.29289}
+{"id": "72d0d07726a4628c-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "c8fa588ef977c084-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "3e893d41daf6c8e5-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "9abe2d760044d6ed-eng", "tier": "low", "score": 0.224, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.92, "creativity_scope": 0.0121, "reasoning": 0.3998, "contextual_knowledge": 0.0644, "number_of_few_shots": 0, "domain_knowledge": 0.5575, "no_label_reason": 0.0, "constraint_ct": 0.2198, "prompt_complexity_score": 0.224}
+{"id": "eb50da7f71f99591-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "a687f79634387c61-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "9abe2d760044d6ed-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "7cb601680dac7892-eng", "tier": "trivial", "score": 0.05757, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.966, "creativity_scope": 0.003, "reasoning": 0.0194, "contextual_knowledge": 0.3888, "number_of_few_shots": 0, "domain_knowledge": 0.1999, "no_label_reason": 0.0, "constraint_ct": 0.015, "prompt_complexity_score": 0.05757}
+{"id": "0a5825c01c07dcf2-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "5649f92a19700204-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "f61b1eac812bcd9f-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "9af7884bcfeb25c1-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "d50168e5362628b5-eng", "tier": "low", "score": 0.31897, "task_type_1": "Closed QA", "task_type_2": "Open QA", "task_type_prob": 0.375, "creativity_scope": 0.0589, "reasoning": 0.1509, "contextual_knowledge": 0.0463, "number_of_few_shots": 0, "domain_knowledge": 0.9901, "no_label_reason": 0.0, "constraint_ct": 0.732, "prompt_complexity_score": 0.31897}
+{"id": "f8064d15fe5698af-eng", "tier": "trivial", "score": 0.0857, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.857, "creativity_scope": 0.0437, "reasoning": 0.0243, "contextual_knowledge": 0.7523, "number_of_few_shots": 0.0917, "domain_knowledge": 0.1229, "no_label_reason": 0.0, "constraint_ct": 0.0246, "prompt_complexity_score": 0.0857}
+{"id": "3e893d41daf6c8e5-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "37c9e9ab7852f809-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "8c161a5eba50a639-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "eb50da7f71f99591-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "fdf1ac96b7525832-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "0d6af8a8a2e072a6-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "ce98ec525470ad48-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "b95b44ab9478da78-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "f577665b0660a238-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "50a5f1bde7146a87-eng", "tier": "medium", "score": 0.463, "task_type_1": "Text Generation", "task_type_2": "NA", "task_type_prob": 0.762, "creativity_scope": 0.4208, "reasoning": 0.0905, "contextual_knowledge": 0.0332, "number_of_few_shots": 0.3907, "domain_knowledge": 0.9225, "no_label_reason": 0.0, "constraint_ct": 0.8902, "prompt_complexity_score": 0.463}
+{"id": "6e7d994aa2a97e2d-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "fdf1ac96b7525832-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "9502863b1de1ca21-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "b96d0705e267fafb-eng", "tier": "low", "score": 0.20594, "task_type_1": "Open QA", "task_type_2": "Closed QA", "task_type_prob": 0.57, "creativity_scope": 0.0014, "reasoning": 0.1293, "contextual_knowledge": 0.0437, "number_of_few_shots": 0, "domain_knowledge": 0.9714, "no_label_reason": 0.0, "constraint_ct": 0.1682, "prompt_complexity_score": 0.20594}
+{"id": "984977c869981dfe-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "27375c7c51aff034-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "e33b2fefb6a1da52-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "a98bc09f95f4204f-eng", "tier": "low", "score": 0.37838, "task_type_1": "Closed QA", "task_type_2": "Open QA", "task_type_prob": 0.651, "creativity_scope": 0.0046, "reasoning": 0.2121, "contextual_knowledge": 0.0714, "number_of_few_shots": 2.9734, "domain_knowledge": 0.8832, "no_label_reason": 0.0, "constraint_ct": 0.2602, "prompt_complexity_score": 0.37838}
+{"id": "f8064d15fe5698af-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "e944f9b1b3bbc893-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "2370e0473fe2f515-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "05bab3e1cc64bd00-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "a982e7d5513ddc67-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "0a5825c01c07dcf2-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "c13fad5029d32ee6-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "d21923f0102d403e-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "167e908a99a5efc5-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "445c95d7f7615499-eng", "tier": "trivial", "score": 0.07236, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.975, "creativity_scope": 0.0079, "reasoning": 0.0114, "contextual_knowledge": 0.0141, "number_of_few_shots": 0, "domain_knowledge": 0.4205, "no_label_reason": 0.0, "constraint_ct": 0.0198, "prompt_complexity_score": 0.07236}
+{"id": "18443ed0f794acf1-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "ee7c601fb399580f-eng", "tier": "low", "score": 0.30135, "task_type_1": "Closed QA", "task_type_2": "Code Generation", "task_type_prob": 0.354, "creativity_scope": 0.0066, "reasoning": 0.168, "contextual_knowledge": 0.076, "number_of_few_shots": 0, "domain_knowledge": 0.9964, "no_label_reason": 0.0, "constraint_ct": 0.6919, "prompt_complexity_score": 0.30135}
+{"id": "a687f79634387c61-eng", "tier": "trivial", "score": 0.0653, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.984, "creativity_scope": 0.0043, "reasoning": 0.005, "contextual_knowledge": 0.1114, "number_of_few_shots": 0, "domain_knowledge": 0.3719, "no_label_reason": 0.0, "constraint_ct": 0.0079, "prompt_complexity_score": 0.0653}
+{"id": "fdf1ac96b7525832-eng", "tier": "trivial", "score": 0.05369, "task_type_1": "Closed QA", "task_type_2": "NA", "task_type_prob": 0.873, "creativity_scope": 0.0044, "reasoning": 0.0342, "contextual_knowledge": 0.0114, "number_of_few_shots": 0.1888, "domain_knowledge": 0.1242, "no_label_reason": 0.0, "constraint_ct": 0.0997, "prompt_complexity_score": 0.05369}
+{"id": "dff3a71af8b7ad08-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "eaa58b6e7985ae82-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "eaa58b6e7985ae82-eng", "tier": "trivial", "score": 0.05348, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.903, "creativity_scope": 0.0018, "reasoning": 0.0062, "contextual_knowledge": 0.1507, "number_of_few_shots": 0, "domain_knowledge": 0.2817, "no_label_reason": 0.0, "constraint_ct": 0.0101, "prompt_complexity_score": 0.05348}
+{"id": "05bab3e1cc64bd00-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "0d6af8a8a2e072a6-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "9502863b1de1ca21-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "deceb9dbf43c77c9-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "6e7d994aa2a97e2d-eng", "tier": "trivial", "score": 0.16228, "task_type_1": "Rewrite", "task_type_2": "NA", "task_type_prob": 0.706, "creativity_scope": 0.0085, "reasoning": 0.007, "contextual_knowledge": 0.0417, "number_of_few_shots": 0, "domain_knowledge": 0.7458, "no_label_reason": 0.0, "constraint_ct": 0.2907, "prompt_complexity_score": 0.16228}
+{"id": "deceb9dbf43c77c9-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "72d0d07726a4628c-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "a17fe8e97531047b-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "0a5825c01c07dcf2-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "cfae448b364f0ee7-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "976852f28de3d18b-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "a982e7d5513ddc67-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "ee7c601fb399580f-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "c8fa588ef977c084-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "1838bc7ccbe31bce-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "0c829b1d1e01ce98-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "a17fe8e97531047b-eng", "tier": "trivial", "score": 0.07762, "task_type_1": "Closed QA", "task_type_2": "Open QA", "task_type_prob": 0.828, "creativity_scope": 0.0008, "reasoning": 0.0709, "contextual_knowledge": 0.0698, "number_of_few_shots": 0, "domain_knowledge": 0.3095, "no_label_reason": 0.0, "constraint_ct": 0.0647, "prompt_complexity_score": 0.07762}
+{"id": "50a5f1bde7146a87-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "f8064d15fe5698af-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "1f80abd87bd8de31-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "9b4d1c67e687db74-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "d21923f0102d403e-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "290054e2e28827cc-eng", "tier": "low", "score": 0.21983, "task_type_1": "Code Generation", "task_type_2": "Open QA", "task_type_prob": 0.661, "creativity_scope": 0.0466, "reasoning": 0.0263, "contextual_knowledge": 0.1456, "number_of_few_shots": 0, "domain_knowledge": 0.996, "no_label_reason": 0.0, "constraint_ct": 0.2684, "prompt_complexity_score": 0.21983}
+{"id": "978b2a7fb0d54649-eng", "tier": "low", "score": 0.21832, "task_type_1": "Text Generation", "task_type_2": "Code Generation", "task_type_prob": 0.497, "creativity_scope": 0.1284, "reasoning": 0.0284, "contextual_knowledge": 0.1234, "number_of_few_shots": 0, "domain_knowledge": 0.9721, "no_label_reason": 0.0, "constraint_ct": 0.0953, "prompt_complexity_score": 0.21832}
+{"id": "18443ed0f794acf1-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "2c89e7c0cef84abd-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "984977c869981dfe-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "05bab3e1cc64bd00-eng", "tier": "trivial", "score": 0.07315, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.972, "creativity_scope": 0.0021, "reasoning": 0.005, "contextual_knowledge": 0.0634, "number_of_few_shots": 0, "domain_knowledge": 0.4425, "no_label_reason": 0.0, "constraint_ct": 0.0108, "prompt_complexity_score": 0.07315}
+{"id": "2add77797edca382-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "f61b1eac812bcd9f-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "a982e7d5513ddc67-eng", "tier": "low", "score": 0.3372, "task_type_1": "Text Generation", "task_type_2": "Code Generation", "task_type_prob": 0.654, "creativity_scope": 0.1429, "reasoning": 0.0383, "contextual_knowledge": 0.1226, "number_of_few_shots": 0, "domain_knowledge": 0.9509, "no_label_reason": 0.0, "constraint_ct": 0.859, "prompt_complexity_score": 0.3372}
+{"id": "3ce175ed3ef6b933-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "eb50da7f71f99591-eng", "tier": "trivial", "score": 0.19523, "task_type_1": "Text Generation", "task_type_2": "NA", "task_type_prob": 0.67, "creativity_scope": 0.0793, "reasoning": 0.0079, "contextual_knowledge": 0.089, "number_of_few_shots": 0, "domain_knowledge": 0.9428, "no_label_reason": 0.0, "constraint_ct": 0.1309, "prompt_complexity_score": 0.19523}
+{"id": "7915924b01f364ce-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "c1b0cc268c6f4a3e-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "290054e2e28827cc-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "e3d93822b841edca-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "1f80abd87bd8de31-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "978b2a7fb0d54649-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "e7f0af72d0d0850e-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "b7fed5cb6ec22d9f-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "7180ab512da7263a-eng", "tier": "trivial", "score": 0.1436, "task_type_1": "Open QA", "task_type_2": "Brainstorming", "task_type_prob": 0.751, "creativity_scope": 0.1581, "reasoning": 0.0084, "contextual_knowledge": 0.0516, "number_of_few_shots": 0, "domain_knowledge": 0.325, "no_label_reason": 0.0, "constraint_ct": 0.2322, "prompt_complexity_score": 0.1436}
+{"id": "a687f79634387c61-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "50a5f1bde7146a87-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "591df8610c4c0186-eng", "tier": "medium", "score": 0.4253, "task_type_1": "Closed QA", "task_type_2": "Open QA", "task_type_prob": 0.756, "creativity_scope": 0.0105, "reasoning": 0.5586, "contextual_knowledge": 0.055, "number_of_few_shots": 0, "domain_knowledge": 0.9479, "no_label_reason": 0.0, "constraint_ct": 0.9136, "prompt_complexity_score": 0.4253}
+{"id": "7180ab512da7263a-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "9b4d1c67e687db74-eng", "tier": "trivial", "score": 0.19717, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.892, "creativity_scope": 0.011, "reasoning": 0.0319, "contextual_knowledge": 0.0597, "number_of_few_shots": 0, "domain_knowledge": 0.9921, "no_label_reason": 0.0, "constraint_ct": 0.2236, "prompt_complexity_score": 0.19717}
+{"id": "e2a06fc58c1c4d59-eng", "tier": "trivial", "score": 0.09654, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.986, "creativity_scope": 0.0138, "reasoning": 0.0726, "contextual_knowledge": 0.1635, "number_of_few_shots": 0, "domain_knowledge": 0.3682, "no_label_reason": 0.0, "constraint_ct": 0.0677, "prompt_complexity_score": 0.09654}
+{"id": "0d6af8a8a2e072a6-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "37c9e9ab7852f809-eng", "tier": "low", "score": 0.30113, "task_type_1": "Closed QA", "task_type_2": "NA", "task_type_prob": 0.777, "creativity_scope": 0.005, "reasoning": 0.0934, "contextual_knowledge": 0.0623, "number_of_few_shots": 0.7928, "domain_knowledge": 0.9357, "no_label_reason": 0.0, "constraint_ct": 0.6195, "prompt_complexity_score": 0.30113}
+{"id": "2bbd145263ec23e4-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "212d98bb321a83dd-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "19fe52c75a0571ec-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "baeba6101b4316a8-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "eaa58b6e7985ae82-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "0d6af8a8a2e072a6-eng", "tier": "trivial", "score": 0.19162, "task_type_1": "Open QA", "task_type_2": "Brainstorming", "task_type_prob": 0.561, "creativity_scope": 0.0052, "reasoning": 0.0562, "contextual_knowledge": 0.0554, "number_of_few_shots": 0, "domain_knowledge": 0.8221, "no_label_reason": 0.0, "constraint_ct": 0.3311, "prompt_complexity_score": 0.19162}
+{"id": "3f2b5dc0588d12e0-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "3f542e8df9a624c4-eng", "tier": "trivial", "score": 0.19939, "task_type_1": "Closed QA", "task_type_2": "Chatbot", "task_type_prob": 0.479, "creativity_scope": 0.022, "reasoning": 0.0273, "contextual_knowledge": 0.0319, "number_of_few_shots": 0, "domain_knowledge": 0.4858, "no_label_reason": 0.0, "constraint_ct": 0.736, "prompt_complexity_score": 0.19939}
+{"id": "3f2b5dc0588d12e0-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "7915924b01f364ce-eng", "tier": "trivial", "score": 0.12052, "task_type_1": "Other", "task_type_2": "Open QA", "task_type_prob": 0.256, "creativity_scope": 0.1613, "reasoning": 0.0158, "contextual_knowledge": 0.5376, "number_of_few_shots": 0, "domain_knowledge": 0.1474, "no_label_reason": 0.0, "constraint_ct": 0.0742, "prompt_complexity_score": 0.12052}
+{"id": "591df8610c4c0186-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "86811c719f4f32da-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "ffe2d47a0e1337e1-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "e2a06fc58c1c4d59-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "aecaf7ffb68dfaec-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "72d0d07726a4628c-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "d756a9b1ff9e2bff-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "eb3d0a335d372b07-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "d21923f0102d403e-eng", "tier": "trivial", "score": 0.09015, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.931, "creativity_scope": 0.0465, "reasoning": 0.0035, "contextual_knowledge": 0.3171, "number_of_few_shots": 0, "domain_knowledge": 0.3551, "no_label_reason": 0.0, "constraint_ct": 0.0259, "prompt_complexity_score": 0.09015}
+{"id": "eb3d0a335d372b07-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "e944f9b1b3bbc893-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "2add77797edca382-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "7915924b01f364ce-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "eb3d0a335d372b07-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "7cb601680dac7892-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "27375c7c51aff034-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "c1b0cc268c6f4a3e-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "c8931cad47554d9e-eng", "tier": "low", "score": 0.33632, "task_type_1": "Text Generation", "task_type_2": "Open QA", "task_type_prob": 0.451, "creativity_scope": 0.3852, "reasoning": 0.0373, "contextual_knowledge": 0.0489, "number_of_few_shots": 0, "domain_knowledge": 0.4995, "no_label_reason": 0.0, "constraint_ct": 0.7654, "prompt_complexity_score": 0.33632}
+{"id": "86811c719f4f32da-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "1f80abd87bd8de31-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "212d98bb321a83dd-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "b7fed5cb6ec22d9f-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "d21923f0102d403e-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "36c29280ca25d905-eng", "tier": "trivial", "score": 0.1903, "task_type_1": "Open QA", "task_type_2": "Brainstorming", "task_type_prob": 0.754, "creativity_scope": 0.3902, "reasoning": 0.0089, "contextual_knowledge": 0.0701, "number_of_few_shots": 0, "domain_knowledge": 0.2534, "no_label_reason": 0.0, "constraint_ct": 0.0666, "prompt_complexity_score": 0.1903}
+{"id": "591df8610c4c0186-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "52af72f21cf65e35-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "d756a9b1ff9e2bff-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "3f542e8df9a624c4-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "19fe52c75a0571ec-eng", "tier": "trivial", "score": 0.08269, "task_type_1": "Closed QA", "task_type_2": "Open QA", "task_type_prob": 0.556, "creativity_scope": 0.0004, "reasoning": 0.0421, "contextual_knowledge": 0.0809, "number_of_few_shots": 0, "domain_knowledge": 0.4298, "no_label_reason": 0.0, "constraint_ct": 0.0234, "prompt_complexity_score": 0.08269}
+{"id": "8c161a5eba50a639-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "634638dbcf710d07-eng", "tier": "low", "score": 0.23849, "task_type_1": "Text Generation", "task_type_2": "Rewrite", "task_type_prob": 0.368, "creativity_scope": 0.0419, "reasoning": 0.0088, "contextual_knowledge": 0.2543, "number_of_few_shots": 0, "domain_knowledge": 0.862, "no_label_reason": 0.0, "constraint_ct": 0.5307, "prompt_complexity_score": 0.23849}
+{"id": "915439339b6f5df7-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "c1c19511ec96d66f-eng", "tier": "trivial", "score": 0.07161, "task_type_1": "Open QA", "task_type_2": "Brainstorming", "task_type_prob": 0.616, "creativity_scope": 0.0197, "reasoning": 0.0058, "contextual_knowledge": 0.0319, "number_of_few_shots": 0, "domain_knowledge": 0.3921, "no_label_reason": 0.0, "constraint_ct": 0.019, "prompt_complexity_score": 0.07161}
+{"id": "e7f0af72d0d0850e-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "057ae32a943e952c-eng", "tier": "low", "score": 0.25294, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.751, "creativity_scope": 0.0082, "reasoning": 0.1176, "contextual_knowledge": 0.487, "number_of_few_shots": 0, "domain_knowledge": 0.8135, "no_label_reason": 0.0, "constraint_ct": 0.4953, "prompt_complexity_score": 0.25294}
+{"id": "a130c6ea53a902d2-eng", "tier": "trivial", "score": 0.07741, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.822, "creativity_scope": 0.01, "reasoning": 0.0057, "contextual_knowledge": 0.0186, "number_of_few_shots": 0, "domain_knowledge": 0.3911, "no_label_reason": 0.0, "constraint_ct": 0.0859, "prompt_complexity_score": 0.07741}
+{"id": "212d98bb321a83dd-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "05bab3e1cc64bd00-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "d40e4882e7f7fe7f-eng", "tier": "low", "score": 0.26361, "task_type_1": "Code Generation", "task_type_2": "NA", "task_type_prob": 0.866, "creativity_scope": 0.0093, "reasoning": 0.1224, "contextual_knowledge": 0.0322, "number_of_few_shots": 0.1641, "domain_knowledge": 0.9968, "no_label_reason": 0.0, "constraint_ct": 0.4695, "prompt_complexity_score": 0.26361}
+{"id": "18443ed0f794acf1-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "6633824d10f9c6ca-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "c8fa588ef977c084-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "aecaf7ffb68dfaec-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "f8064d15fe5698af-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "d40e4882e7f7fe7f-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "4930873de93f0233-eng", "tier": "trivial", "score": 0.16478, "task_type_1": "Closed QA", "task_type_2": "Summarization", "task_type_prob": 0.546, "creativity_scope": 0.0376, "reasoning": 0.0474, "contextual_knowledge": 0.0135, "number_of_few_shots": 0, "domain_knowledge": 0.3424, "no_label_reason": 0.0, "constraint_ct": 0.5849, "prompt_complexity_score": 0.16478}
+{"id": "e7f0af72d0d0850e-eng", "tier": "low", "score": 0.21676, "task_type_1": "Closed QA", "task_type_2": "Classification", "task_type_prob": 0.286, "creativity_scope": 0.0079, "reasoning": 0.0194, "contextual_knowledge": 0.1037, "number_of_few_shots": 0, "domain_knowledge": 0.9921, "no_label_reason": 0.0, "constraint_ct": 0.3676, "prompt_complexity_score": 0.21676}
+{"id": "86811c719f4f32da-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "a98bc09f95f4204f-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "978b2a7fb0d54649-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "2370e0473fe2f515-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "d50168e5362628b5-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "baeba6101b4316a8-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "915439339b6f5df7-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "1a8c036081a4d1ff-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "2370e0473fe2f515-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "7ef9a2da3786930d-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "36c29280ca25d905-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "e3d93822b841edca-eng", "tier": "low", "score": 0.29434, "task_type_1": "Chatbot", "task_type_2": "Text Generation", "task_type_prob": 0.447, "creativity_scope": 0.6089, "reasoning": 0.0364, "contextual_knowledge": 0.1528, "number_of_few_shots": 0, "domain_knowledge": 0.2754, "no_label_reason": 0.0, "constraint_ct": 0.1545, "prompt_complexity_score": 0.29434}
+{"id": "cfae448b364f0ee7-eng", "tier": "low", "score": 0.21182, "task_type_1": "Text Generation", "task_type_2": "Chatbot", "task_type_prob": 0.321, "creativity_scope": 0.3755, "reasoning": 0.0026, "contextual_knowledge": 0.1345, "number_of_few_shots": 0, "domain_knowledge": 0.377, "no_label_reason": 0.0, "constraint_ct": 0.1098, "prompt_complexity_score": 0.21182}
+{"id": "64ca9045d1ff6687-eng", "tier": "low", "score": 0.37147, "task_type_1": "Text Generation", "task_type_2": "NA", "task_type_prob": 0.795, "creativity_scope": 0.5515, "reasoning": 0.0113, "contextual_knowledge": 0.1336, "number_of_few_shots": 0, "domain_knowledge": 0.4971, "no_label_reason": 0.0, "constraint_ct": 0.6292, "prompt_complexity_score": 0.37147}
+{"id": "e944f9b1b3bbc893-eng", "tier": "trivial", "score": 0.07914, "task_type_1": "Open QA", "task_type_2": "Brainstorming", "task_type_prob": 0.743, "creativity_scope": 0.0449, "reasoning": 0.0096, "contextual_knowledge": 0.1331, "number_of_few_shots": 0, "domain_knowledge": 0.3507, "no_label_reason": 0.0, "constraint_ct": 0.0118, "prompt_complexity_score": 0.07914}
+{"id": "2370e0473fe2f515-eng", "tier": "medium", "score": 0.42469, "task_type_1": "Text Generation", "task_type_2": "Open QA", "task_type_prob": 0.726, "creativity_scope": 0.4866, "reasoning": 0.0512, "contextual_knowledge": 0.0571, "number_of_few_shots": 0, "domain_knowledge": 0.6481, "no_label_reason": 0.0, "constraint_ct": 0.9434, "prompt_complexity_score": 0.42469}
+{"id": "f792a90b8343a121-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "72d0d07726a4628c-eng", "tier": "low", "score": 0.34764, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.837, "creativity_scope": 0.0454, "reasoning": 0.2066, "contextual_knowledge": 0.0461, "number_of_few_shots": 0, "domain_knowledge": 0.9198, "no_label_reason": 0.0, "constraint_ct": 0.9322, "prompt_complexity_score": 0.34764}
+{"id": "2c89e7c0cef84abd-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "c42d59de0ccacbaf-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "50a5f1bde7146a87-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "dff3a71af8b7ad08-rus", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "978b2a7fb0d54649-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "c13fad5029d32ee6-eng", "tier": "low", "score": 0.34405, "task_type_1": "Chatbot", "task_type_2": "Closed QA", "task_type_prob": 0.428, "creativity_scope": 0.1277, "reasoning": 0.3057, "contextual_knowledge": 0.0263, "number_of_few_shots": 0.0517, "domain_knowledge": 0.7183, "no_label_reason": 0.0, "constraint_ct": 0.7419, "prompt_complexity_score": 0.34405}
+{"id": "7cb601680dac7892-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "a130c6ea53a902d2-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "c1b0cc268c6f4a3e-eng", "tier": "trivial", "score": 0.05989, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.973, "creativity_scope": 0.0112, "reasoning": 0.0115, "contextual_knowledge": 0.0242, "number_of_few_shots": 0, "domain_knowledge": 0.3348, "no_label_reason": 0.0, "constraint_ct": 0.0111, "prompt_complexity_score": 0.05989}
+{"id": "c8931cad47554d9e-fra", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "6633824d10f9c6ca-eng", "tier": "low", "score": 0.32186, "task_type_1": "Closed QA", "task_type_2": "Open QA", "task_type_prob": 0.306, "creativity_scope": 0.0109, "reasoning": 0.1142, "contextual_knowledge": 0.0455, "number_of_few_shots": 0, "domain_knowledge": 0.9293, "no_label_reason": 0.0, "constraint_ct": 0.9855, "prompt_complexity_score": 0.32186}
+{"id": "167e908a99a5efc5-eng", "tier": "trivial", "score": 0.06193, "task_type_1": "Open QA", "task_type_2": "NA", "task_type_prob": 0.988, "creativity_scope": 0.0032, "reasoning": 0.0058, "contextual_knowledge": 0.0584, "number_of_few_shots": 0, "domain_knowledge": 0.3656, "no_label_reason": 0.0, "constraint_ct": 0.0107, "prompt_complexity_score": 0.06193}
+{"id": "a687f79634387c61-zho", "tier": null, "score": null, "not_predicted": "language not covered"}
+{"id": "9af7884bcfeb25c1-fra", "tier": null, "score": null, "not_predicted": "language not covered"}

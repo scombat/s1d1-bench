@@ -47,12 +47,13 @@ BLUE, ORANGE, GREEN, GREY = "#2a78d6", "#eb6834", "#1baf7a", "#7a7975"
 JUDGE, JUDGE_SOFT = "#0b0b0b", "#52514e"
 LLM_READER = "LLM reading the v7 instructions"
 # (prefixes of the names, label, hue): grouped by kind and not by brand, three hues and the grey of the witnesses. The
-# routers of other projects share one hue (a variant is two steps lighter); a small LLM that reads the v7 instructions
+# routers and classifiers of other projects share one hue (LiteLLM, RouteLLM and NVIDIA are three lightness steps of
+# it: the base hue, lighter, darker); a small LLM that reads the v7 instructions
 # like the judges takes the colour of the judges
 FAMILIES = (
     (("s1d1-",), "s1d1", BLUE),
     (("laya-",), "Laya", ORANGE),
-    (("litellm-", "routellm-"), "third-party routers", GREEN),
+    (("litellm-", "routellm-", "nvidia-"), "third-party routers and classifiers", GREEN),
     (("llm4b-",), LLM_READER, JUDGE),
 )
 OTHERS = ("witnesses and others", GREY)
@@ -61,6 +62,7 @@ VARIANTS = {
     "s1d1-": (("fp16", -0.25), ("compact", 0.25), ("small", 0.45), ("tiny", 0.6)),
     "laya-": (("multilingual", 0.4),),
     "routellm-": (("bert", 0.4),),
+    "nvidia-": (("ptcc", -0.3),),
 }
 CONFUSION = (REFERENCE, "laya-multilingual-tier", LITELLM, FLOOR)  # the four panels of `confusion`
 HEAT = (0.9, 0.0, -0.5)  # the single-hue heat maps: blue lightened (value 0), blue, blue darkened (the top)
@@ -86,13 +88,17 @@ LABEL_OFFSETS: dict[tuple[str, str], tuple[float, float]] = {
     # so as not to hide the 4B marker, whose own label is centred above its whisker
     ("quality-vs-latency", "base-v1-qwen3-cap512"): (-8, -13),
     ("quality-vs-latency", "llm4b-gemma4-e4b-off"): (0, 38),
+    # the third-party systems sit at 0.3 QWK within a decade of latency: routellm's label drops below the whisker of
+    # nvidia, which its default position would cross
+    ("quality-vs-latency", "routellm-bert"): (6, -28),
     ("quality-vs-footprint", "s1d1-full-int8"): (0, 26),  # centred above its whisker: left of it, it named compact
-    ("quality-vs-footprint", "s1d1-full-fp16"): (6, -16),  # below qwen3's label, which reaches back to 5 GB
+    ("quality-vs-footprint", "s1d1-full-fp16"): (6, -3),  # level with its point, clear of qwen3's label below it
     ("quality-vs-footprint", "s1d1-compact-int8"): (6, -14),
     ("quality-vs-footprint", "s1d1-small-int8"): (-8, 0),
     ("quality-vs-footprint", "base-v1-gemma4-cap512"): (-8, 10),
     ("quality-vs-footprint", "base-v1-qwen3-cap512"): (-8, -16),  # below-left, clear of the 4B model's marker
     ("quality-vs-footprint", "llm4b-gemma4-e4b-off"): (0, 38),  # centred above its whisker
+    ("quality-vs-footprint", "nvidia-ptcc-eng"): (-8, 0),  # left: on the right it crosses the whisker of routellm
 }
 RC = {
     "svg.hashsalt": "s1d1-bench",  # the ids of clip paths and glyphs, otherwise random
@@ -1032,7 +1038,7 @@ def _quality_vs_latency(computed: dict[str, pa.Table], sigma: float, mpl):
         f"QWK against truth_all, {n_ids}; whiskers: 95% CI over the {n_base}",
     )
     fig.tight_layout()
-    legend_below(fig, handles, ncol=4)
+    legend_below(fig, handles, ncol=2)
     columns = ["kind", "name", "family", "device", "latency_p50_ms", "latency_p95_ms", "qwk", "lo", "hi", "draws_used"]
     return fig, columns, points, notes
 

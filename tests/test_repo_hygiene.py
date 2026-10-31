@@ -162,7 +162,7 @@ def test_readme_results_match_the_report():
     candidates = _csv_rows("agreement_all.csv", "name")
     shown = (
         "s1d1-full-int8", "s1d1-small-int8", "length", "laya-english-tier", "laya-multilingual-tier",
-        "routellm-bert", "llm4b-gemma4-e4b-off",
+        "routellm-bert", "llm4b-gemma4-e4b-off", "nvidia-ptcc-eng",
     )  # fmt: skip
     for name in (*shown, "litellm-heuristic"):
         row = candidates[name]
@@ -191,7 +191,7 @@ def test_readme_results_show_the_three_figures_with_a_caption_and_link_the_repor
         assert block.strip() and not block.strip().startswith("|"), figure
     assert "](report/base-v1/index.md)" in results
     table = [line for line in results.splitlines() if line.startswith("| ") and not line.startswith("| candidate")]
-    assert len(table) == 9  # the seven lines of the first lot, plus RouteLLM bert and the 4B model of lot B
+    assert len(table) == 10  # the seven lines of the first lot, RouteLLM bert and the 4B model of lot B, NVIDIA
 
 
 def _span(values: list[float], unit) -> str:
@@ -284,6 +284,7 @@ LOCAL_PATH_EXCEPTIONS = {
     "tests/test_classify.py",
     "tests/test_laya_backend.py",
     "tests/test_routellm_backend.py",
+    "tests/test_nvidia_backend.py",
 }
 
 

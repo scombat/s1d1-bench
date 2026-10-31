@@ -91,18 +91,30 @@ QWK against `truth_all` (the median of the three main judges), 95% CI over 1,000
 | LiteLLM heuristic | 0.089 [0.026, 0.172] | 0.342 [0.250, 0.436] |
 | RouteLLM bert (`routellm-bert`) | 0.278 [0.132, 0.408] | 0.381 [0.303, 0.467] |
 | LLM 4B, Gemma 4 E4B 8-bit (`llm4b-gemma4-e4b-off`) | 0.789 [0.698, 0.853] | 0.545 [0.447, 0.643] |
+| NVIDIA prompt-task-and-complexity (`nvidia-ptcc-eng`), 90 English ids | 0.311 [0.209, 0.415] | 0.267 [0.178, 0.356] |
 
-The last two rows are those of lot B. `routellm-bert` is RouteLLM's published `bert` router, run on the prompts as they
+The last three rows are those of lot B and of the NVIDIA lot. `routellm-bert` is RouteLLM's published `bert` router, run on the prompts as they
 are; it predicts the probability that GPT-4 beats Mixtral on an English question, not a tier, read here with five equal
 bounds of 0.2 ([the mapping](#the-routellm-routers-and-the-4-billion-llm)): its QWK is 0.367 in English and 0.149 to
 0.303 in the other three languages (point values, the CIs overlap), and the paired gap `s1d1-full-int8` −
 `routellm-bert` is 0.528 [0.388, 0.668]. `llm4b-gemma4-e4b-off` is a small LLM that reads the v7 instructions like
 the judges, without reasoning; its QWK, computed on 356 ids (4 abstentions), is close to that of `s1d1-full-int8`, and
-the 2 σ rule does not separate them (paired gap 0.018 [−0.067, 0.105]). This model is of the Gemma 4 family, which is
+the 2 σ rule does not separate them (paired gap 0.016 [−0.068, 0.103], on the 356 ids both have). This model is of the Gemma 4 family, which is
 both one of the three judges and the labeller of the training data of s1d1; against the two other judges only
 (`truth_all_nogemma`), it is at 0.713 [0.628, 0.774] and `s1d1-full-int8` at 0.785 [0.713, 0.834]
 (`report/base-v1/tables/agreement_nogemma.csv`). It answers in 1.1 s per prompt on the GPU and
 weighs 8.9 GB on disk, `routellm-bert` 16.3 ms on the CPU for 1.1 GB.
+
+`nvidia-ptcc-eng` is NVIDIA's `prompt-task-and-complexity-classifier`, a DeBERTa-v3-base with several heads that labels
+an English prompt with one of eleven task types and six complexity dimensions; its complexity score is their weighted
+sum, not a v7 tier. The model is English only, so only the 90 English ids are classified and the 270 others stay
+unpredicted (no label, counted nowhere: `n` is 90); the score is kept as it is, in [0 ; 1], and read with the same five
+equal bounds of 0.2 as the RouteLLM routers, `task` and `needs_tools` being `null` (see
+[the mapping](#the-routellm-routers-and-the-4-billion-llm)). On those 90 ids its QWK is 0.311 [0.209, 0.415] and
+`s1d1-full-int8`'s is 0.840 [0.767, 0.890] (`report/base-v1/tables/by_language.csv`, row `eng`); the paired gap
+`s1d1-full-int8` − `nvidia-ptcc-eng`, taken on the 90 ids both have (`paired.csv`, `n_common` 90), is 0.529
+[0.404, 0.634], and the table says it passes the 2 σ rule (the interval excludes zero and its lower bound is beyond
+2 σ = 0.010). It answers in 107.9 ms per prompt on the CPU and weighs 735.5 MB.
 
 The judges are the measuring instrument, not competitors: no table ranks a candidate against a judge, except the
 ceiling. No "better than" sentence without the 2 σ rule (the CI of the paired gap excludes zero and exceeds 2 σ,
@@ -112,7 +124,7 @@ ceiling. No "better than" sentence without the 2 σ rule (the CI of the paired g
 LiteLLM's heuristic is the default classifier of LiteLLM's Auto Router, and Laya the other option that LiteLLM
 documents for a self-hosted classifier; the bench reads both without training or tuning (zero-shot) on
 this rubric, LiteLLM's four tiers translated name by name (see
-[The fifteen classifier folders](#the-fifteen-classifier-folders-thirteen-in-the-results)). For `small`, the
+[The sixteen classifier folders](#the-sixteen-classifier-folders-fourteen-in-the-results)). For `small`, the
 bench does not separate `s1d1-small-int8` from `s1d1-full-int8`: the paired gap `s1d1-full-int8` − `s1d1-small-int8` is
 0.035 [−0.004, 0.076] (`report/base-v1/tables/paired.csv`, the 2 σ rule does not pass). `s1d1-small-int8` weighs 56 MB
 against 310 MB for `s1d1-full-int8` and answers in 5.8 ms per prompt against 9.1 ms (`report/base-v1/tables/profile.csv`,
@@ -138,10 +150,11 @@ uv run --group report bench report --results results/base-v1.parquet --meta data
 - `bench check`: flags the translations to proofread (`structure`, `labels`, `request`) and writes the review sheet
   (`review`).
 - `bench classify`: has a classifier classify the prompts and writes a `classifiers/<name>` folder in the format of a
-  judge, plus the score when it is on the v7 scale. Six adapters: three witnesses (`random`, `length`, `constant`) and
-  three systems under test (`s1d1`, weights from the Hub; `laya`; `litellm-heuristic`, LiteLLM's rule-based scorer,
-  with no model), the last one and `laya` keeping their raw decisions apart in `decisions.jsonl` (tier name by name,
-  no `score` in `labels.jsonl`).
+  judge, plus the score when it is on the v7 scale. Eight adapters: three witnesses (`random`, `length`, `constant`) and
+  five systems under test (`s1d1`, weights from the Hub; `laya`; `litellm-heuristic`, LiteLLM's rule-based scorer,
+  with no model; `routellm`, RouteLLM's `bert` router; `nvidia`, NVIDIA's prompt classifier, English ids only), the
+  last four and `laya` keeping their raw decisions apart in `decisions.jsonl` (for `laya` and `litellm-heuristic`, tier
+  name by name, no `score` in `labels.jsonl`).
 - `bench run`: gathers the judge and classifier folders of a set into one table, one row per id, with the truths of the
   main judges (`results/<set>.parquet` and `<set>.run.json`).
 - `bench report`: writes the report of a set (`report/<set>/index.md`, twenty-seven CSV tables, ten SVG figures with
@@ -406,7 +419,7 @@ one of the two judges abstained (column `abstained`).
 
 ## The report's judges and the classifiers
 
-The `base-v1` report rests on five series of judges and thirteen classifiers, all on `data/prompts/base-v1.jsonl` (360
+The `base-v1` report rests on five series of judges and fourteen classifiers, all on `data/prompts/base-v1.jsonl` (360
 lines, SHA-256 `e6a6d4c12ef8b95caea942337a3a1e16ec1622cb4e75c8ee0b473ef609a32490`). The judges ran on 2026-10-30
 on a Mac M4 Max 128 GB, with `mlx-lm` 0.32.2, one model at a time, temperature 0, `--max-tokens 1024`, the `v7-single`
 instructions, revisions of [judges/MODELS.md](judges/MODELS.md).
@@ -439,7 +452,7 @@ abstentions), and `bench validate` prints `ok (1 abstention)`. What an abstentio
 [The truths](#the-truths) and in [judges/README.md](judges/README.md); this section does not return to it. In the agreements
 below, the `abstained` column counts the ids left out of the pair.
 
-### The fifteen classifier folders (thirteen in the results)
+### The sixteen classifier folders (fourteen in the results)
 
 | folder | what it is | revision | duration |
 |---|---|---|---|
@@ -458,6 +471,7 @@ below, the `abstained` column counts the ids left out of the pair.
 | `classifiers/litellm-heuristic` | LiteLLM's built-in heuristic scorer (`classifier_type: heuristic`, default configuration), code copied as is at tag v1.106.6, no model | tag `v1.106.6`, commit `61c6ab78…` | under a second |
 | `classifiers/routellm-bert` | RouteLLM's `bert` router (`routellm/bert_gpt4_augmented`, XLM-RoBERTa-base), PyTorch float32, CPU, score = probability that the strong model wins, five equal bounds | `86237e3df400762178ea98379477b8296e66d5e4` | 14 s |
 | `classifiers/llm4b-gemma4-e4b-off` | Gemma 4 E4B-it 8-bit (MLX) reading the v7 instructions through `bench judge`, no reasoning, in the judge folder format, a candidate and not a judge | `4255b21bd9a9d3fc807ef7abd80373f5e3a52a73` | ≈ 7 min |
+| `classifiers/nvidia-ptcc-eng` | NVIDIA's `nvidia/prompt-task-and-complexity-classifier` (DeBERTa-v3-base, eight heads), PyTorch float32, CPU, English ids only (the 270 others are not predicted), score = `prompt_complexity_score`, five equal bounds | `fea1121511eafabaf7dd6fc66863dcb04f74defb` | ≈ 14 s |
 
 The classifiers' durations are those of classifying the 360 prompts, with the small Hub download, the weights being
 already in cache. Three s1d1 revisions (`small`, `compact`, `full` int8) are pinned to the revision of the repository's card.
@@ -505,6 +519,35 @@ the rubric's 19): they are outside the QWK of this candidate (356 ids). Its prof
 [The profile](#the-profile)). The two profile rows of this lot were measured afterwards, apart
 (`bench profile --only routellm-bert,llm4b-gemma4-e4b-off`, on 2026-10-31) and added to `results/base-v1.profile.json`
 without touching the other rows, whose latencies do not repeat identically (`meta.added_later` names them).
+
+**NVIDIA's prompt classifier.** `classifiers/nvidia-ptcc-eng` is `nvidia/prompt-task-and-complexity-classifier` (NemoCurator
+v1.1): a DeBERTa-v3-base with eight classification heads, trained on 4,024 English prompts annotated by people. It labels
+a prompt with a task type (eleven, not the rubric's 19) and with six dimensions, creativity, reasoning, contextual
+knowledge, domain knowledge, constraints and number of few shots, and its `prompt_complexity_score` is their weighted sum
+(0.35 creativity + 0.25 reasoning + 0.15 constraints + 0.15 domain knowledge + 0.05 contextual knowledge + 0.05 few
+shots), a number in [0 ; 1] that is not a v7 tier. The bench keeps it as `score`, and reads it onto the tiers with the
+five equal bounds of the RouteLLM routers (0.2 is low, 0.8 is expert, 1.0 is expert), fixed in advance and not
+calibrated; `task` and `needs_tools` are `null`, `decisions.jsonl` keeps every head as the model gives it. **The model is
+English only** (its card says so): the adapter reads the language of each id in `data/prompts/base-v1.meta.parquet`, runs
+the model on the 90 `eng` ids only, and writes the 270 others as not predicted, the three fields `null` and no score, which
+`bench run` reads as a null prediction (`n` is 90 where the tables count ids, 0 for the three other languages in
+`by_language.csv`, `n/a` in the figure by language): nothing is run in those languages, and no workaround is attempted. The
+scores of the 90 English ids run from 0.053 to 0.463, so the model predicts `trivial` for 44 ids, `low` for 40, `medium`
+for 6 and never `high` or `expert` (`report/base-v1/tables/tier_distribution.csv`): the bounds, not the model, set that
+spread; read on ranks, its score has a Spearman of 0.593 [0.426, 0.727] against the truth tiers
+(`report/base-v1/tables/rank_metrics.csv`). The model is rebuilt from the `CustomModel` code of its Hub card (revision
+`fea1121511eafabaf7dd6fc66863dcb04f74defb`, read on 2026-10-31) without installing NeMo Curator, in the `routellm`
+group, CPU, float32, one prompt per call; the backbone is built from the config of `microsoft/deberta-v3-base` (config
+file only, revision `8ccc9b6f36199bec6961081d44eb72fb3f7353f3`) and the card repository's weights are loaded over it with
+`strict=True`. Cross-check against the card: its code sample (`Prompt: Write a Python script that uses a for loop.`) is
+reproduced digit for digit, and so is its first table (the mystery prompt, which matches without the `Prompt: ` prefix);
+its second table (the antibiotics prompt) is not reproduced, with or without the prefix, and the cause is not known. The
+bench gives the prompt as it is, without the prefix (`tests/test_nvidia_backend.py`, `slow` test, replays the two
+matches). The weights are public and ungated; the licence is the NVIDIA Open Model License Agreement of June 2024: the
+bench downloads them read only and does not redistribute them, and what `classifiers/nvidia-ptcc-eng` publishes is the
+model's outputs, under CC-BY-4.0 (see [Licences](#licences)). The profile row was measured afterwards, apart
+(`bench profile --only nvidia-ptcc-eng`, on 2026-10-31, on the 90 English prompts) and added to
+`results/base-v1.profile.json` without touching the other rows (`meta.added_later`).
 
 **Hub revisions for the int8 repositories.** For `small`, `compact` and `full`, the current Hub head is not the revision of
 the card: the commits between them touch only metadata (`README.md`, `eval.json`, `footprint.json`,
@@ -578,6 +621,13 @@ another name.
   uv run --group routellm bench classify routellm --routellm-router bert --revision 86237e3df400762178ea98379477b8296e66d5e4 \
       --prompts data/prompts/base-v1.jsonl --out classifiers/routellm-bert --author <name>
   ```
+- **NVIDIA's prompt classifier** (group `routellm`, CPU; the language of each id is read in `base-v1.meta.parquet`, only
+  `eng` is run):
+
+  ```
+  uv run --group routellm bench classify nvidia --revision fea1121511eafabaf7dd6fc66863dcb04f74defb \
+      --prompts data/prompts/base-v1.jsonl --out classifiers/nvidia-ptcc-eng --author <name>
+  ```
 - **The 4-billion LLM** (Apple silicon, group `judge`, model in `~/mlx-models/mlx-community--gemma-4-e4b-it-8bit`,
   revision `4255b21bd9a9d3fc807ef7abd80373f5e3a52a73`):
 
@@ -596,8 +646,8 @@ another name.
   uv run bench run --prompts data/prompts/base-v1.jsonl --judges 'judges/base-v1-*' \
       --main base-v1-gemma4-cap512,base-v1-qwen3-cap512,base-v1-gptoss-cap512 \
       --classifiers 'classifiers/s1d1-*' classifiers/laya-english-tier classifiers/laya-multilingual-tier \
-      classifiers/litellm-heuristic classifiers/routellm-bert classifiers/llm4b-gemma4-e4b-off classifiers/random \
-      classifiers/length classifiers/constant-low --out results/base-v1.parquet
+      classifiers/litellm-heuristic classifiers/routellm-bert classifiers/llm4b-gemma4-e4b-off classifiers/nvidia-ptcc-eng \
+      classifiers/random classifiers/length classifiers/constant-low --out results/base-v1.parquet
   ```
 
   `--judges` and `--classifiers` take several values in a row (globs between quotes, which `bench run`
@@ -627,11 +677,11 @@ is true for 52 ids. A plain lower median, instead of rule R5, would change `trut
 
 ### What `results/` is, and is not
 
-`results/base-v1.parquet` (360 rows, 101 columns) and `results/base-v1.run.json` (the folders loaded, their revisions,
+`results/base-v1.parquet` (360 rows, 107 columns) and `results/base-v1.run.json` (the folders loaded, their revisions,
 the abstentions, the rules) are **derived** from the `judges/` and `classifiers/` folders: they are regenerated at each
 `bench run`; a classifier's columns are `<name>.complexity`, `<name>.task`, `<name>.needs_tools`, `<name>.score` when its
 `labels.jsonl` has one and, when it has a `decisions.jsonl`, `<name>.raw_score` and `<name>.raw_tier` (`litellm-heuristic` has
-these two and no `score`: five columns; `laya-english-tier` and `laya-multilingual-tier` too; `routellm-bert` has a `score` and these two columns). It is not an immutable record, unlike the judge
+these two and no `score`: five columns; `laya-english-tier` and `laya-multilingual-tier` too; `routellm-bert` has a `score` and these two columns; `nvidia-ptcc-eng` too, all six columns null on the 270 ids outside English). It is not an immutable record, unlike the judge
 and classifier folders, which are added to and not rewritten: what is replayed is the inputs. Nor is it
 a report: no metric, no figure is in it, they are in `report/` (see [The report](#the-report)).
 
@@ -699,7 +749,9 @@ latency, against weight on disk, and the distribution of predicted tiers). The t
 `report/TEMPLATE.md` carries the caveats and the sentence with holes; the code fills the holes with the figures as
 they come out, and the two final clauses of the sentence follow rules written in `src/s1d1_bench/report_index.py`
 and quoted in the report. The intervals are at 95%, by resampling the 90 base prompts (1,000 draws,
-seed 0, the four versions follow their base prompt).
+seed 0, the four versions follow their base prompt). A paired gap is computed on the ids where the reference and the
+candidate both have a prediction (the `n_common` column of `paired.csv`: 360 for a complete candidate, 356 for
+`llm4b-gemma4-e4b-off`, 90 for `nvidia-ptcc-eng`), both QWKs being taken on those ids over the same draws.
 
 **What it says.** Over 360 ids (90 base prompts in four languages), `s1d1-full-int8` agrees with the median of the three
 main judges at QWK 0.807 [0.734, 0.852] and `s1d1-full-fp16` at 0.814 [0.738, 0.865]; the ceiling (each main
@@ -778,6 +830,7 @@ once, on an M4 Max, in one minute (58 s for the eight classifiers and the five j
 | `onnxruntime`, `tokenizers`, `numpy`, `huggingface_hub` | `s1d1` | s1d1 classifier in ONNX int8 (CPU) |
 | `torch`, `transformers` | `s1d1-torch` | s1d1 classifier in PyTorch fp16 |
 | `laya` (0.4.15) | `laya` | Laya classifier |
+| `torch`, `transformers`, `numpy`, `huggingface_hub` | `routellm` | RouteLLM `bert` router and NVIDIA prompt classifier (CPU, float32) |
 | `matplotlib` (and `numpy`, which it brings) | `report` | SVG figures of `bench report` and statistics of `metrics.py` |
 | none | none | `litellm-heuristic` classifier: LiteLLM code copied into the repository, without the `litellm` package |
 | `pytest` | `dev` | tests, no network and no model |
@@ -794,6 +847,10 @@ once, on an M4 Max, in one minute (58 s for the eight classifiers and the five j
 - Arena-Hard: the English Arena-Hard prompts come from `arena-hard-auto` v0.1 (lmarena, Apache-2.0, prompts
   from Chatbot Arena users) and their translations from `CohereLabs/m-ArenaHard` (Apache-2.0); the conditions of the
   upstream collection from Chatbot Arena users cannot be verified downstream.
+- NVIDIA's model: `nvidia/prompt-task-and-complexity-classifier` is under the NVIDIA Open Model License Agreement (June
+  2024). The bench downloads its weights from the Hub for the run and does not redistribute them; `classifiers/nvidia-ptcc-eng`
+  holds the model's outputs only (CC-BY-4.0 like every classifier folder), which the licence's sections 1.1 and 2.4 do not
+  treat as derivative works, as the repository owner reads them; section 2.2 allows public use and display of the results.
 - [CC-BY-4.0](data/LICENSE) (`data/LICENSE`): the handwritten prompts and their translations, the judge files
   (`judges/`), the classifier files (`classifiers/`), the results (`results/`), the report (`report/<set>/`),
   the rubric `src/s1d1_bench/rubric/judge-rubric-v7.txt`, the instructions `consigne/`, the checks

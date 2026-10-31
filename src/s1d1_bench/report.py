@@ -17,7 +17,8 @@ Conventions:
   prompts (90 prompts de base, one per `base_key`).
 - Intervals: 95 % bootstrap over the base keys, the four versions of a key travelling together: the draws of
   `metrics.bootstrap` (n = 1000, seed 0), made once and shared by every statistic, so the interval of a paired
-  difference is that of `metrics.paired_difference` (`metrics.bootstrap_draws`, `metrics.percentile_interval`). A
+  difference is that of `metrics.paired_difference` (`metrics.bootstrap_draws`, `metrics.percentile_interval`), the two
+  QWKs being taken on the ids where the reference and the candidate both have a prediction (`n_common`). A
   statistic undefined on a draw (nan) drops that draw. Columns `<m>`, `<m>_lo`, `<m>_hi` and `<m>_draws_used` (how many
   of the 1000 draws the interval is made of). A subgroup (a language, a source, a tier) is measured on the rows of each
   draw that fall in it: the draw is over all the keys, never within the subgroup, so a draw may hold no row of it (nan).
@@ -642,21 +643,28 @@ class _Report:
         return pa.Table.from_pylist(result), (pa.Table.from_pylist(bins) if bins else empty_bins)
 
     def paired(self) -> pa.Table:
-        if REFERENCE not in self.qwk_all:
+        """The QWK of the reference minus that of each other candidate, both against `truth_all` on the ids where the
+        reference and the candidate both have a prediction (`n_common`: 360 for a complete candidate, fewer for an
+        abstaining or a partial one), over the same draws of the base prompts; a base prompt with no id in common
+        contributes nothing to a draw."""
+        if REFERENCE not in self.candidates:
             self.skip("reference of the paired differences", REFERENCE, "no paired difference")
             return pa.table({"reference": pa.array([], type=pa.string())})
-        reference = self.qwk_all[REFERENCE]
+        truth = self.truth["truth_all"]
         result = []
         for name in self.candidates:
             if name == REFERENCE:
                 continue
-            other = self.qwk_all[name]
+            common = (truth >= 0) & (self.tier[REFERENCE] >= 0) & (self.tier[name] >= 0)
+            reference = self.qwk(truth, self.tier[REFERENCE], common)
+            other = self.qwk(truth, self.tier[name], common)
             draws = reference.draws - other.draws
             lo, hi = _interval(draws)
             result.append(
                 {
                     "reference": REFERENCE,
                     "candidate": name,
+                    "n_common": int(common.sum()),
                     "difference": reference.value - other.value,
                     "lo": lo,
                     "hi": hi,
