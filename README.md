@@ -27,6 +27,19 @@ Les décisions citées `docs/NN` sont dans [`docs/`](docs/README.md).
   agentiques et multi-tours sont absents, le jeu est fait de premiers prompts.
 - **Non mesuré : les autres langues.** Seules les quatre langues choisies sont couvertes.
 
+### D'où vient ce banc
+
+Avant ce banc, s1d1 a été passé sur l'évaluation publique de RouteLLM (lm-sys,
+[arXiv 2406.18665](https://arxiv.org/abs/2406.18665) : MT-Bench, GSM8K, MMLU ; GPT-4 contre Mixtral 8x7B ; métrique
+APGR), après avoir retrouvé à l'identique les neuf chiffres publiés de leur routeur BERT. Selon le jeu d'évaluation, s1d1 y faisait
+entre 0,40 et 0,59 d'APGR. Un témoin trivial, la longueur du prompt en caractères, faisait de 0,56 à 0,60 : 0,598 sur
+GSM8K et 0,583 sur MMLU, là où le routeur BERT de RouteLLM fait 0,531 et 0,572. Sur MT-Bench (72 questions), tout
+tombait dans le bruit, sauf le BERT entraîné sur la préférence GPT-4 contre Mixtral, qui est exactement ce que cette
+évaluation mesure. Elle répond à la question « sur cette question, GPT-4 bat-il Mixtral ? » : un écart entre deux modèles sur une
+paire anglaise, pas la complexité d'un prompt. Un prompt difficile pour les deux modèles n'y rapporte rien, alors que
+s1d1 prédit l'effort de réponse jugé par un LLM. D'où le présent banc, à soi : des témoins (hasard, longueur, constante), un
+plafond fait des juges eux-mêmes, des intervalles par rééchantillonnage et quatre langues, soit `base-v1`.
+
 ## Résultats (`base-v1`, 2026-10-30)
 
 La phrase de docs/32 § 5, remplie avec les chiffres du rapport de `base-v1` (360 ids, 90 prompts de base) :
