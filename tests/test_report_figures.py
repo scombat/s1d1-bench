@@ -84,8 +84,47 @@ def test_legend_entries_are_families(small):  # noqa: F811
         assert len(labels) == len(set(labels)), (name, labels)  # at most one entry per family and reference line
         assert not candidates & set(labels), (name, labels)  # never one entry per variant
         assert len(fig.legends) <= 1 and all(ax.get_legend() is None for ax in fig.axes), name  # below, one legend
-    bars = dict(drawn)["qwk-bars"]
-    assert families & set(_legend_labels(bars)) == {"s1d1", "Laya", OTHERS[0]}  # the families of the fake set
+        # every entry is a family or one of the named reference lines of that figure, nothing else
+        others = [text for text in labels if text not in families]
+        assert all(any(re.fullmatch(p, text) for p in REFERENCES.get(name, ())) for text in others), (name, others)
+    # the exact legend of each figure on the fake set (s1d1-full-int8, laya-rank, notask, the witnesses; no `length`
+    # floor line, no positive needs_tools id)
+    families_here = ["s1d1", "Laya", OTHERS[0]]
+    assert {name: _legend_labels(fig) for name, fig in drawn} == {
+        "qwk-bars": [
+            *families_here,
+            "ceiling: mean of the main judges",
+            "ceiling: each main judge against the other two (8 votes)",
+            "floor: random, min-max of its draws",
+            "± 2σ around s1d1-full-int8 (σ = 0.005)",
+        ],
+        "qwk-by-language": families_here,
+        "confusion": [],
+        "reliability-s1d1": ["s1d1", "perfect calibration (score = anchor)"],
+        "judge-spread-by-tier": [],
+        "language-disagreements": [],
+        "needs-tools-pr": ["s1d1", "share of positives (0/8 ids)"],
+    }
+    # two variants of a family in the panels: still one entry for the family, no entry for the other panels
+    import pyarrow as pa
+
+    curve = computed["needs_tools_pr"].to_pylist()
+    two = dict(computed, needs_tools_pr=pa.Table.from_pylist(curve + [r | {"name": "s1d1-tiny-int8"} for r in curve]))
+    assert _legend_labels(dict(_drawn(two))["needs-tools-pr"]) == ["s1d1", "share of positives (0/8 ids)"]
+
+
+# the reference lines (and bands) each figure may name in its legend, beside the families
+REFERENCES = {
+    "qwk-bars": (
+        r"ceiling: mean of the main judges",
+        r"ceiling: each main judge against the other two \(8 votes\)",
+        r"floor: (length|constant-low)( and (length|constant-low))?",
+        r"floor: random, min-max of its draws",
+        r"± 2σ around s1d1-full-int8 \(σ = [0-9.]+\)",
+    ),
+    "reliability-s1d1": (r"perfect calibration \(score = anchor\)",),
+    "needs-tools-pr": (r"share of positives \(\d+/\d+ ids\)",),
+}
 
 
 def test_one_marker_shape_and_no_hatch_in_any_figure(small):  # noqa: F811

@@ -435,7 +435,7 @@ def _qwk_bars(computed: dict[str, pa.Table], sigma: float, mpl):
         handles.append(mpl.lines.Line2D([], [], color=JUDGE, linewidth=2, label="ceiling: mean of the main judges"))
     judges = [r for r in ceiling if r["judge"] != "mean"]
     for r in judges:
-        ax.axvline(r["qwk"], color=JUDGE_SOFT, linewidth=1, zorder=1.5)
+        ax.axvline(r["qwk"], color=JUDGE_SOFT, linewidth=2, zorder=1.5)
         data.append(
             {
                 "kind": "ceiling (judge)",
@@ -450,7 +450,7 @@ def _qwk_bars(computed: dict[str, pa.Table], sigma: float, mpl):
     if judges:
         handles.append(
             mpl.lines.Line2D(
-                [], [], color=JUDGE_SOFT, linewidth=1, label="ceiling: each main judge against the other two (8 votes)"
+                [], [], color=JUDGE_SOFT, linewidth=2, label="ceiling: each main judge against the other two (8 votes)"
             )
         )
     if mean:
@@ -779,17 +779,6 @@ def _needs_tools_pr(computed: dict[str, pa.Table], sigma: float, mpl):
     prevalence = first["n_ids_positive"] / first["n_ids"] if first and first["n_ids"] else None
     by_name = {name: [r for r in curve if r["name"] == name] for name in names}  # by decreasing threshold
     for ax, name in zip(axes, names, strict=True):
-        for other in names:  # the other candidates, light, behind: the panel's curve read against them
-            if other != name:
-                found = by_name[other]
-                ax.step(
-                    [r["recall"] for r in found],
-                    [r["precision"] for r in found],
-                    where="post",
-                    color=GRID,
-                    linewidth=1,
-                    zorder=1,
-                )
         found = by_name[name]
         ax.step(
             [r["recall"] for r in found],
@@ -826,8 +815,6 @@ def _needs_tools_pr(computed: dict[str, pa.Table], sigma: float, mpl):
                 label=f"share of positives ({first['n_ids_positive']}/{first['n_ids']} ids)",
             )
         )
-    if len(names) > 1:
-        handles.append(mpl.lines.Line2D([], [], color=GRID, linewidth=1, label="the other candidates, for comparison"))
     title(axes[0], "needs_tools: precision against recall", sub)
     fig.tight_layout(w_pad=0.8)
     legend_below(fig, handles)

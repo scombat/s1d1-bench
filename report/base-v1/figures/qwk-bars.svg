@@ -238,17 +238,17 @@ L 564.6575 43.300898
    <g id="line2d_26">
     <path d="M 498.433153 346.640898 
 L 498.433153 43.300898 
-" clip-path="url(#p9a3f658380)" style="fill: none; stroke: #52514e; stroke-linecap: square"/>
+" clip-path="url(#p9a3f658380)" style="fill: none; stroke: #52514e; stroke-width: 2; stroke-linecap: square"/>
    </g>
    <g id="line2d_27">
     <path d="M 485.810495 346.640898 
 L 485.810495 43.300898 
-" clip-path="url(#p9a3f658380)" style="fill: none; stroke: #52514e; stroke-linecap: square"/>
+" clip-path="url(#p9a3f658380)" style="fill: none; stroke: #52514e; stroke-width: 2; stroke-linecap: square"/>
    </g>
    <g id="line2d_28">
     <path d="M 450.534948 346.640898 
 L 450.534948 43.300898 
-" clip-path="url(#p9a3f658380)" style="fill: none; stroke: #52514e; stroke-linecap: square"/>
+" clip-path="url(#p9a3f658380)" style="fill: none; stroke: #52514e; stroke-width: 2; stroke-linecap: square"/>
    </g>
    <g id="line2d_29">
     <path d="M 389.574295 346.640898 
@@ -602,7 +602,7 @@ L 115.2375 438.702148
     <path d="M 266.0375 390.699648 
 L 273.2375 390.699648 
 L 280.4375 390.699648 
-" style="fill: none; stroke: #52514e; stroke-linecap: square"/>
+" style="fill: none; stroke: #52514e; stroke-width: 2; stroke-linecap: square"/>
    </g>
    <g id="text_39">
     <text style="font-size: 8px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start; fill: #0b0b0b" x="285.2375" y="393.499648" transform="rotate(-0 285.2375 393.499648)">ceiling: each main judge against the other two (8 votes)</text>
