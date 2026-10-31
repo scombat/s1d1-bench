@@ -4,15 +4,16 @@
 régénère : les tableaux sont dans `tables/` (CSV), les figures dans `figures/` (SVG, chacune avec son CSV). Le gabarit
 est `report/TEMPLATE.md` ; ses trous sont remplis par le code, chiffres tels qu'ils sortent.
 
-## Ce que ce rapport dit en premier
+## What this report says first
 
-Deux lectures ont été écrites avant de voir les chiffres (docs/34 § 7.4) ; celle qui ne se vérifie pas est dite en
-premier.
+Two readings were written before seeing the figures (docs/34 § 7.4); the one that does not hold is stated first.
 
 {predictions_first}
 
-Tableaux : [`tables/predictions.csv`](tables/predictions.csv), [`tables/by_language.csv`](tables/by_language.csv) ;
-dans cette page : [Les deux prédictions, en tableau](#les-deux-prédictions-en-tableau).
+Tables: [`tables/predictions.csv`](tables/predictions.csv), [`tables/by_language.csv`](tables/by_language.csv);
+in this page: [Les deux prédictions, en tableau](#les-deux-prédictions-en-tableau).
+
+_Note: the rest of this report is in French._
 
 ## La phrase de docs/32 § 5
 
