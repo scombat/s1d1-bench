@@ -150,9 +150,14 @@ des classifieurs que ce run n'a pas chargés : `laya-english`, `laya-multilingua
 
 _QWK contre truth_all (360 ids), IC 95 % sur 1 000 tirages des 90 prompts de base ; plafond, plancher, ± 2 σ._ Données : [`figures/qwk-bars.csv`](figures/qwk-bars.csv).
 
-Barres : QWK de chaque candidat contre `truth_all` et son IC ; lignes noires : le plafond (pointillé : chaque juge
-principal, trait plein : leur moyenne) ; lignes et bande grises : le plancher ; bande bleue : ± 2 σ autour de
-`s1d1-full-int8`, étroite par nature (σ = 0,005).
+Barres : QWK de chaque candidat contre `truth_all` et son IC à 95 % ; ligne noire : le plafond, moyenne des juges
+principaux ; lignes gris foncé : chaque juge principal contre les deux autres ; lignes grises en tirets et bande grise :
+le plancher (`length`, `constant-low`, les tirages de `random`) ; bande bleue : ± 2 σ autour de `s1d1-full-int8`, étroite
+par nature (σ = 0,005). Le chiffre principal est à hauteur du plafond inter-juges quand son IC contient la moyenne du
+plafond ; ici, l'IC de `s1d1-full-int8` contient la moyenne du plafond.
+Les témoins font le plancher ; sous la longueur du prompt, en valeurs ponctuelles : `laya-english-tier`, `laya-multilingual-tier` et `litellm-heuristic`.
+Une position sur la figure n'est pas une phrase de supériorité : seule la règle des 2 σ en permet une (l'IC de l'écart
+apparié exclut zéro et dépasse 2 σ = 0,010), voir [Les écarts appariés](#les-écarts-appariés).
 
 | nom | ids | QWK | exact | ± 1 | alpha ordinal | paliers jamais prédits |
 |---|---|---|---|---|---|---|
@@ -294,9 +299,28 @@ les deux réglages d'un même modèle, sans réflexion et réflexion plafonnée 
 
 _QWK contre truth_all (360 ids) contre la latence médiane par prompt (lot de 1, échelle logarithmique) ; juges principaux : QWK contre les deux autres._ Données : [`figures/quality-vs-latency.csv`](figures/quality-vs-latency.csv).
 
+Latence médiane par prompt, lot de 1, après chauffe, sur le même Mac : s1d1 int8 et LiteLLM sur le CPU, s1d1 fp16 et
+Laya sur le GPU (MPS), les juges sur le GPU (MLX) ; la latence d'un juge comprend la lecture de la consigne v7 (environ
+1 900 jetons) et sa réponse, raisonnement compris. En ordonnée, le QWK contre `truth_all` ; pour un juge principal, son
+QWK contre la médiane des deux autres (le plafond, 8 votes), le chiffre des lignes du plafond des barres. L'IC de
+`s1d1-full-int8` contient la moyenne du plafond ;
+s1d1 répond par prompt sur le CPU (int8) en 1,6 à 9,1 ms,
+là où un juge principal met, sur le GPU du même Mac et en lisant la consigne, 1,8 à 42,8 s.
+Au 95e centile, la latence de s1d1 int8 sur le CPU (« p95 » du tableau ci-dessous) : 12,8 à 78,7 ms ;
+cette queue est tirée par les prompts longs, et la médiane est la valeur portée. Les témoins (`random`, `length`,
+`constant-low`) ne sont pas des modèles : ils n'ont ni latence ni poids, et ne sont ni dans cette figure ni dans la
+suivante.
+
 ![QWK contre truth_all (360 ids) contre le poids des fichiers de poids sur disque (échelle logarithmique) ; juges principaux : QWK contre les deux autres](figures/quality-vs-footprint.svg)
 
 _QWK contre truth_all (360 ids) contre le poids des fichiers de poids sur disque (échelle logarithmique) ; juges principaux : QWK contre les deux autres._ Données : [`figures/quality-vs-footprint.csv`](figures/quality-vs-footprint.csv). Absent de la figure : `litellm-heuristic` : pas de fichier de poids (0 Mo), hors de l'axe logarithmique : pas de point.
+
+Poids des fichiers de poids sur disque (Mo de 10⁶ octets), la seule mesure de mémoire que tous les modèles ont.
+Les poids de s1d1 tiennent dans 25 à 615 Mo ;
+ceux de Laya font, selon la tête, 644 à 843 Mo ;
+les juges principaux demandent 12,1 à 33,8 Go.
+Ordonnée et juges comme dans la figure de la latence. Un modèle sans fichier de poids (des règles, 0 Mo) ne se place
+pas sur un axe logarithmique : il est nommé sous la figure.
 
 | nom | type | rôle | appareil | latence médiane (ms) | p95 (ms) | moyenne (ms) | poids sur disque (Mo) | RSS de crête (Mo) |
 |---|---|---|---|---|---|---|---|---|
@@ -314,8 +338,10 @@ _QWK contre truth_all (360 ids) contre le poids des fichiers de poids sur disque
 | base-v1-gemma4-off | juge | juge hors de la vérité | gpu-mlx | 12635,5 | 15700,1 | 12989,2 | 33763,1 | — |
 | base-v1-qwen3-off | juge | juge hors de la vérité | gpu-mlx | 9153,5 | 11039,8 | 9425,5 | 29501,2 | — |
 
-Le profil de `bench profile` : latence par prompt à lot de 1 après chauffe, poids des fichiers de poids sur disque et
-mémoire de crête du processus (classifieurs seulement) ; les témoins n'y sont pas.
+Le profil de `bench profile` : latence par prompt à lot de 1 après chauffe (médiane, 95e centile, moyenne), poids des
+fichiers de poids sur disque et mémoire de crête du processus. La mémoire de crête (RSS) n'est pas dans les figures :
+elle comprend l'interpréteur et les bibliothèques, sur MPS la mémoire du pilote du GPU peut y manquer, et elle ne se
+mesure pas après coup pour les juges (« — »). Les témoins n'y sont pas.
 
 ## Par langue
 
@@ -323,7 +349,10 @@ mémoire de crête du processus (classifieurs seulement) ; les témoins n'y sont
 
 _QWK contre truth_all par langue (ids de la langue), IC 95 % sur 1 000 tirages des 90 prompts de base._ Données : [`figures/qwk-by-language.csv`](figures/qwk-by-language.csv).
 
-QWK de chaque candidat contre `truth_all` dans chaque langue.
+QWK de chaque candidat contre `truth_all` dans chaque langue, un même ordre des candidats dans tous les panneaux.
+`s1d1-full-int8` par langue : eng 0,840, fra 0,802, rus 0,793, zho 0,787 ;
+`litellm-heuristic` par langue : eng 0,205, fra 0,044, rus 0,061, zho 0,044
+(ses listes de mots-clés sont anglaises ; la prédiction 1, en tête du rapport, lit ces valeurs ponctuelles).
 
 | nom | langue | ids | QWK (truth_all) | exact (truth_all) | QWK (truth_lang) | exact (truth_lang) |
 |---|---|---|---|---|---|---|
@@ -657,7 +686,22 @@ vérité, en crans).
 
 _Part des ids de chaque palier (0–1), truth_all puis chaque candidat._ Données : [`figures/tier-distribution.csv`](figures/tier-distribution.csv).
 
-Part des ids de chaque palier, pour `truth_all` puis pour chaque candidat.
+Part des ids de chaque palier, pour `truth_all` puis pour chaque candidat, du palier `trivial` (clair) à `expert`
+(foncé) : un candidat qui met presque tous les ids dans un palier n'ordonne pas les prompts, quelle que soit son
+exactitude. Paliers utilisés et part la plus grande de chaque barre :
+
+- `truth_all` : 5 paliers sur 5 ; plus grande part : `low` 32,2 %
+- `constant-low` : 1 palier sur 5, jamais `trivial`, `medium`, `high` et `expert` ; plus grande part : `low` 100,0 %
+- `laya-english-tier` : 4 paliers sur 5, jamais `trivial` ; plus grande part : `high` 37,8 %
+- `laya-multilingual-tier` : 4 paliers sur 5, jamais `trivial` ; plus grande part : `low` 62,2 %
+- `length` : 5 paliers sur 5 ; plus grande part : `low` 30,0 %
+- `litellm-heuristic` : 3 paliers sur 5, jamais `trivial` et `expert` ; plus grande part : `low` 93,3 %
+- `random` : 5 paliers sur 5 ; plus grande part : `trivial` 21,7 %
+- `s1d1-compact-int8` : 4 paliers sur 5, jamais `expert` ; plus grande part : `low` 50,6 %
+- `s1d1-full-fp16` : 4 paliers sur 5, jamais `expert` ; plus grande part : `low` 45,6 %
+- `s1d1-full-int8` : 4 paliers sur 5, jamais `expert` ; plus grande part : `low` 47,5 %
+- `s1d1-small-int8` : 4 paliers sur 5, jamais `expert` ; plus grande part : `low` 51,4 %
+- `s1d1-tiny-int8` : 4 paliers sur 5, jamais `expert` ; plus grande part : `low` 52,5 %
 
 ![Matrices de confusion normalisées par ligne : part des ids de chaque palier de truth_all (0–1)](figures/confusion.svg)
 
@@ -756,6 +800,9 @@ MAE, Spearman et erreur de calibration attendue (dix cases) du score contre l'an
 ![Score de s1d1 (échelle v7, 0–1) contre l'ancre du palier de truth_all (0–1), 10 cases](figures/reliability-s1d1.svg)
 
 _Score de s1d1 (échelle v7, 0–1) contre l'ancre du palier de truth_all (0–1), 10 cases._ Données : [`figures/reliability-s1d1.csv`](figures/reliability-s1d1.csv).
+
+Chaque point est une case de score (dix cases) : en abscisse le score moyen de la variante de s1d1 dans la case, en
+ordonnée l'ancre moyenne du palier de `truth_all` de ses ids ; sur la diagonale, le score dit le palier de la vérité.
 
 ## Les deux prédictions, en tableau
 

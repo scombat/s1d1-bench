@@ -32,7 +32,26 @@ La phrase de docs/32 § 5, remplie avec les chiffres du rapport de `base-v1` (36
 
 ![Accord de chaque candidat avec la médiane des juges principaux](report/base-v1/figures/qwk-bars.svg)
 
+`s1d1-full-int8` est à hauteur du plafond inter-juges : son IC, 0,807 [0,734 ; 0,852], contient la moyenne du plafond
+(0,774, ligne noire ; lignes gris foncé : chaque juge principal contre les deux autres). Les témoins font le plancher
+(lignes grises en tirets et bande grise) ; Laya (0,405 et 0,119) et LiteLLM (0,089) sont sous la longueur du prompt
+(0,543), en valeurs ponctuelles. Une position sur la figure n'est pas une phrase de supériorité : il y faut la règle des
+2 σ, l'IC de l'écart apparié qui exclut zéro et dépasse 2 σ (σ = 0,005, bande bleue autour de `s1d1-full-int8`).
+
+![Accord avec les juges contre la latence par prompt](report/base-v1/figures/quality-vs-latency.svg)
+
+À QWK de l'ordre de celui d'un juge (un juge principal y est placé à son QWK contre les deux autres), s1d1 répond en
+1,6 à 9,1 ms par prompt sur le CPU du Mac (int8, latence médiane, lot de 1), là où un juge principal met 1,8 à 42,8 s
+sur le GPU du même Mac (MLX), en lisant une consigne d'environ 1 900 jetons. s1d1 fp16 et Laya tournent sur le GPU
+(MPS), LiteLLM sur le CPU. Les témoins ne sont pas des modèles et ne sont pas dans la figure. Les poids de s1d1 tiennent
+dans 25 à 615 Mo, ceux des juges principaux dans 12,1 à 33,8 Go (figure `quality-vs-footprint` du rapport). Mesures de
+`bench profile` sur un M4 Max, voir [Le profil](#le-profil).
+
 ![QWK par langue](report/base-v1/figures/qwk-by-language.svg)
+
+s1d1 tient dans les quatre langues : `s1d1-full-int8` est à 0,840 en anglais et de 0,787 à 0,802 dans les trois
+autres. LiteLLM tombe hors de l'anglais, ses listes de mots-clés étant anglaises : 0,205 en anglais, 0,044 à 0,061
+ailleurs, sur les valeurs ponctuelles et sans que les IC se séparent.
 
 QWK contre `truth_all` (la médiane des trois juges principaux), IC à 95 % sur 1 000 tirages des 90 prompts de base ;
 « palier exact » est la part des ids dont le palier est celui de `truth_all` :
@@ -76,8 +95,9 @@ uv run --group report bench report --results results/base-v1.parquet --meta data
   `labels.jsonl`).
 - `bench run` : réunit les dossiers de juges et de classifieurs d'un jeu en un tableau, une ligne par id, avec les vérités
   des juges principaux (`results/<jeu>.parquet` et `<jeu>.run.json`).
-- `bench report` : écrit le rapport d'un jeu (`report/<jeu>/index.md`, vingt-cinq tableaux CSV, sept figures SVG avec leur
-  CSV) depuis `results/<jeu>.parquet` ; voir [Le rapport](#le-rapport).
+- `bench report` : écrit le rapport d'un jeu (`report/<jeu>/index.md`, vingt-sept tableaux CSV, dix figures SVG avec
+  leur CSV) depuis `results/<jeu>.parquet` et, s'il existe, `results/<jeu>.profile.json` ; voir
+  [Le rapport](#le-rapport).
 - `bench profile` : mesure, pour chaque modèle d'un run, la latence par prompt à lot de 1 après chauffe (p50, p95,
   moyenne), la mémoire de crête du processus et le poids des fichiers de poids (`results/<jeu>.profile.json`) ; voir
   [Le profil](#le-profil).
@@ -539,16 +559,21 @@ uv run --group report bench report --results results/base-v1.parquet --meta data
 ```
 
 `--classifiers` est la racine des dossiers : la bande du témoin aléatoire se lit dans `classifiers/random/draws.jsonl`
-(dix tirages), `results/base-v1.run.json` ne donnant que les noms. Une quinzaine de secondes. La commande refuse de
+(dix tirages), `results/base-v1.run.json` ne donnant que les noms. Le profil de `bench profile` est lu à côté des
+résultats (`results/base-v1.profile.json`) ou là où `--profile` le nomme ; sans profil, le tableau `profile` et les deux
+figures de vitesse et d'empreinte manquent, et le rapport le dit. Une quinzaine de secondes. La commande refuse de
 tourner (code 1, un message) si un dossier de classifieur nommé par `run.json` manque à la racine, si `run.json` n'a pas
 l'une des clés `classifiers`, `judges`, `main` ou la table méta l'une des colonnes `source`, `origin`, si le gabarit
-`report/TEMPLATE.md` est introuvable, ou si `matplotlib` (groupe `report`) n'est pas installé.
+`report/TEMPLATE.md` est introuvable, si `--profile` nomme un fichier absent, ou si `matplotlib` (groupe `report`)
+n'est pas installé.
 
 **Ce qu'il contient.** `index.md` (lu de haut en bas : les deux prédictions de docs/34 § 7.4 d'abord, celle qui ne se
 vérifie pas en tête ; la phrase de docs/32 § 5 avec ses chiffres ; les mises en garde de docs/32 § 2 ; l'accord de chaque
 candidat et de chaque juge avec `truth_all` puis `truth_all_nogemma` ; le plafond, le plancher, les écarts appariés ; par
 langue, par source, par origine, par palier ; `task` et `needs_tools` ; les rangs et la calibration du score ; ce qui
-manque), `tables/` (vingt-cinq CSV) et `figures/` (sept SVG, chacun avec le CSV de ses données). Le gabarit
+manque), `tables/` (vingt-sept CSV, dont `profile` et `tier_distribution`) et `figures/` (dix SVG, chacun avec le CSV
+de ses données et une légende en français dessous dans `index.md` : les sept de l'accord, plus la qualité contre la
+latence, contre le poids sur disque, et la distribution des paliers prédits). Le gabarit
 `report/TEMPLATE.md` porte les mises en garde et la phrase à trous ; le code remplit les trous avec les chiffres tels
 qu'ils sortent, et les deux clauses finales de la phrase suivent des règles écrites dans `src/s1d1_bench/report_index.py`
 et citées dans le rapport. Les intervalles sont à 95 %, par rééchantillonnage des 90 prompts de base (1 000 tirages,

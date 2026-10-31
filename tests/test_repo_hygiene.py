@@ -112,13 +112,88 @@ def test_readme_results_match_the_report():
     assert f"{_french(mean['exact'])} [{_french(mean['exact_lo'])} ; {_french(mean['exact_hi'])}]" in results
 
 
-def test_readme_results_show_both_figures_and_link_the_report():
+README_FIGURES = ("qwk-bars.svg", "quality-vs-latency.svg", "qwk-by-language.svg")
+
+
+def test_readme_results_show_the_three_figures_with_a_caption_and_link_the_report():
     results = _readme_section("Résultats (`base-v1`, 2026-10-30)")
-    for figure in ("qwk-bars.svg", "qwk-by-language.svg"):
+    places = []
+    for figure in README_FIGURES:
         path = f"report/base-v1/figures/{figure}"
         assert f"]({path})" in results, figure
         assert (REPO_ROOT / path).is_file(), figure
+        places.append(results.index(f"]({path})"))
+    assert places == sorted(places)  # in this order
+    # each figure is followed by its French caption, a paragraph before the next figure
+    blocks = re.split(r"!\[[^\]]*\]\(report/base-v1/figures/[^)]+\)", results)[1:]
+    for figure, block in zip(README_FIGURES, blocks, strict=True):
+        assert block.strip() and not block.strip().startswith("|"), figure
     assert "](report/base-v1/index.md)" in results
+    table = [line for line in results.splitlines() if line.startswith("| ") and not line.startswith("| candidat")]
+    assert len(table) == 7  # the seven lines of the table
+
+
+def _span(values: list[float], unit) -> str:
+    """'1,6 à 9,1 ms': the two ends, the unit once when they share it."""
+    low, high = unit(min(values)), unit(max(values))
+    number, _, word = low.rpartition(" ")
+    return f"{number if word == high.rpartition(' ')[2] else low} à {high}"
+
+
+def _ms(value: float) -> str:
+    """A latency as the report writes it: ms under a second, s above, one decimal, decimal comma."""
+    if value < 1000:
+        return f"{value:.1f}".replace(".", ",") + " ms"
+    return f"{value / 1000:.1f}".replace(".", ",") + " s"
+
+
+def _mb(value: float) -> str:
+    """A weight as the report writes it: Mo without decimal under 1 000 Mo, Go with one decimal above."""
+    if value < 1000:
+        return f"{value:.0f} Mo"
+    return f"{value / 1000:.1f}".replace(".", ",") + " Go"
+
+
+def test_readme_results_latency_and_weights_match_the_profile():
+    results = _readme_section("Résultats (`base-v1`, 2026-10-30)")
+    profile = list(_csv_rows("profile.csv", "name").values())
+    s1d1_cpu = [r for r in profile if r["name"].startswith("s1d1-") and r["device"] == "cpu"]
+    s1d1 = [r for r in profile if r["name"].startswith("s1d1-")]
+    judges = [r for r in profile if r["role"] == "judge-in-truth"]
+    assert len(s1d1_cpu) == 4 and len(s1d1) == 5 and len(judges) == 3
+    assert _span([float(r["latency_p50_ms"]) for r in s1d1_cpu], _ms) in results
+    assert _span([float(r["latency_p50_ms"]) for r in judges], _ms) in results
+    assert _span([float(r["weights_mb"]) for r in s1d1], _mb) in results
+    assert _span([float(r["weights_mb"]) for r in judges], _mb) in results
+
+
+def test_readme_results_by_language_match_the_report():
+    results = _readme_section("Résultats (`base-v1`, 2026-10-30)")
+    with (REPORT_DIR / "tables" / "by_language.csv").open(encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    for name in ("s1d1-full-int8", "litellm-heuristic"):
+        qwk = {r["lang"]: float(r["qwk_all"]) for r in rows if r["name"] == name}
+        others = [v for lang, v in qwk.items() if lang != "eng"]
+        assert f"{_french(str(qwk['eng']))} en anglais" in results, name
+        assert f"{_french(str(min(others)))} à {_french(str(max(others)))}" in results, name
+
+
+WITNESSES = {"random", "length", "constant-low"}
+
+
+def test_profile_figures_of_the_report_leave_the_witnesses_out_and_say_it():
+    """Review focus 4, on the committed report: no witness point, LiteLLM (no weights) out of the footprint figure."""
+    figures = REPORT_DIR / "figures"
+    for name in ("quality-vs-latency", "quality-vs-footprint"):
+        with (figures / f"{name}.csv").open(encoding="utf-8", newline="") as handle:
+            names = {row["name"] for row in csv.DictReader(handle)}
+        assert names and not names & WITNESSES, name
+        assert "s1d1-full-int8" in names and "base-v1-gemma4-cap512" in names, name
+        assert not {"base-v1-gemma4-off", "base-v1-qwen3-off"} & names, name  # the main judges only
+    with (figures / "quality-vs-footprint.csv").open(encoding="utf-8", newline="") as handle:
+        assert "litellm-heuristic" not in {row["name"] for row in csv.DictReader(handle)}
+    index = (REPORT_DIR / "index.md").read_text(encoding="utf-8")
+    assert "ne sont pas des modèles" in index and "`litellm-heuristic` : pas de fichier de poids (0 Mo)" in index
 
 
 # the files whose strings check, on purpose, that a local path is refused or kept out of meta.json

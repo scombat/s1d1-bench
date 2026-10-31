@@ -25,6 +25,7 @@ from s1d1_bench.report import (
     CONSTANT_SCALE,
     FLOOR,
     HEADLINE,
+    IN_TRUTH,
     LITELLM,
     MACRO_F1_NOTE,
     NOT_IN_RUN,
@@ -32,6 +33,7 @@ from s1d1_bench.report import (
     RAW,
     REFERENCE,
     V7,
+    WITNESSES,
     constant_scale,
     french,
     markdown_table,
@@ -532,6 +534,84 @@ def _reading(computed: dict[str, pa.Table], run: dict, sigma: float, classifiers
     }
 
 
+def _latency(value: float) -> str:
+    """A latency in ms as the captions write it: ms under a second, s above, one decimal ("9,1 ms", "42,8 s")."""
+    return f"{french(value, 1)} ms" if value < 1000 else f"{french(value / 1000, 1)} s"
+
+
+def _weight(value: float) -> str:
+    """A weight in MB (10^6 bytes) as the captions write it: Mo without decimal under 1 000 Mo, Go above."""
+    return f"{value:.0f} Mo" if value < 1000 else f"{french(value / 1000, 1)} Go"
+
+
+def _span(values: Sequence[float], unit, none: str) -> str:
+    """'a à b' from the smallest to the largest of `values` in `unit` ("1,6 à 9,1 ms", the unit once when both ends
+    share it; "0,1 ms à 1,2 s" otherwise), the value alone for one, `none` for none."""
+    values = [v for v in values if v is not None and not math.isnan(v)]
+    if not values:
+        return none
+    low, high = unit(min(values)), unit(max(values))
+    if low == high:
+        return low
+    (low_number, _, low_unit), high_unit = low.rpartition(" "), high.rpartition(" ")[2]
+    return f"{low_number if low_unit == high_unit else low} à {high}"
+
+
+def _tiers_used(computed: dict[str, pa.Table]) -> str:
+    """One line per bar of tier_distribution: how many tiers it uses, those it never uses and its largest share."""
+    rows = computed["tier_distribution"].to_pylist()
+    lines = []
+    for name in dict.fromkeys(r["name"] for r in rows):
+        bar = [r for r in rows if r["name"] == name]
+        used = sum(r["n_ids"] > 0 for r in bar)
+        text = f"- {_code(name)} : {used} palier{'s' if used > 1 else ''} sur {len(bar)}"
+        never = [_code(r["tier"]) for r in bar if r["n_ids"] == 0]
+        text += ", jamais " + _and(never) if never else ""
+        top = max(bar, key=lambda r: r["n_ids"])  # the first of the largest, in tier order
+        text += f" ; plus grande part : {_code(top['tier'])} {_percent(top['share'])}" if top["n_ids"] else ""
+        lines.append(text)
+    return "\n".join(lines) or "_(aucune ligne)_"
+
+
+def _captions(computed: dict[str, pa.Table]) -> dict[str, str]:
+    """The numbers of the captions under the figures: who is below `length`, the latencies and weights of the profile
+    (s1d1, Laya, the main judges), the tiers each bar uses, the QWK by language of the headline and of LiteLLM."""
+    agreement = {r["name"]: r for r in computed["agreement_all"].to_pylist() if r["role"] == "candidate"}
+    length = agreement.get(FLOOR)
+    if length is None or french(length["qwk"]) == "—":
+        below = f"pas de témoin {_code(FLOOR)} dans ce run"
+    else:
+        names = [
+            _code(name)
+            for name, row in agreement.items()
+            if name not in WITNESSES and french(row["qwk"]) != "—" and row["qwk"] < length["qwk"]
+        ]
+        below = _and(names) if names else "aucun candidat"
+    rows = computed["profile"].to_pylist() if "profile" in computed else []
+    none = "non mesuré (pas de profil)" if not rows else "—"
+    s1d1 = [r for r in rows if r["name"].startswith(CALIBRATED) and r["role"] == "candidate"]
+    cpu = [r for r in s1d1 if r["device"] == "cpu"]
+    judges = [r for r in rows if r["role"] == IN_TRUTH]
+    laya = [r for r in rows if r["name"].startswith(LAYA) and r["role"] == "candidate"]
+
+    def by_language(name: str) -> str:
+        found = [r for r in computed["by_language"].to_pylist() if r["name"] == name]
+        return ", ".join(f"{r['lang']} {french(r['qwk_all'])}" for r in found) or "absent de ce run"
+
+    return {
+        "below_length": below,
+        "latency_s1d1_cpu": _span([r["latency_p50_ms"] for r in cpu], _latency, none),
+        "p95_s1d1_cpu": _span([r["latency_p95_ms"] for r in cpu], _latency, none),
+        "latency_judges": _span([r["latency_p50_ms"] for r in judges], _latency, none),
+        "weights_s1d1": _span([r["weights_mb"] for r in s1d1], _weight, none),
+        "weights_laya": _span([r["weights_mb"] for r in laya], _weight, none),
+        "weights_judges": _span([r["weights_mb"] for r in judges], _weight, none),
+        "tiers_used": _tiers_used(computed),
+        "headline_by_language": by_language(HEADLINE[0]),
+        "litellm_by_language": by_language(LITELLM),
+    }
+
+
 def _missing(computed: dict[str, pa.Table], figures: Sequence[Figure]) -> str:
     lines = [
         f"- {SKIPPED.get(r['role'], r['role'])}, {_code(r['name'])} : {SKIPPED.get(r['consequence'], r['consequence'])}"
@@ -570,6 +650,7 @@ def write_index(
     values |= _sentence(tables, run)
     values |= _reading(tables, run, sigma, Path(classifiers_root) if classifiers_root is not None else None)
     values |= _tables(tables)
+    values |= _captions(tables)
     values |= _figures(figures, n_ids, n_base)
     text = fill(Path(template).read_text(encoding="utf-8"), values)
     lowered = text.lower()

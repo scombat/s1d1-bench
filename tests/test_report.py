@@ -727,6 +727,13 @@ def test_report_command_on_the_fake_set(tmp_path, capsys):
     assert "La prédiction 1 n'a pas été évaluée" in text and "La prédiction 2 n'a pas été évaluée" in text
     assert "figure `confusion` : `laya-multilingual-tier` absent : pas de panneau de confusion" in text
     assert "plancher, `length` : pas de ligne de plancher" in text
+    # the captions under the figures, filled from the tables and the profile (fake: s1d1 1 ms on cpu, judges 1-3 s)
+    assert "s1d1 répond par prompt sur le CPU (int8) en 1,0 ms," in text
+    assert "là où un juge principal met, sur le GPU du même Mac et en lisant la consigne, 1,0 à 3,0 s." in text
+    assert "Les poids de s1d1 tiennent dans 10 Mo ;" in text and "les juges principaux demandent 1,0 à 3,0 Go." in text
+    assert "ne sont pas des modèles : ils n'ont ni latence ni poids, et ne sont ni dans cette figure" in text
+    truth_line = "- `truth_all` : 2 paliers sur 5, jamais `low`, `medium` et `expert`"
+    assert f"{truth_line} ; plus grande part : `trivial` 50,0 %" in text
 
     # the rank-only candidate has neither MAE nor ECE anywhere, the candidate without task no task row
     for path in [*(out / "tables").glob("*.csv"), *(out / "figures").glob("*.csv")]:
@@ -858,6 +865,8 @@ def test_report_command_without_a_profile_skips_the_profile_table_and_figures(tm
     text = (out / "index.md").read_text(encoding="utf-8")
     for name in PROFILE_FIGURES:
         assert f"_Figure `{name}` non tracée : pas de profil" in text, name
+    assert "s1d1 répond par prompt sur le CPU (int8) en non mesuré (pas de profil)," in text
+    assert "_(pas de profil : `results/<jeu>.profile.json`" in text  # in place of the profile table
 
 
 def test_report_command_reads_a_named_profile_and_refuses_a_missing_one(tmp_path, capsys):
@@ -1031,6 +1040,17 @@ def test_report_command_refuses_a_meta_table_without_a_column(tmp_path, capsys, 
     pq.write_table(meta.drop_columns([column]), tmp_path / "fake.meta.parquet")
     assert main([*args, "--out", str(tmp_path / "out")]) == 1
     assert f"the meta table has no column {column!r}" in capsys.readouterr().err
+
+
+def test_caption_spans_say_the_unit_once_when_both_ends_share_it():
+    from s1d1_bench.report_index import _latency, _span, _weight
+
+    assert _span([9.114, 1.646, 5.8], _latency, "-") == "1,6 à 9,1 ms"
+    assert _span([0.123, 1821.0], _latency, "-") == "0,1 ms à 1,8 s"
+    assert _span([42786.5, 1821.0], _latency, "-") == "1,8 à 42,8 s"
+    assert _span([24.7, 615.1], _weight, "-") == "25 à 615 Mo"
+    assert _span([12076.2, 33763.1], _weight, "-") == "12,1 à 33,8 Go"
+    assert _span([310.3], _weight, "-") == "310 Mo" and _span([], _weight, "none") == "none"
 
 
 def test_constant_scores_are_named_from_the_data_with_their_anchor():
