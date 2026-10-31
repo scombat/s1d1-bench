@@ -1,44 +1,43 @@
 # s1d1-bench
 
-> **In English, in short.** An open, replayable bench of how well a prompt classifier agrees with local LLM judges on
-> the v7 rubric (complexity tier, score, task, `needs_tools`). On `base-v1`, 90 base prompts in four languages (360
-> ids), `s1d1-full-int8` agrees with the median of three judges at QWK 0,807 [0,734 ; 0,852]; the inter-judge ceiling is
-> 0,774, the prompt-length witness 0,543, Laya 0,405 (english) and 0,119 (multilingual), LiteLLM's heuristic 0,089. The
-> judges are the instrument, not competitors; no "better than" claim is made unless the paired difference passes the 2 σ
-> rule. Everything below is in French: the [results](#résultats-base-v1-2026-10-30), the three commands, how to replay,
-> and the [full report](report/base-v1/index.md). Licences: code Apache-2.0 (one MIT copy), data CC-BY-4.0 or its
-> source's.
+An open, replayable bench of how well a prompt classifier agrees with local LLM judges on the v7 rubric (complexity
+tier, score, task, `needs_tools`). On `base-v1`, 90 base prompts in four languages (360 ids), `s1d1-full-int8` agrees
+with the median of three judges at QWK 0.807 [0.734, 0.852]; the inter-judge ceiling is 0.774, the prompt-length
+witness 0.543, Laya 0.405 (english) and 0.119 (multilingual), LiteLLM's heuristic 0.089. The judges are the instrument,
+not competitors; no "better than" claim is made unless the paired difference passes the 2 σ rule. Licences: code
+Apache-2.0 (one MIT copy), data CC-BY-4.0 or its source's.
 
-Banc ouvert pour mesurer à quel point un classifieur de prompts s'accorde avec des juges LLM locaux, sur la grille de
-notation v7 (palier de complexité, score, tâche, `needs_tools`).
+The model can be tried in the browser, where it runs in the page, in the
+[demo Space](https://huggingface.co/spaces/scombat/s1d1-router-demo).
 
-Les décisions citées `docs/NN` sont dans [`docs/`](docs/README.md).
+Below are what the bench does not measure, the [results](#results-base-v1-2026-10-30), the commands and how to replay. The full report is [`report/base-v1/index.md`](report/base-v1/index.md): its first section is in English, the
+rest in French. The decisions cited as `docs/NN` are in [`docs/`](docs/README.md); those decision documents are in
+French.
 
-## Ce que le banc mesure, et ce qu'il ne mesure pas
+## What the bench measures, and what it does not
 
-- **Mesuré.** L'accord des quatre sorties d'un classifieur avec la médiane des juges : palier de complexité, score,
-  tâche et `needs_tools`, globalement, et pour le palier de complexité aussi par langue, par source, par origine et par
-  palier de la vérité. Les témoins aléatoire et longueur du
-  prompt donnent le plancher, l'accord de chaque juge avec les autres donne le plafond.
-- **Non mesuré : la grille.** Si la grille elle-même correspond à « quel modèle suffit » relève d'un autre banc, celui
-  des réponses, qui n'est pas traité ici.
-- **Non mesuré : le routage.** Le mapping score vers modèle est l'affaire du déployeur.
-- **Non mesuré : la distribution réelle.** Le jeu est construit par cases, `expert` sera la moins fournie ; les prompts
-  agentiques et multi-tours sont absents, le jeu est fait de premiers prompts.
-- **Non mesuré : les autres langues.** Seules les quatre langues choisies sont couvertes.
+- **Measured.** The agreement of a classifier's four outputs with the median of the judges: complexity tier, score, task
+  and `needs_tools`, overall, and for the complexity tier also by language, by source, by origin and by truth tier. The
+  random and prompt-length witnesses give the floor, each judge's agreement with the others gives the ceiling.
+- **Not measured: the rubric.** Whether the rubric itself matches "which model is enough" belongs to another bench, the
+  one on answers, which is not covered here.
+- **Not measured: routing.** The mapping from score to model is the deployer's business.
+- **Not measured: the real distribution.** The set is built by cells, `expert` will be the least populated; agentic and
+  multi-turn prompts are absent, the set is made of first prompts.
+- **Not measured: other languages.** Only the four chosen languages are covered.
 
-### D'où vient ce banc
+### Where this bench comes from
 
-Avant ce banc, s1d1 a été passé sur l'évaluation publique de RouteLLM (lm-sys,
-[arXiv 2406.18665](https://arxiv.org/abs/2406.18665) : MT-Bench, GSM8K, MMLU ; GPT-4 contre Mixtral 8x7B ; métrique
-APGR), après avoir retrouvé à l'identique les neuf chiffres publiés de leur routeur BERT. Selon le jeu d'évaluation, s1d1 y faisait
-entre 0,40 et 0,59 d'APGR. Un témoin trivial, la longueur du prompt en caractères, faisait de 0,56 à 0,60 : 0,598 sur
-GSM8K et 0,583 sur MMLU, là où le routeur BERT de RouteLLM fait 0,531 et 0,572. Sur MT-Bench (72 questions), tout
-tombait dans le bruit, sauf le BERT entraîné sur la préférence GPT-4 contre Mixtral, qui est exactement ce que cette
-évaluation mesure. Elle répond à la question « sur cette question, GPT-4 bat-il Mixtral ? » : un écart entre deux modèles sur une
-paire anglaise, pas la complexité d'un prompt. Un prompt difficile pour les deux modèles n'y rapporte rien, alors que
-s1d1 prédit l'effort de réponse jugé par un LLM. D'où le présent banc, à soi : des témoins (hasard, longueur, constante), un
-plafond fait des juges eux-mêmes, des intervalles par rééchantillonnage et quatre langues, soit `base-v1`.
+Before this bench, s1d1 was run on RouteLLM's public evaluation (lm-sys,
+[arXiv 2406.18665](https://arxiv.org/abs/2406.18665): MT-Bench, GSM8K, MMLU; GPT-4 against Mixtral 8x7B; APGR metric),
+after reproducing exactly the nine published figures of their BERT router. Depending on the evaluation set, s1d1 scored
+between 0.40 and 0.59 APGR. A trivial witness, the prompt length in characters, scored 0.56 to 0.60: 0.598 on GSM8K and
+0.583 on MMLU, where RouteLLM's BERT router scores 0.531 and 0.572. On MT-Bench (72 questions), everything fell within
+the noise, except the BERT trained on the GPT-4 against Mixtral preference, which is exactly what that evaluation
+measures. It answers the question "on this question, does GPT-4 beat Mixtral?": a gap between two models on an English
+pair, not the complexity of a prompt. A prompt that is hard for both models earns nothing there, whereas s1d1 predicts
+the answering effort as judged by an LLM. Hence the present bench, one of its own: witnesses (chance, length, constant),
+a ceiling made of the judges themselves, bootstrap intervals and four languages, that is `base-v1`.
 
 ## Résultats (`base-v1`, 2026-10-30)
 
