@@ -39,71 +39,71 @@ pair, not the complexity of a prompt. A prompt that is hard for both models earn
 the answering effort as judged by an LLM. Hence the present bench, one of its own: witnesses (chance, length, constant),
 a ceiling made of the judges themselves, bootstrap intervals and four languages, that is `base-v1`.
 
-## Résultats (`base-v1`, 2026-10-30)
+## Results (`base-v1`, 2026-10-30)
 
-La phrase de docs/32 § 5, remplie avec les chiffres du rapport de `base-v1` (360 ids, 90 prompts de base) :
+The sentence of docs/32 § 5, filled with the figures of the `base-v1` report (360 ids, 90 base prompts):
 
-> Sur 360 ids, soit 90 prompts de base en 4 langues, `s1d1-full-int8` s'accorde avec la médiane de 3 juges à QWK 0,807
-> [0,734 ; 0,852] ; le plafond inter-juges est 0,774 [0,718 ; 0,815] (chaque juge principal contre les deux autres, 8
-> votes et non 12 : `base-v1-gemma4-cap512` 0,827, `base-v1-qwen3-cap512` 0,794, `base-v1-gptoss-cap512` 0,702) ; Laya
-> english 0,405 [0,314 ; 0,490], Laya multilingual 0,119 [−0,040 ; 0,264] ; l'heuristique de LiteLLM 0,089 [0,026 ;
-> 0,172] ; la longueur du prompt 0,543 [0,424 ; 0,647]. L'IC de `s1d1-full-int8` contient la moyenne du plafond ;
-> `s1d1-full-int8` se distingue du plancher `length` selon la règle des 2 σ (écart apparié `s1d1-full-int8` −
-> `length` : 0,264 [0,159 ; 0,383]).
+> Over 360 ids, that is 90 base prompts in 4 languages, `s1d1-full-int8` agrees with the median of 3 judges at QWK 0.807
+> [0.734, 0.852]; the inter-judge ceiling is 0.774 [0.718, 0.815] (each main judge against the other two, 8 votes and
+> not 12: `base-v1-gemma4-cap512` 0.827, `base-v1-qwen3-cap512` 0.794, `base-v1-gptoss-cap512` 0.702); Laya english 0.405
+> [0.314, 0.490], Laya multilingual 0.119 [−0.040, 0.264]; LiteLLM's heuristic 0.089 [0.026, 0.172]; the prompt length
+> 0.543 [0.424, 0.647]. The CI of `s1d1-full-int8` contains the ceiling mean; `s1d1-full-int8` is distinguished from the
+> `length` floor by the 2 σ rule (paired gap `s1d1-full-int8` − `length`: 0.264 [0.159, 0.383]).
 
-![Accord de chaque candidat avec la médiane des juges principaux](report/base-v1/figures/qwk-bars.svg)
+![Agreement of each candidate with the median of the main judges](report/base-v1/figures/qwk-bars.svg)
 
-`s1d1-full-int8` est à hauteur du plafond inter-juges : son IC, 0,807 [0,734 ; 0,852], contient la moyenne du plafond
-(0,774, ligne noire ; lignes gris foncé : chaque juge principal contre les deux autres). Les témoins font le plancher
-(lignes grises en tirets et bande grise) ; Laya (0,405 et 0,119) et LiteLLM (0,089) sont sous la longueur du prompt
-(0,543), en valeurs ponctuelles. Une position sur la figure n'est pas une phrase de supériorité : il y faut la règle des
-2 σ, l'IC de l'écart apparié qui exclut zéro et dépasse 2 σ (σ = 0,005, bande bleue autour de `s1d1-full-int8`).
+`s1d1-full-int8` reaches the inter-judge ceiling: its CI, 0.807 [0.734, 0.852], contains the ceiling mean (0.774, black
+line; dark grey lines: each main judge against the other two). The witnesses make the floor (dashed grey lines and grey
+band); Laya (0.405 and 0.119) and LiteLLM (0.089) are below the prompt length (0.543), on point values. A position on
+the figure is not a superiority sentence: that needs the 2 σ rule, the CI of the paired gap excluding zero and exceeding
+2 σ (σ = 0.005, blue band around `s1d1-full-int8`).
 
-![Accord avec les juges contre la latence par prompt](report/base-v1/figures/quality-vs-latency.svg)
+![Agreement with the judges against latency per prompt](report/base-v1/figures/quality-vs-latency.svg)
 
-`s1d1-full-int8`, dont l'IC contient la moyenne du plafond (un juge principal y est placé à son QWK contre les deux
-autres), répond en 9,1 ms par prompt sur le CPU du Mac (latence médiane, lot de 1) ; les quatre variantes int8 de s1d1,
-chacune à son propre QWK, répondent en 1,6 à 9,1 ms. Au 95e centile, `s1d1-full-int8` met 76,8 ms (la cause de cette
-queue n'est pas mesurée). Un juge principal met 1,8 à 42,8 s sur le GPU du même Mac (MLX), en lisant une consigne
-d'environ 1 900 jetons puis en raisonnant (réflexion plafonnée à 512 jetons) ; sans réflexion, gemma4 et qwen3 mettent
-9,2 à 12,6 s. s1d1 fp16 et Laya tournent sur le GPU (MPS), LiteLLM sur le CPU. Les
-témoins ne sont pas des modèles et ne sont pas dans la figure. Sur disque, `s1d1-full-int8` pèse 310 Mo (les cinq
-variantes de s1d1 : 25 à 615 Mo), un juge principal 12,1 à 33,8 Go (figure `quality-vs-footprint` du rapport). Mesures
-de `bench profile` sur un M4 Max, voir [Le profil](#le-profil).
+`s1d1-full-int8`, whose CI contains the ceiling mean (a main judge is placed there at its QWK against the other two),
+answers in 9.1 ms per prompt on the Mac's CPU (median latency, batch of 1); the four int8 variants of s1d1, each at its
+own QWK, answer in 1.6 to 9.1 ms. At the 95th percentile, `s1d1-full-int8` takes 76.8 ms (the cause of this
+tail is not measured). A main judge takes 1.8 to 42.8 s on the same Mac's GPU (MLX), reading instructions of about 1,900
+tokens and then reasoning (reasoning capped at 512 tokens); without reasoning, gemma4 and qwen3 take
+9.2 to 12.6 s. s1d1 fp16 and Laya run on the GPU (MPS), LiteLLM on the CPU. The
+witnesses are not models and are not in the figure. On disk, `s1d1-full-int8` weighs 310 MB (the five
+s1d1 variants: 25 to 615 MB), a main judge 12.1 to 33.8 GB (figure `quality-vs-footprint` of the report). Measurements
+of `bench profile` on an M4 Max, see [The profile](#the-profile).
 
-![QWK par langue](report/base-v1/figures/qwk-by-language.svg)
+![QWK by language](report/base-v1/figures/qwk-by-language.svg)
 
-s1d1 tient dans les quatre langues : `s1d1-full-int8` est à 0,840 en anglais et de 0,787 à 0,802 dans les trois
-autres. LiteLLM tombe hors de l'anglais, ses listes de mots-clés étant anglaises : 0,205 en anglais, 0,044 à 0,061
-ailleurs, sur les valeurs ponctuelles et sans que les IC se séparent.
+s1d1 holds up in the four languages: `s1d1-full-int8` is at 0.840 in English and from 0.787 to 0.802 in the other
+three. LiteLLM drops outside English, its keyword lists being English: 0.205 in English, 0.044 to 0.061
+elsewhere, on point values and without the CIs separating.
 
-QWK contre `truth_all` (la médiane des trois juges principaux), IC à 95 % sur 1 000 tirages des 90 prompts de base ;
-« palier exact » est la part des ids dont le palier est celui de `truth_all` :
+QWK against `truth_all` (the median of the three main judges), 95% CI over 1,000 draws of the 90 base prompts;
+"exact tier" is the share of ids whose tier is that of `truth_all`:
 
-| candidat | QWK [IC 95 %] | palier exact [IC 95 %] |
+| candidate | QWK [95% CI] | exact tier [95% CI] |
 |---|---|---|
-| s1d1 full int8 | 0,807 [0,734 ; 0,852] | 0,656 [0,569 ; 0,733] |
-| s1d1 small int8 | 0,772 [0,700 ; 0,822] | 0,650 [0,561 ; 0,731] |
-| plafond (moyenne des trois juges) | 0,774 [0,718 ; 0,815] | 0,600 [0,523 ; 0,671] |
-| longueur (témoin `length`) | 0,543 [0,424 ; 0,647] | 0,394 [0,300 ; 0,483] |
-| Laya english (`laya-english-tier`) | 0,405 [0,314 ; 0,490] | 0,311 [0,247 ; 0,386] |
-| Laya multilingual (`laya-multilingual-tier`) | 0,119 [−0,040 ; 0,264] | 0,278 [0,203 ; 0,353] |
-| LiteLLM heuristic | 0,089 [0,026 ; 0,172] | 0,342 [0,250 ; 0,436] |
+| s1d1 full int8 | 0.807 [0.734, 0.852] | 0.656 [0.569, 0.733] |
+| s1d1 small int8 | 0.772 [0.700, 0.822] | 0.650 [0.561, 0.731] |
+| ceiling (mean of the three judges) | 0.774 [0.718, 0.815] | 0.600 [0.523, 0.671] |
+| length (`length` witness) | 0.543 [0.424, 0.647] | 0.394 [0.300, 0.483] |
+| Laya english (`laya-english-tier`) | 0.405 [0.314, 0.490] | 0.311 [0.247, 0.386] |
+| Laya multilingual (`laya-multilingual-tier`) | 0.119 [−0.040, 0.264] | 0.278 [0.203, 0.353] |
+| LiteLLM heuristic | 0.089 [0.026, 0.172] | 0.342 [0.250, 0.436] |
 
-Les juges sont l'instrument de mesure, pas des concurrents : aucun tableau ne range un candidat face à un juge, sauf le
-plafond. Aucune phrase « meilleur que » sans la règle des 2 σ (l'IC de l'écart apparié exclut zéro et dépasse 2 σ,
-σ = 0,005) : la règle ne sépare pas `s1d1-full-int8` de `s1d1-full-fp16`, de `s1d1-small-int8` ni de
-`s1d1-compact-int8` (seul `tiny` en est séparé).
+The judges are the measuring instrument, not competitors: no table ranks a candidate against a judge, except the
+ceiling. No "better than" sentence without the 2 σ rule (the CI of the paired gap excludes zero and exceeds 2 σ,
+σ = 0.005): the rule does not separate `s1d1-full-int8` from `s1d1-full-fp16`, `s1d1-small-int8` or
+`s1d1-compact-int8` (only `tiny` is separated from it).
 
-L'heuristique de LiteLLM est le classifieur par défaut de l'Auto Router de LiteLLM, et Laya l'autre option que LiteLLM
-documente pour un classifieur auto-hébergé ; le banc les lit toutes deux sans entraînement ni réglage (zéro-shot) sur
-cette grille, les quatre paliers de LiteLLM traduits nom à nom (voir
-[Les treize dossiers de classifieurs](#les-treize-dossiers-de-classifieurs-onze-dans-les-résultats)). Pour `small`, le
-banc ne sépare pas `s1d1-small-int8` de `s1d1-full-int8` : l'écart apparié `s1d1-full-int8` − `s1d1-small-int8` est de
-0,035 [−0,004 ; 0,076] (`report/base-v1/tables/paired.csv`, la règle des 2 σ ne passe pas). `s1d1-small-int8` pèse 56 Mo
-contre 310 Mo pour `s1d1-full-int8` et répond en 5,8 ms par prompt contre 9,1 ms (`report/base-v1/tables/profile.csv`,
-latence médiane, lot de 1, CPU d'un M4 Max). Tout le reste est dans
-[`report/base-v1/index.md`](report/base-v1/index.md) ; pour le régénérer, depuis la racine du dépôt :
+LiteLLM's heuristic is the default classifier of LiteLLM's Auto Router, and Laya the other option that LiteLLM
+documents for a self-hosted classifier; the bench reads both without training or tuning (zero-shot) on
+this rubric, LiteLLM's four tiers translated name by name (see
+[The thirteen classifier folders](#the-thirteen-classifier-folders-eleven-in-the-results)). For `small`, the
+bench does not separate `s1d1-small-int8` from `s1d1-full-int8`: the paired gap `s1d1-full-int8` − `s1d1-small-int8` is
+0.035 [−0.004, 0.076] (`report/base-v1/tables/paired.csv`, the 2 σ rule does not pass). `s1d1-small-int8` weighs 56 MB
+against 310 MB for `s1d1-full-int8` and answers in 5.8 ms per prompt against 9.1 ms (`report/base-v1/tables/profile.csv`,
+median latency, batch of 1, CPU of an M4 Max). Everything else is in
+[`report/base-v1/index.md`](report/base-v1/index.md), whose first section is in English and the rest in French; to
+regenerate it, from the repository root:
 
 ```
 uv run --group report bench report --results results/base-v1.parquet --meta data/prompts/base-v1.meta.parquet \
