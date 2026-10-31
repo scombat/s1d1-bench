@@ -524,11 +524,11 @@ compare est le plafond. Gemma 4 a produit les étiquettes d'entraînement de s1d
 le rapport donne l'accord contre la médiane sans Gemma (`truth_all_nogemma`, tableau « Sans Gemma 4 ») ; `s1d1-full-int8`
 y passe de 0,807 à 0,785 (`fp16` de 0,814 à 0,794) ; parmi les candidats qui n'ont pas vu Gemma, `length` passe de 0,543 à
 0,478 et `laya-english-tier` de 0,405 à 0,347, tandis que `litellm-heuristic` (0,089 → 0,106) et `laya-multilingual-tier`
-(0,119 → 0,115), proches du plancher, ne baissent pas. Ces écarts se lisent sur les valeurs ponctuelles, sans IC (aucun
+(0,119 → 0,115), proches du plancher, ne baissent guère. Ces écarts se lisent sur les valeurs ponctuelles, sans IC (aucun
 écart apparié entre vérités n'est calculé). Sans Gemma, la vérité est la médiane des 8 votes de deux juges, arrondie vers
 le bas : `expert` disparaît (8 ids → 0), `high` passe de 52 à 28 ids, 20 des 90 prompts de base changent de palier (18 vers
-le bas), et un candidat qui ne prédit jamais `expert`, comme s1d1, y perd mécaniquement moins. Les deux juges restants
-s'accordent avec Gemma (QWK 0,879 pour Qwen 3, 0,707 pour gpt-oss, tableau des juges). Ce tableau ne dit donc pas si s1d1
+le bas), et un candidat qui ne prédit jamais `expert`, comme s1d1, peut y perdre moins. Les deux juges restants
+s'accordent avec Gemma (QWK 0,879 pour Qwen 3, 0,707 pour gpt-oss, tableau des juges). Le tableau « Sans Gemma 4 » ne dit donc pas si s1d1
 hérite des biais de Gemma. Le rapport ne mesure pas la grille, le routage, la distribution réelle des prompts, les prompts
 agentiques ou multi-tours, ni les langues autres que les quatre ; trois analyses de docs/32 ne sont pas produites dans ce
 lot (la part des prompts notés 0,70 à 0,80 que les juges mettent en `high` ou au-dessus, les confusions entre tâches
