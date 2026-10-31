@@ -94,7 +94,16 @@ QWK contre `truth_all` (la médiane des trois juges principaux), IC à 95 % sur 
 Les juges sont l'instrument de mesure, pas des concurrents : aucun tableau ne range un candidat face à un juge, sauf le
 plafond. Aucune phrase « meilleur que » sans la règle des 2 σ (l'IC de l'écart apparié exclut zéro et dépasse 2 σ,
 σ = 0,005) : la règle ne sépare pas `s1d1-full-int8` de `s1d1-full-fp16`, de `s1d1-small-int8` ni de
-`s1d1-compact-int8` (seul `tiny` en est séparé). Tout le reste est dans
+`s1d1-compact-int8` (seul `tiny` en est séparé).
+
+L'heuristique de LiteLLM est le classifieur par défaut de l'Auto Router de LiteLLM, et Laya l'autre option que LiteLLM
+documente pour un classifieur auto-hébergé ; le banc les lit toutes deux sans entraînement ni réglage (zéro-shot) sur
+cette grille, les quatre paliers de LiteLLM traduits nom à nom (voir
+[Les treize dossiers de classifieurs](#les-treize-dossiers-de-classifieurs-onze-dans-les-résultats)). Pour `small`, le
+banc ne sépare pas `s1d1-small-int8` de `s1d1-full-int8` : l'écart apparié `s1d1-full-int8` − `s1d1-small-int8` est de
+0,035 [−0,004 ; 0,076] (`report/base-v1/tables/paired.csv`, la règle des 2 σ ne passe pas). `s1d1-small-int8` pèse 56 Mo
+contre 310 Mo pour `s1d1-full-int8` et répond en 5,8 ms par prompt contre 9,1 ms (`report/base-v1/tables/profile.csv`,
+latence médiane, lot de 1, CPU d'un M4 Max). Tout le reste est dans
 [`report/base-v1/index.md`](report/base-v1/index.md) ; pour le régénérer, depuis la racine du dépôt :
 
 ```
