@@ -10,6 +10,11 @@
         "date": "2026-10-31",
         "machine": "macOS-27.0.1-arm64-arm-64bit, Apple M4 Max",
         "name": "routellm-bert"
+      },
+      {
+        "date": "2026-10-31",
+        "machine": "macOS-27.0.1-arm64-arm-64bit, Apple M4 Max",
+        "name": "nvidia-ptcc-eng"
       }
     ],
     "batch_size": 1,
@@ -86,6 +91,19 @@
       "peak_rss_mb": null,
       "revision": "4255b21bd9a9d3fc807ef7abd80373f5e3a52a73",
       "weights_mb": 8881.0
+    },
+    {
+      "device": "cpu",
+      "kind": "classifier",
+      "latency_mean_ms": 108.752,
+      "latency_p50_ms": 107.897,
+      "latency_p95_ms": 112.888,
+      "model": "nvidia/prompt-task-and-complexity-classifier",
+      "name": "nvidia-ptcc-eng",
+      "note": "time of classify([prompt]) per prompt (tokenisation padded to 512 tokens, forward pass, softmax of the eight heads), batch of 1, 90 prompts after 10 warm-up calls, time.perf_counter_ns; float32 on cpu; weights: model.safetensors of the pinned revision in the local Hub cache; peak RSS: ru_maxrss of a fresh process that loaded this model only (interpreter, libraries and model load included)",
+      "peak_rss_mb": 1807.0,
+      "revision": "fea1121511eafabaf7dd6fc66863dcb04f74defb",
+      "weights_mb": 735.5
     },
     {
       "device": "cpu",

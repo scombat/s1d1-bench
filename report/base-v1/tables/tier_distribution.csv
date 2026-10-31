@@ -34,6 +34,11 @@ llm4b-gemma4-e4b-off,candidate,low,101,356,0.28370786516853935
 llm4b-gemma4-e4b-off,candidate,medium,91,356,0.2556179775280899
 llm4b-gemma4-e4b-off,candidate,high,108,356,0.30337078651685395
 llm4b-gemma4-e4b-off,candidate,expert,19,356,0.05337078651685393
+nvidia-ptcc-eng,candidate,trivial,44,90,0.4888888888888889
+nvidia-ptcc-eng,candidate,low,40,90,0.4444444444444444
+nvidia-ptcc-eng,candidate,medium,6,90,0.06666666666666667
+nvidia-ptcc-eng,candidate,high,0,90,0.0
+nvidia-ptcc-eng,candidate,expert,0,90,0.0
 random,candidate,trivial,78,360,0.21666666666666667
 random,candidate,low,78,360,0.21666666666666667
 random,candidate,medium,70,360,0.19444444444444445

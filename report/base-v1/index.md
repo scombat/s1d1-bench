@@ -1,6 +1,6 @@
 # Rapport du banc : base-v1
 
-Écrit par `bench report` depuis les résultats de `bench run` du 2026-10-31. Entrées : prompts `data/prompts/base-v1.jsonl` (sha256 `e6a6d4c12ef8b95caea942337a3a1e16ec1622cb4e75c8ee0b473ef609a32490`), méta `data/prompts/base-v1.meta.parquet`, 5 juges, 13 classifieurs ; 360 ids, 90 prompts de base. Ce fichier se
+Écrit par `bench report` depuis les résultats de `bench run` du 2026-10-31. Entrées : prompts `data/prompts/base-v1.jsonl` (sha256 `e6a6d4c12ef8b95caea942337a3a1e16ec1622cb4e75c8ee0b473ef609a32490`), méta `data/prompts/base-v1.meta.parquet`, 5 juges, 14 classifieurs ; 360 ids, 90 prompts de base. Ce fichier se
 régénère : les tableaux sont dans `tables/` (CSV), les figures dans `figures/` (SVG, chacune avec son CSV). Le gabarit
 est `report/TEMPLATE.md` ; ses trous sont remplis par le code, chiffres tels qu'ils sortent.
 
@@ -88,7 +88,7 @@ caractères, seuils par quantiles) et `constant-low`. Entre les deux, le bruit d
   arrondie vers le bas.
 - **Unités** : « ids » compte les versions (une par langue, 360 en tout) ; « prompts de base » compte les
   `base_key` (90). Les IC tirent les prompts de base, jamais les ids.
-- **Paliers jamais prédits** : `constant-low` : trivial, medium, high, expert ; `laya-english-tier` : trivial ; `laya-multilingual-tier` : trivial ; `litellm-heuristic` : trivial, expert ; `s1d1-compact-int8` : expert ; `s1d1-full-fp16` : expert ; `s1d1-full-int8` : expert ; `s1d1-small-int8` : expert ; `s1d1-tiny-int8` : expert ([`tables/agreement_all.csv`](tables/agreement_all.csv),
+- **Paliers jamais prédits** : `constant-low` : trivial, medium, high, expert ; `laya-english-tier` : trivial ; `laya-multilingual-tier` : trivial ; `litellm-heuristic` : trivial, expert ; `nvidia-ptcc-eng` : high, expert ; `s1d1-compact-int8` : expert ; `s1d1-full-fp16` : expert ; `s1d1-full-int8` : expert ; `s1d1-small-int8` : expert ; `s1d1-tiny-int8` : expert ([`tables/agreement_all.csv`](tables/agreement_all.csv),
   colonne « paliers jamais prédits »). Le QWK reste sur l'échelle à cinq paliers : un candidat qui
   ne prédit jamais un palier est au mieux à un cran sur les ids de ce palier.
 - **Indécidables, abstentions, votes nuls** : indécidables : 0 id (sortis de toute mesure de palier) ;
@@ -112,6 +112,7 @@ caractères, seuils par quantiles) et `constant-low`. Entre les deux, le bruit d
 | length | classifieur | candidat | witness:length | — | 2026-10-30 | — | — | — |
 | litellm-heuristic | classifieur | candidat | litellm:complexity_router:heuristic | v1.106.6 61c6ab78393ef45683dd7d963d2a315bd845e20b | 2026-10-30 | — | — | — |
 | llm4b-gemma4-e4b-off | classifieur | candidat | mlx-community/gemma-4-e4b-it-8bit | 4255b21bd9a9d3fc807ef7abd80373f5e3a52a73 | 2026-10-31 | — | — | — |
+| nvidia-ptcc-eng | classifieur | candidat | nvidia/prompt-task-and-complexity-classifier | fea1121511eafabaf7dd6fc66863dcb04f74defb | 2026-10-31 | — | — | — |
 | random | classifieur | candidat | witness:random | seed 0 | 2026-10-30 | — | — | — |
 | routellm-bert | classifieur | candidat | routellm/bert_gpt4_augmented | 86237e3df400762178ea98379477b8296e66d5e4 | 2026-10-31 | — | — | — |
 | s1d1-compact-int8 | classifieur | candidat | scombat/s1d1-router-6src-compact-onnx-int8 | 7e87870132a19d12b32dbad1f8233801b8145b9f | 2026-10-30 | — | — | — |
@@ -159,7 +160,7 @@ le plancher (`length`, `constant-low`, les tirages de `random`) ; bande bleue : 
 étroite par nature (σ = 0,005). Le chiffre principal est à hauteur du plafond inter-juges quand son IC contient la
 moyenne du plafond ; ici, l'IC de `s1d1-full-int8` contient la moyenne du plafond.
 Les témoins font le plancher ; sous la longueur du prompt, en valeurs ponctuelles :
-`laya-english-tier`, `laya-multilingual-tier`, `litellm-heuristic` et `routellm-bert`.
+`laya-english-tier`, `laya-multilingual-tier`, `litellm-heuristic`, `nvidia-ptcc-eng` et `routellm-bert`.
 Une position sur la figure n'est pas une phrase de supériorité : seule la règle des 2 σ en permet une (l'IC de l'écart
 apparié exclut zéro et dépasse 2 σ = 0,010), voir [Les écarts appariés](#les-écarts-appariés).
 
@@ -171,6 +172,7 @@ apparié exclut zéro et dépasse 2 σ = 0,010), voir [Les écarts appariés](#l
 | length | 360 | 0,543 [0,424 ; 0,647] | 0,394 [0,300 ; 0,483] | 0,839 [0,761 ; 0,906] | 0,602 [0,463 ; 0,708] |  |
 | litellm-heuristic | 360 | 0,089 [0,026 ; 0,172] | 0,342 [0,250 ; 0,436] | 0,844 [0,772 ; 0,908] | 0,042 [−0,091 ; 0,147] | trivial, expert |
 | llm4b-gemma4-e4b-off | 356 | 0,789 [0,698 ; 0,853] | 0,545 [0,447 ; 0,643] | 0,989 [0,966 ; 1,000] | 0,782 [0,683 ; 0,851] |  |
+| nvidia-ptcc-eng | 90 | 0,311 [0,209 ; 0,415] | 0,267 [0,178 ; 0,356] | 0,800 [0,711 ; 0,878] | 0,207 [0,021 ; 0,375] | high, expert |
 | random | 360 | −0,028 [−0,109 ; 0,050] | 0,183 [0,142 ; 0,228] | 0,528 [0,469 ; 0,583] | −0,056 [−0,153 ; 0,032] |  |
 | routellm-bert | 360 | 0,278 [0,132 ; 0,408] | 0,381 [0,303 ; 0,467] | 0,819 [0,744 ; 0,889] | 0,264 [0,078 ; 0,419] |  |
 | s1d1-compact-int8 | 360 | 0,759 [0,680 ; 0,813] | 0,633 [0,550 ; 0,714] | 0,989 [0,972 ; 1,000] | 0,769 [0,683 ; 0,826] | expert |
@@ -231,6 +233,7 @@ moyenne, sans IC (la bande, ce sont eux).
 | length | 0,264 [0,159 ; 0,383] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
 | litellm-heuristic | 0,718 [0,614 ; 0,799] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
 | llm4b-gemma4-e4b-off | 0,018 [−0,067 ; 0,105] | ne passe pas | l'IC contient zéro |
+| nvidia-ptcc-eng | 0,496 [0,371 ; 0,603] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
 | random | 0,835 [0,734 ; 0,924] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
 | routellm-bert | 0,528 [0,388 ; 0,668] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
 | s1d1-compact-int8 | 0,048 [0,009 ; 0,089] | ne passe pas | l'IC exclut zéro, mais sa borne la plus proche de zéro n'est pas au-delà de 2 σ |
@@ -265,6 +268,7 @@ avec elle se lit avec les paires « même modèle » du tableau des juges, qui m
 | length | 360 | 0,478 [0,344 ; 0,592] | 0,422 [0,325 ; 0,520] | 0,825 [0,750 ; 0,894] | 0,533 [0,373 ; 0,656] |  |
 | litellm-heuristic | 360 | 0,106 [0,038 ; 0,190] | 0,281 [0,194 ; 0,375] | 0,939 [0,889 ; 0,978] | 0,080 [−0,033 ; 0,173] | trivial, expert |
 | llm4b-gemma4-e4b-off | 356 | 0,713 [0,628 ; 0,774] | 0,396 [0,308 ; 0,492] | 0,975 [0,941 ; 1,000] | 0,709 [0,594 ; 0,780] |  |
+| nvidia-ptcc-eng | 90 | 0,394 [0,286 ; 0,498] | 0,311 [0,222 ; 0,411] | 0,867 [0,789 ; 0,933] | 0,323 [0,135 ; 0,468] | high, expert |
 | random | 360 | 0,003 [−0,076 ; 0,088] | 0,200 [0,156 ; 0,242] | 0,558 [0,503 ; 0,619] | −0,043 [−0,149 ; 0,063] |  |
 | routellm-bert | 360 | 0,223 [0,092 ; 0,347] | 0,386 [0,308 ; 0,467] | 0,811 [0,736 ; 0,878] | 0,209 [0,035 ; 0,365] |  |
 | s1d1-compact-int8 | 360 | 0,722 [0,634 ; 0,786] | 0,600 [0,517 ; 0,681] | 0,994 [0,983 ; 1,000] | 0,733 [0,638 ; 0,797] | expert |
@@ -341,6 +345,7 @@ pas sur un axe logarithmique : il est nommé sous la figure.
 | laya-multilingual-tier | classifieur | candidat | mps | 12,8 | 30,2 | 15,5 | 643,8 | 2708,9 |
 | litellm-heuristic | classifieur | candidat | cpu | 0,1 | 1,2 | 0,3 | 0,0 | 24,5 |
 | llm4b-gemma4-e4b-off | classifieur | candidat | gpu-mlx | 1098,5 | 1308,5 | 1127,0 | 8881,0 | — |
+| nvidia-ptcc-eng | classifieur | candidat | cpu | 107,9 | 112,9 | 108,8 | 735,5 | 1807,0 |
 | routellm-bert | classifieur | candidat | cpu | 16,3 | 52,9 | 21,0 | 1112,2 | 1357,8 |
 | s1d1-compact-int8 | classifieur | candidat | cpu | 8,9 | 78,7 | 20,0 | 138,5 | 914,4 |
 | s1d1-full-fp16 | classifieur | candidat | mps | 8,6 | 21,9 | 10,6 | 615,1 | 937,4 |
@@ -395,6 +400,10 @@ QWK de chaque candidat contre `truth_all` dans chaque langue, un même ordre des
 | llm4b-gemma4-e4b-off | fra | 88 | 0,768 [0,656 ; 0,847] | 0,534 [0,432 ; 0,640] | 0,780 [0,667 ; 0,858] | 0,568 [0,466 ; 0,667] |
 | llm4b-gemma4-e4b-off | rus | 89 | 0,797 [0,721 ; 0,853] | 0,539 [0,427 ; 0,644] | 0,811 [0,738 ; 0,863] | 0,573 [0,467 ; 0,678] |
 | llm4b-gemma4-e4b-off | zho | 89 | 0,795 [0,722 ; 0,852] | 0,528 [0,419 ; 0,636] | 0,813 [0,745 ; 0,867] | 0,562 [0,449 ; 0,667] |
+| nvidia-ptcc-eng | eng | 90 | 0,311 [0,209 ; 0,415] | 0,267 [0,178 ; 0,356] | 0,312 [0,214 ; 0,416] | 0,278 [0,189 ; 0,367] |
+| nvidia-ptcc-eng | fra | 0 | — | — | — | — |
+| nvidia-ptcc-eng | rus | 0 | — | — | — | — |
+| nvidia-ptcc-eng | zho | 0 | — | — | — | — |
 | random | eng | 90 | −0,087 [−0,274 ; 0,100] | 0,222 [0,144 ; 0,311] | −0,115 [−0,311 ; 0,076] | 0,233 [0,156 ; 0,322] |
 | random | fra | 90 | −0,116 [−0,275 ; 0,042] | 0,133 [0,067 ; 0,200] | −0,096 [−0,261 ; 0,072] | 0,156 [0,089 ; 0,233] |
 | random | rus | 90 | 0,054 [−0,124 ; 0,223] | 0,233 [0,144 ; 0,322] | 0,106 [−0,084 ; 0,290] | 0,233 [0,144 ; 0,322] |
@@ -460,6 +469,7 @@ principaux sur la version elle-même (trois votes). Les deux sont publiées côt
 | length | 90 | 0 | 0,233 [0,156 ; 0,322] | 0,233 [0,156 ; 0,322] |
 | litellm-heuristic | 90 | 0 | 0,133 [0,067 ; 0,211] | 0,144 [0,067 ; 0,222] |
 | llm4b-gemma4-e4b-off | 87 | 3 | 0,184 [0,105 ; 0,267] | 0,184 [0,105 ; 0,267] |
+| nvidia-ptcc-eng | 0 | 90 | — | — |
 | random | 90 | 0 | 0,967 [0,922 ; 1,000] | 2,867 [2,633 ; 3,089] |
 | routellm-bert | 90 | 0 | 0,533 [0,433 ; 0,633] | 0,556 [0,444 ; 0,667] |
 | s1d1-compact-int8 | 90 | 0 | 0,378 [0,267 ; 0,478] | 0,378 [0,267 ; 0,478] |
@@ -529,6 +539,10 @@ prompts de base qui ont au moins une version en désaccord.
 | llm4b-gemma4-e4b-off | dolly | 72 | 0,667 [0,458 ; 0,867] | 0,345 [−0,090 ; 0,794] |
 | llm4b-gemma4-e4b-off | handwritten | 37 | 0,703 [0,387 ; 1,000] | 0,414 [0,094 ; 1,000] |
 | llm4b-gemma4-e4b-off | oasst2 | 136 | 0,588 [0,428 ; 0,738] | 0,723 [0,576 ; 0,816] |
+| nvidia-ptcc-eng | arena_hard | 28 | 0,179 [0,050 ; 0,321] | −0,034 [−0,136 ; 0,101] |
+| nvidia-ptcc-eng | dolly | 18 | 0,278 [0,077 ; 0,500] | −0,089 [−0,297 ; 0,000] |
+| nvidia-ptcc-eng | handwritten | 10 | 0,000 [0,000 ; 0,000] | −0,030 [−0,082 ; 0,000] |
+| nvidia-ptcc-eng | oasst2 | 34 | 0,412 [0,222 ; 0,581] | 0,321 [0,052 ; 0,539] |
 | random | arena_hard | 112 | 0,125 [0,067 ; 0,184] | −0,084 [−0,199 ; 0,025] |
 | random | dolly | 72 | 0,181 [0,091 ; 0,269] | −0,069 [−0,263 ; 0,056] |
 | random | handwritten | 40 | 0,200 [0,056 ; 0,364] | −0,026 [−0,106 ; 0,021] |
@@ -598,6 +612,8 @@ vérité, et son IC ne garde que les tirages où le sous-groupe en a au moins de
 | litellm-heuristic | pool | 320 | 0,384 [0,277 ; 0,494] | 0,086 [0,024 ; 0,153] |
 | llm4b-gemma4-e4b-off | handwritten | 37 | 0,703 [0,387 ; 1,000] | 0,414 [0,094 ; 1,000] |
 | llm4b-gemma4-e4b-off | pool | 319 | 0,527 [0,426 ; 0,630] | 0,722 [0,612 ; 0,803] |
+| nvidia-ptcc-eng | handwritten | 10 | 0,000 [0,000 ; 0,000] | −0,030 [−0,082 ; 0,000] |
+| nvidia-ptcc-eng | pool | 80 | 0,300 [0,198 ; 0,392] | 0,270 [0,135 ; 0,394] |
 | random | handwritten | 40 | 0,200 [0,056 ; 0,364] | −0,026 [−0,106 ; 0,021] |
 | random | pool | 320 | 0,181 [0,133 ; 0,227] | −0,039 [−0,129 ; 0,039] |
 | routellm-bert | handwritten | 40 | 0,450 [0,214 ; 0,700] | −0,095 [−0,345 ; 0,108] |
@@ -662,6 +678,11 @@ Les mêmes mesures par origine (tiré du pool ou écrit à la main).
 | llm4b-gemma4-e4b-off | medium | 115 | 0,391 [0,250 ; 0,539] | 0,574 [0,400 ; 0,730] |
 | llm4b-gemma4-e4b-off | high | 49 | 0,776 [0,523 ; 1,000] | 0,224 [0,000 ; 0,477] |
 | llm4b-gemma4-e4b-off | expert | 8 | 1,000 [1,000 ; 1,000] | 0,000 [0,000 ; 0,000] |
+| nvidia-ptcc-eng | trivial | 17 | 0,824 [0,611 ; 1,000] | 0,176 [0,000 ; 0,389] |
+| nvidia-ptcc-eng | low | 29 | 0,276 [0,120 ; 0,480] | −0,724 [−0,880 ; −0,520] |
+| nvidia-ptcc-eng | medium | 29 | 0,069 [0,000 ; 0,179] | −1,172 [−1,372 ; −1,000] |
+| nvidia-ptcc-eng | high | 13 | 0,000 [0,000 ; 0,000] | −1,846 [−2,200 ; −1,467] |
+| nvidia-ptcc-eng | expert | 2 | 0,000 [0,000 ; 0,000] | −3,000 [−3,000 ; −3,000] |
 | random | trivial | 68 | 0,206 [0,141 ; 0,267] | 2,000 [1,708 ; 2,313] |
 | random | low | 116 | 0,216 [0,114 ; 0,326] | 0,914 [0,659 ; 1,167] |
 | random | medium | 116 | 0,147 [0,080 ; 0,214] | −0,147 [−0,436 ; 0,125] |
@@ -744,6 +765,7 @@ exactitude. Paliers utilisés et part la plus grande de chaque barre :
 - `length` : 5 paliers sur 5 ; plus grande part : `low` 30,0 %
 - `litellm-heuristic` : 3 paliers sur 5, jamais `trivial` et `expert` ; plus grande part : `low` 93,3 %
 - `llm4b-gemma4-e4b-off` : 5 paliers sur 5 ; plus grande part : `high` 30,3 %
+- `nvidia-ptcc-eng` : 3 paliers sur 5, jamais `high` et `expert` ; plus grande part : `trivial` 48,9 %
 - `random` : 5 paliers sur 5 ; plus grande part : `trivial` 21,7 %
 - `routellm-bert` : 5 paliers sur 5 ; plus grande part : `medium` 53,9 %
 - `s1d1-compact-int8` : 4 paliers sur 5, jamais `expert` ; plus grande part : `low` 50,6 %
@@ -769,7 +791,7 @@ des juges principaux : là où l'instrument hésite.
 ## Tâche et `needs_tools`
 
 Seuls les candidats qui prédisent ces sorties ont une ligne : `llm4b-gemma4-e4b-off`, `random`, `s1d1-compact-int8`, `s1d1-full-fp16`, `s1d1-full-int8`, `s1d1-small-int8`, `s1d1-tiny-int8`. Sans ligne, parce qu'ils ne les
-prédisent pas : `constant-low`, `laya-english-tier`, `laya-multilingual-tier`, `length`, `litellm-heuristic`, `routellm-bert`.
+prédisent pas : `constant-low`, `laya-english-tier`, `laya-multilingual-tier`, `length`, `litellm-heuristic`, `nvidia-ptcc-eng`, `routellm-bert`.
 
 | nom | ids | exactitude | F1 macro |
 |---|---|---|---|
@@ -827,6 +849,7 @@ précision change ; la ligne pointillée grise est la part des positifs, la pré
 | laya-multilingual-tier | laya-multilingual-tier.raw_score | brut (hors échelle v7 : rangs seulement) | 360 | 0,351 [0,173 ; 0,517] | 0,672 [0,574 ; 0,761] | — |
 | length | length.score | brut (hors échelle v7 : rangs seulement) | 360 | 0,661 [0,531 ; 0,757] | 0,800 [0,708 ; 0,883] | — |
 | litellm-heuristic | litellm-heuristic.raw_score | brut (hors échelle v7 : rangs seulement) | 360 | 0,552 [0,435 ; 0,651] | 0,711 [0,626 ; 0,792] | — |
+| nvidia-ptcc-eng | nvidia-ptcc-eng.score | brut (hors échelle v7 : rangs seulement) | 90 | 0,593 [0,426 ; 0,727] | 0,827 [0,718 ; 0,920] | — |
 | routellm-bert | routellm-bert.score | brut (hors échelle v7 : rangs seulement) | 360 | 0,356 [0,167 ; 0,511] | 0,792 [0,633 ; 0,924] | — |
 | s1d1-compact-int8 | s1d1-compact-int8.score | score v7 | 360 | 0,857 [0,789 ; 0,901] | 0,952 [0,904 ; 0,986] | — |
 | s1d1-full-fp16 | s1d1-full-fp16.score | score v7 | 360 | 0,865 [0,800 ; 0,905] | 0,953 [0,894 ; 0,991] | — |
@@ -835,7 +858,7 @@ précision change ; la ligne pointillée grise est la part des positifs, la pré
 | s1d1-tiny-int8 | s1d1-tiny-int8.score | score v7 | 360 | 0,775 [0,696 ; 0,830] | 0,885 [0,813 ; 0,945] | — |
 
 Corrélation de rang (Spearman) du score avec le palier de la vérité, et AUROC du score pour « la vérité est high ou
-expert ». Les scores bruts (`laya-english-tier`, `laya-multilingual-tier`, `length`, `litellm-heuristic`, `routellm-bert`) ne sont pas sur l'échelle v7 : seul leur ordre compte, ni MAE ni
+expert ». Les scores bruts (`laya-english-tier`, `laya-multilingual-tier`, `length`, `litellm-heuristic`, `nvidia-ptcc-eng`, `routellm-bert`) ne sont pas sur l'échelle v7 : seul leur ordre compte, ni MAE ni
 calibration pour eux ; `constant-low` a un score constant (l'ancre de low) : ni rang ni AUROC ne le départagent.
 
 | nom | ids | MAE | Spearman | ECE |
