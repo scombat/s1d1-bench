@@ -2131,6 +2131,12 @@ pool = [
 report = [
     { name = "matplotlib" },
 ]
+routellm = [
+    { name = "huggingface-hub" },
+    { name = "numpy" },
+    { name = "torch" },
+    { name = "transformers" },
+]
 s1d1 = [
     { name = "huggingface-hub" },
     { name = "numpy" },
@@ -2157,6 +2163,12 @@ pool = [
     { name = "huggingface-hub" },
 ]
 report = [{ name = "matplotlib" }]
+routellm = [
+    { name = "huggingface-hub" },
+    { name = "numpy" },
+    { name = "torch" },
+    { name = "transformers" },
+]
 s1d1 = [
     { name = "huggingface-hub" },
     { name = "numpy" },
