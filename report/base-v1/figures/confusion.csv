@@ -1,4 +1,4 @@
-candidat,palier de truth_all,palier prédit,ids,part de la ligne
+candidate,truth_all tier,predicted tier,ids,share of the row
 s1d1-full-int8,trivial,trivial,35,0.5147058823529411
 s1d1-full-int8,trivial,low,33,0.4852941176470588
 s1d1-full-int8,trivial,medium,0,0.0

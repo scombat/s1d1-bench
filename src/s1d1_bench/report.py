@@ -5,9 +5,11 @@
 the truth of the two others) and the floor (`length`, `constant-low`, the ten draws of `random`), the judge pairs, the
 tables by language, source, origin and truth tier, `task` and `needs_tools`, the rank metrics of the scores, the
 calibration of the s1d1 scores against the anchor of the truth tier, the paired differences with the 2 sigma rule, the
-two predictions written before the figures (docs/34 § 7.4) and the inputs. `write_tables` writes them as CSV,
-`markdown_table` renders one in French for the index. `run_report_cmd` is the command: these tables, then the figures
-(`report_figures`, matplotlib) and `index.md` (`report_index`, from `report/TEMPLATE.md`).
+two predictions written before the figures (docs/34 § 7.4) and the inputs; the predicted tiers of each candidate beside
+those of the truth (`tier_distribution`), and, when a profile of `bench profile` is given, its rows (`profile`).
+`write_tables` writes them as CSV, `markdown_table` renders one in French for the index. `run_report_cmd` is the
+command: these tables, then the figures (`report_figures`, matplotlib) and `index.md` (`report_index`, from
+`report/TEMPLATE.md`).
 
 Conventions:
 
@@ -38,7 +40,9 @@ Conventions:
 
 What is read: the results table (`bench run`), the meta table (`source`, `origin` by id), the run record
 (`<results stem>.run.json`: judges, classifiers, main, gemma, abstentions) and the classifiers root, which must hold a
-folder for every classifier of the run record and `random/draws.jsonl` (the ten draws of the random witness).
+folder for every classifier of the run record and `random/draws.jsonl` (the ten draws of the random witness). The
+profile (`<results stem>.profile.json`, `bench profile`: latency, weights and peak RSS of each model of the run) is
+optional: without it the table `profile` and the two figures drawn from it are left out, and the index says so.
 """
 
 import csv
@@ -66,6 +70,7 @@ REFERENCE = "s1d1-full-int8"  # minuend of every paired difference
 FLOOR = "length"  # the informed witness
 CONSTANT = "constant-low"
 RANDOM = "random"  # its ten draws: <classifiers root>/random/draws.jsonl
+WITNESSES = (RANDOM, FLOOR, CONSTANT)  # not models: no latency, no weights (`bench profile` skips them)
 LITELLM = "litellm-heuristic"  # its exact agreement next to constant-low's, and the two predictions
 CALIBRATED = "s1d1-"  # the prefix of the candidates whose `.score` is on the v7 scale
 N_BOOT, SEED = 1000, 0
@@ -73,6 +78,17 @@ BINS = 10
 HIGH = LEVELS.index("high")  # "high or expert": the positive class of the rank AUROC
 LOW = LEVELS.index("low")
 CANDIDATE, IN_TRUTH, OUTSIDE = "candidate", "judge-in-truth", "judge-outside-truth"
+TRUTH = "truth"  # the role of the truth_all rows of tier_distribution
+NOT_IN_RUN = "not in the run"  # the role of a profile row whose model the run record does not name
+# a profile row: the keys it must have, then the columns of the table `profile` (every key of a row of the file, its
+# role in the run, and the machine and batch size of the file's meta)
+PROFILE_KEYS = ("name", "kind", "device", "weights_mb", "latency_p50_ms")
+PROFILE_COLUMNS = (
+    ("name", pa.string()), ("kind", pa.string()), ("role", pa.string()), ("device", pa.string()),
+    ("model", pa.string()), ("revision", pa.string()), ("weights_mb", pa.float64()), ("latency_p50_ms", pa.float64()),
+    ("latency_p95_ms", pa.float64()), ("latency_mean_ms", pa.float64()), ("peak_rss_mb", pa.float64()),
+    ("note", pa.string()), ("machine", pa.string()), ("batch_size", pa.int64()),
+)  # fmt: skip
 CEILING_NOTE = "plafond sur 8 votes, pas 12"
 FEW_POSITIVES = "peu de positifs: l'IC le dit"
 MACRO_F1_NOTE = (
@@ -106,8 +122,8 @@ TABLES = (
     "agreement_all", "agreement_nogemma", "ceiling", "floor", "exact_vs_constant_low", "judge_pairs", "by_language",
     "lang_change", "truth_lang_vs_all", "by_source", "by_origin", "by_tier", "task", "needs_tools", "needs_tools_pr",
     "rank_metrics", "calibration", "calibration_bins", "paired", "predictions", "confusion", "judge_spread_by_tier",
-    "inputs", "inputs_summary", "skipped",
-)  # fmt: skip
+    "tier_distribution", "profile", "inputs", "inputs_summary", "skipped",
+)  # fmt: skip  # `profile` only when a profile is given
 
 
 class Estimate(NamedTuple):
@@ -753,6 +769,42 @@ class _Report:
                 )
         return pa.Table.from_pylist(result)
 
+    def tier_distribution(self) -> pa.Table:
+        """Long format: the truth (`truth_all`, its decidable ids) then every candidate (the ids where both the truth
+        and its prediction are non-null), one row per tier: `n_ids`, `n_ids_total` (the ids of that bar) and `share`
+        (n_ids / n_ids_total; the shares of a bar sum to 1)."""
+        truth = self.truth["truth_all"]
+        result = []
+        bars = [("truth_all", TRUTH, truth[truth >= 0])]
+        bars += [(name, CANDIDATE, self.tier[name][(truth >= 0) & (self.tier[name] >= 0)]) for name in self.candidates]
+        for name, role, tiers in bars:
+            total = len(tiers)
+            for k, level in enumerate(LEVELS):
+                n = int((tiers == k).sum())
+                row = {"name": name, "role": role, "tier": level, "n_ids": n, "n_ids_total": total}
+                result.append(row | {"share": n / total if total else math.nan})
+        return pa.Table.from_pylist(result)
+
+    def profile_table(self, profile: dict) -> pa.Table:
+        """Every row of the profile of `bench profile`, in its order, with its role in the run (`NOT_IN_RUN` for a
+        model the run record does not name) and the machine and batch size of its meta. ValueError when the profile
+        has no list `rows` or a row lacks one of `PROFILE_KEYS`."""
+        rows = profile.get("rows") if isinstance(profile, dict) else None
+        if not isinstance(rows, list):
+            raise ValueError("the profile has no list 'rows' (the file of bench profile)")
+        meta = profile.get("meta") or {}
+        result = []
+        for row in rows:
+            absent = [key for key in PROFILE_KEYS if key not in row]
+            if absent:
+                raise ValueError(f"the profile row {row.get('name')!r} has no key {absent[0]!r}")
+            known = row["name"] in self.candidates or row["name"] in self.judges
+            entry = {column: row.get(column) for column, _ in PROFILE_COLUMNS}
+            entry |= {"role": self.role(row["name"]) if known else NOT_IN_RUN}
+            entry |= {"machine": meta.get("machine"), "batch_size": meta.get("batch_size")}
+            result.append(entry)
+        return pa.Table.from_pylist(result, schema=pa.schema(PROFILE_COLUMNS))
+
     def inputs(self) -> tuple[pa.Table, pa.Table]:
         abstentions = self.run.get("abstentions", {})
         # the ids whose complexity vote is null, abstention or not (a judge may answer null on one field)
@@ -800,12 +852,18 @@ class _Report:
 
 
 def tables(
-    results: pa.Table, meta: pa.Table, run: dict, classifiers_root: Path | str, sigma: float = 0.005
+    results: pa.Table,
+    meta: pa.Table,
+    run: dict,
+    classifiers_root: Path | str,
+    sigma: float = 0.005,
+    profile: dict | None = None,
 ) -> dict[str, pa.Table]:
-    """Every table of the report (`TABLES`), from the results table of `bench run`, the meta table, its run record and
-    the classifiers root. Refused (ValueError naming the key, column, folder or file) when the run record lacks one of
-    `RUN_KEYS`, the meta table one of `META_COLUMNS`, the root a folder for a classifier of the run record or
-    `random/draws.jsonl`, or when the tables do not match the run record."""
+    """Every table of the report (`TABLES`), from the results table of `bench run`, the meta table, its run record,
+    the classifiers root and the profile of `bench profile` (`profile`, the parsed JSON; without it, the table
+    `profile` is left out). Refused (ValueError naming the key, column, folder or file) when the run record lacks one
+    of `RUN_KEYS`, the meta table one of `META_COLUMNS`, the root a folder for a classifier of the run record or
+    `random/draws.jsonl`, when the tables do not match the run record, or when the profile is malformed."""
     report = _Report(results, meta, run, Path(classifiers_root), sigma)
     for name in HEADLINE:
         if name not in report.candidates:
@@ -831,9 +889,12 @@ def tables(
     out["predictions"] = report.predictions(out["agreement_all"], out["by_language"])
     out["confusion"] = report.confusion()
     out["judge_spread_by_tier"] = report.judge_spread_by_tier()
+    out["tier_distribution"] = report.tier_distribution()
+    if profile is not None:
+        out["profile"] = report.profile_table(profile)
     out["inputs"], out["inputs_summary"] = report.inputs()
     out["skipped"] = report.skipped_table()
-    return {name: out[name] for name in TABLES}
+    return {name: out[name] for name in TABLES if name in out}
 
 
 # --- output -------------------------------------------------------------------------------------------------------
@@ -861,9 +922,13 @@ def write_csv(path: Path, columns: Sequence[str], rows: Sequence[dict]) -> Path:
 
 
 def write_tables(computed: dict[str, pa.Table], out_dir: Path | str) -> list[Path]:
-    """Write each table as `out_dir/tables/<name>.csv` (`write_csv`); return the paths in the order of `computed`."""
+    """Write each table as `out_dir/tables/<name>.csv` (`write_csv`); return the paths in the order of `computed`. A
+    table of `TABLES` absent from `computed` (`profile`, without a profile) has its stale file removed."""
     folder = Path(out_dir) / "tables"
     folder.mkdir(parents=True, exist_ok=True)
+    for name in TABLES:
+        if name not in computed:
+            (folder / f"{name}.csv").unlink(missing_ok=True)
     return [write_csv(folder / f"{name}.csv", t.column_names, t.to_pylist()) for name, t in computed.items()]
 
 
@@ -919,10 +984,12 @@ MATPLOTLIB_HINT = (
 
 def run_report_cmd(args) -> int:
     """`bench report`: `--out/tables/*.csv`, `--out/figures/*.svg` (each with its CSV) and `--out/index.md`, from
-    `--results`, its `<stem>.run.json`, `--meta`, the `--classifiers` root and `--template`. Exit 1 with a message on
-    a refusal (a missing input, a key missing from the run record or a column from the meta table, a classifier folder
-    or `random/draws.jsonl` missing from the root) or when matplotlib
-    is missing; matplotlib and the inputs are checked first, before any computation."""
+    `--results`, its `<stem>.run.json`, `--meta`, the `--classifiers` root, `--template` and the profile (`--profile`,
+    by default `<stem>.profile.json` beside the results when it exists; without one, the table `profile` and its two
+    figures are left out). Exit 1 with a message on a refusal (a missing input, a `--profile` named but missing, a key
+    missing from the run record or a column from the meta table, a classifier folder or `random/draws.jsonl` missing
+    from the root, a malformed profile) or when matplotlib is missing; matplotlib and the inputs are checked first,
+    before any computation."""
     try:
         import matplotlib  # noqa: F401  (the figures need it; checked before the tables take their time)
     except ImportError:
@@ -933,6 +1000,8 @@ def run_report_cmd(args) -> int:
 
     results_path = Path(args.results)
     run_path = results_path.with_name(results_path.stem + ".run.json")
+    named_profile = getattr(args, "profile", None)
+    profile_path = Path(named_profile) if named_profile else results_path.with_name(results_path.stem + ".profile.json")
     try:
         inputs = [
             (results_path, "the results table of bench run"),
@@ -940,13 +1009,18 @@ def run_report_cmd(args) -> int:
             (Path(args.meta), "the meta table of the set"),
             (Path(args.template), "the template of index.md"),
         ]
+        if named_profile:  # named: it must be there; by default, read only when it is
+            inputs.append((profile_path, "the profile of bench profile"))
         for path, what in inputs:  # every input checked before the tables take their time
             if not path.is_file():
                 raise ValueError(f"{path}: missing ({what})")
         if not Path(args.classifiers).is_dir():
             raise ValueError(f"{args.classifiers}: missing (the root of the classifier folders)")
         run = json.loads(run_path.read_text(encoding="utf-8"))
-        computed = tables(pq.read_table(results_path), pq.read_table(args.meta), run, args.classifiers, args.sigma)
+        profile = json.loads(profile_path.read_text(encoding="utf-8")) if profile_path.is_file() else None
+        computed = tables(
+            pq.read_table(results_path), pq.read_table(args.meta), run, args.classifiers, args.sigma, profile
+        )
         written = write_tables(computed, args.out)
         drawn = figures(computed, args.out, args.sigma)
         index = write_index(args.out, computed, drawn, run, args.template, classifiers_root=args.classifiers)

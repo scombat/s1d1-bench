@@ -19,8 +19,10 @@ local folder, so the revision written in meta.json is the one that was run.
 
 import json
 import os
+import re
 from collections.abc import Callable
 from pathlib import Path
+from types import SimpleNamespace
 
 ROUTER_REPO = "scombat/s1d1-router"  # the main repo: the fp16 reference, and the home of s1d1_router.py
 ROUTER_FILE = "s1d1_router.py"
@@ -44,8 +46,24 @@ def hub_env() -> None:
     os.environ.setdefault("HF_HUB_DISABLE_IMPLICIT_TOKEN", "1")
 
 
+def hub_offline() -> bool:
+    """True when `HF_HUB_OFFLINE` is set (as `bench profile` does): the Hub is never asked, only its local cache."""
+    return os.environ.get("HF_HUB_OFFLINE", "").strip().upper() in {"1", "ON", "YES", "TRUE"}
+
+
 def model_info(repo: str, revision: str | None = None):
-    """The Hub description of `repo` at `revision` (its head by default): `.sha` is the full commit."""
+    """The Hub description of `repo` at `revision` (its head by default): `.sha` is the full commit.
+
+    Offline (`hub_offline()`), a full 40-character commit is taken as it is, without the network, and anything else
+    (a head, a branch, a short commit) raises ValueError, since only the Hub could resolve it. Online, nothing
+    changes."""
+    if hub_offline():
+        if revision and re.fullmatch(r"[0-9a-f]{40}", revision):
+            return SimpleNamespace(sha=revision)
+        raise ValueError(
+            f"HF_HUB_OFFLINE is set: {repo} needs a full 40-character commit to be read from the local cache, "
+            f"not {revision!r}"
+        )
     hub_env()
     from huggingface_hub import HfApi
 

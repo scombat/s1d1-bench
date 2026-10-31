@@ -41,7 +41,29 @@ La phrase de docs/32 § 5, remplie avec les chiffres du rapport de `base-v1` (36
 
 ![Accord de chaque candidat avec la médiane des juges principaux](report/base-v1/figures/qwk-bars.svg)
 
+`s1d1-full-int8` est à hauteur du plafond inter-juges : son IC, 0,807 [0,734 ; 0,852], contient la moyenne du plafond
+(0,774, ligne noire ; lignes gris foncé : chaque juge principal contre les deux autres). Les témoins font le plancher
+(lignes grises en tirets et bande grise) ; Laya (0,405 et 0,119) et LiteLLM (0,089) sont sous la longueur du prompt
+(0,543), en valeurs ponctuelles. Une position sur la figure n'est pas une phrase de supériorité : il y faut la règle des
+2 σ, l'IC de l'écart apparié qui exclut zéro et dépasse 2 σ (σ = 0,005, bande bleue autour de `s1d1-full-int8`).
+
+![Accord avec les juges contre la latence par prompt](report/base-v1/figures/quality-vs-latency.svg)
+
+`s1d1-full-int8`, dont l'IC contient la moyenne du plafond (un juge principal y est placé à son QWK contre les deux
+autres), répond en 9,1 ms par prompt sur le CPU du Mac (latence médiane, lot de 1) ; les quatre variantes int8 de s1d1,
+chacune à son propre QWK, répondent en 1,6 à 9,1 ms. Au 95e centile, `s1d1-full-int8` met 76,8 ms (la cause de cette
+queue n'est pas mesurée). Un juge principal met 1,8 à 42,8 s sur le GPU du même Mac (MLX), en lisant une consigne
+d'environ 1 900 jetons puis en raisonnant (réflexion plafonnée à 512 jetons) ; sans réflexion, gemma4 et qwen3 mettent
+9,2 à 12,6 s. s1d1 fp16 et Laya tournent sur le GPU (MPS), LiteLLM sur le CPU. Les
+témoins ne sont pas des modèles et ne sont pas dans la figure. Sur disque, `s1d1-full-int8` pèse 310 Mo (les cinq
+variantes de s1d1 : 25 à 615 Mo), un juge principal 12,1 à 33,8 Go (figure `quality-vs-footprint` du rapport). Mesures
+de `bench profile` sur un M4 Max, voir [Le profil](#le-profil).
+
 ![QWK par langue](report/base-v1/figures/qwk-by-language.svg)
+
+s1d1 tient dans les quatre langues : `s1d1-full-int8` est à 0,840 en anglais et de 0,787 à 0,802 dans les trois
+autres. LiteLLM tombe hors de l'anglais, ses listes de mots-clés étant anglaises : 0,205 en anglais, 0,044 à 0,061
+ailleurs, sur les valeurs ponctuelles et sans que les IC se séparent.
 
 QWK contre `truth_all` (la médiane des trois juges principaux), IC à 95 % sur 1 000 tirages des 90 prompts de base ;
 « palier exact » est la part des ids dont le palier est celui de `truth_all` :
@@ -85,8 +107,12 @@ uv run --group report bench report --results results/base-v1.parquet --meta data
   `labels.jsonl`).
 - `bench run` : réunit les dossiers de juges et de classifieurs d'un jeu en un tableau, une ligne par id, avec les vérités
   des juges principaux (`results/<jeu>.parquet` et `<jeu>.run.json`).
-- `bench report` : écrit le rapport d'un jeu (`report/<jeu>/index.md`, vingt-cinq tableaux CSV, sept figures SVG avec leur
-  CSV) depuis `results/<jeu>.parquet` ; voir [Le rapport](#le-rapport).
+- `bench report` : écrit le rapport d'un jeu (`report/<jeu>/index.md`, vingt-sept tableaux CSV, dix figures SVG avec
+  leur CSV) depuis `results/<jeu>.parquet` et, s'il existe, `results/<jeu>.profile.json` ; voir
+  [Le rapport](#le-rapport).
+- `bench profile` : mesure, pour chaque modèle d'un run, la latence par prompt à lot de 1 après chauffe (p50, p95,
+  moyenne), la mémoire de crête du processus et le poids des fichiers de poids (`results/<jeu>.profile.json`) ; voir
+  [Le profil](#le-profil).
 
 Installation : `uv sync --group pool --group dev` (sur Apple silicon, pour faire tourner un juge :
 `uv sync --group pool --group judge --group dev`), puis `uv run bench --help`.
@@ -545,16 +571,21 @@ uv run --group report bench report --results results/base-v1.parquet --meta data
 ```
 
 `--classifiers` est la racine des dossiers : la bande du témoin aléatoire se lit dans `classifiers/random/draws.jsonl`
-(dix tirages), `results/base-v1.run.json` ne donnant que les noms. Une quinzaine de secondes. La commande refuse de
+(dix tirages), `results/base-v1.run.json` ne donnant que les noms. Le profil de `bench profile` est lu à côté des
+résultats (`results/base-v1.profile.json`) ou là où `--profile` le nomme ; sans profil, le tableau `profile` et les deux
+figures de vitesse et d'empreinte manquent, et le rapport le dit. Une quinzaine de secondes. La commande refuse de
 tourner (code 1, un message) si un dossier de classifieur nommé par `run.json` manque à la racine, si `run.json` n'a pas
 l'une des clés `classifiers`, `judges`, `main` ou la table méta l'une des colonnes `source`, `origin`, si le gabarit
-`report/TEMPLATE.md` est introuvable, ou si `matplotlib` (groupe `report`) n'est pas installé.
+`report/TEMPLATE.md` est introuvable, si `--profile` nomme un fichier absent, ou si `matplotlib` (groupe `report`)
+n'est pas installé.
 
 **Ce qu'il contient.** `index.md` (lu de haut en bas : les deux prédictions de docs/34 § 7.4 d'abord, celle qui ne se
 vérifie pas en tête ; la phrase de docs/32 § 5 avec ses chiffres ; les mises en garde de docs/32 § 2 ; l'accord de chaque
 candidat et de chaque juge avec `truth_all` puis `truth_all_nogemma` ; le plafond, le plancher, les écarts appariés ; par
 langue, par source, par origine, par palier ; `task` et `needs_tools` ; les rangs et la calibration du score ; ce qui
-manque), `tables/` (vingt-cinq CSV) et `figures/` (sept SVG, chacun avec le CSV de ses données). Le gabarit
+manque), `tables/` (vingt-sept CSV, dont `profile` et `tier_distribution`) et `figures/` (dix SVG, chacun avec le CSV
+de ses données et une légende en français dessous dans `index.md` : les sept de l'accord, plus la qualité contre la
+latence, contre le poids sur disque, et la distribution des paliers prédits). Le gabarit
 `report/TEMPLATE.md` porte les mises en garde et la phrase à trous ; le code remplit les trous avec les chiffres tels
 qu'ils sortent, et les deux clauses finales de la phrase suivent des règles écrites dans `src/s1d1_bench/report_index.py`
 et citées dans le rapport. Les intervalles sont à 95 %, par rééchantillonnage des 90 prompts de base (1 000 tirages,
@@ -590,6 +621,41 @@ prompts notés 0,70 à 0,80 que les juges mettent en `high` ou au-dessus, les co
 de confusion normalisée de la tâche), et `expert` n'a que 8 ids sur 360 (2 prompts de base) : tout ce qui touche ce
 palier est dit sur très peu de prompts. Les 360 ids ne sont pas 360 prompts indépendants : ce sont 90 prompts de base en
 quatre versions, et les IC en tiennent compte.
+
+### Le profil
+
+`results/base-v1.profile.json` est écrit par `bench profile` à partir de `results/base-v1.run.json`. Il se refait sur
+le Mac, avec les poids déjà présents en local : la commande pose `HF_HUB_OFFLINE=1`, rien n'est téléchargé, et un modèle
+absent du cache échoue au lieu de se télécharger.
+
+```
+uv run --group s1d1 --group s1d1-torch --group laya bench profile --prompts data/prompts/base-v1.jsonl \
+    --run results/base-v1.run.json --judges-dir judges --models-dir ~/mlx-models --out results/base-v1.profile.json
+```
+
+**Ce qu'il mesure.** Pour chaque classifieur du run dont le `meta.json` nomme un modèle (s1d1 ×5, Laya ×2,
+l'heuristique de LiteLLM), la commande recharge le modèle par son adaptateur, aux mêmes `model`, `revision`, backend et
+checkpoint (la ligne « Replay » de `meta.json`), dans un processus Python neuf ; elle le chauffe sur 10 appels, puis
+chronomètre un appel par prompt du fichier, un prompt par appel (lot de 1, `time.perf_counter_ns`, 360 prompts) : p50,
+p95 et moyenne en millisecondes. La mémoire de crête est le `ru_maxrss` de ce processus, lu après les appels
+chronométrés ; un processus par modèle, pour que la crête de l'un ne soit pas celle d'un autre. Le poids est la taille
+sur disque des fichiers de poids de la révision épinglée dans le cache local du Hub (le `.onnx` int8 des variantes int8,
+le `.safetensors` fp16 de `s1d1-full-fp16`, le fichier de chaque tête pour Laya ; 0 pour LiteLLM), en Mo de 10⁶ octets.
+Pour les juges, la latence vient de leur `log.jsonl` (`wall_s` des appels finis `ok`, un prompt par appel par
+construction) et le poids des fichiers de `~/mlx-models/<org>--<nom>`. Les appareils sont ceux que les adaptateurs
+rapportent : s1d1 int8 et LiteLLM sur CPU, s1d1 fp16 et Laya sur le GPU du Mac (MPS), les juges sur le GPU par MLX. Les
+témoins ne sont pas des modèles : ils sont listés dans `meta.skipped`, comme le serait un modèle qui n'a pas pu se
+charger (le fichier est alors écrit sans lui et la commande sort en code 1). `--only nom,...` restreint la mesure à des
+noms du run, les autres allant dans `meta.skipped` ; un nom hors du run est refusé. `bench validate` ne lit pas ce
+fichier.
+
+**Ce qu'il ne dit pas.** La latence d'un juge comprend la lecture de la consigne v7 (environ 1 900 jetons) et la
+génération de sa réponse, raisonnement compris : elle dit ce que coûte un juge employé comme routeur, pas la vitesse du
+modèle sur le seul prompt. La mémoire de crête comprend l'interpréteur, les bibliothèques (onnxruntime, torch,
+tokenizers) et le chargement du modèle : ce n'est pas la taille du modèle seul ; sur MPS, la mémoire tenue par le pilote
+du GPU peut y manquer ; pour les juges, elle n'est pas mesurable après coup (`null`). Les latences bougent d'une
+exécution à l'autre : le fichier est une mesure, pas un calcul, et ne se refait pas à l'octet près. Il a été mesuré une
+fois, sur un M4 Max, en une minute (58 s pour les huit classifieurs et les cinq juges).
 
 ## Dépendances
 

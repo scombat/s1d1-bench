@@ -25,12 +25,15 @@ from s1d1_bench.report import (
     CONSTANT_SCALE,
     FLOOR,
     HEADLINE,
+    IN_TRUTH,
     LITELLM,
     MACRO_F1_NOTE,
+    NOT_IN_RUN,
     PASSES,
     RAW,
     REFERENCE,
     V7,
+    WITNESSES,
     constant_scale,
     french,
     markdown_table,
@@ -60,11 +63,13 @@ LABELS = {
     "candidate": "candidat", "difference": f"écart apparié de QWK ({REFERENCE} − candidat)",
     "rule_2sigma": "règle des 2 σ", "prediction": "prédiction", "verified": "vérifiée", "model": "modèle",
     "revision": "révision", "date": "date", "n_ids_abstained": "ids en abstention", "n_ids_null_vote": "ids à vote nul",
-    "null_votes_ids": "ids des votes nuls", "item": "élément", "why": "pourquoi",
+    "null_votes_ids": "ids des votes nuls", "item": "élément", "why": "pourquoi", "device": "appareil",
+    "weights_mb": "poids sur disque (Mo)", "latency_p50_ms": "latence médiane (ms)", "latency_p95_ms": "p95 (ms)",
+    "latency_mean_ms": "moyenne (ms)", "peak_rss_mb": "RSS de crête (Mo)",
 }  # fmt: skip
 VALUES = {
     "role": {"candidate": "candidat", "judge-in-truth": "juge dans la vérité",
-             "judge-outside-truth": "juge hors de la vérité"},
+             "judge-outside-truth": "juge hors de la vérité", NOT_IN_RUN: "hors du run"},
     "kind": {"informed witness": "témoin informé", "constant witness": "témoin constant", "random draw": "tirage",
              "random min": "minimum des tirages", "random max": "maximum des tirages",
              "random mean": "moyenne des tirages", "judge": "juge", "classifier": "classifieur"},
@@ -109,7 +114,14 @@ COLUMNS = {
     "inputs": ["name", "kind", "role", "model", "revision", "date", "n_ids_abstained", "n_ids_null_vote",
                "null_votes_ids"],
     "inputs_summary": ["item", "value"],
+    "profile": ["name", "kind", "role", "device", "latency_p50_ms", "latency_p95_ms", "latency_mean_ms", "weights_mb",
+                "peak_rss_mb"],
 }  # fmt: skip
+DIGITS = {"profile": 1}  # milliseconds and megabytes at one decimal; every other table at three
+NO_PROFILE = (
+    "_(pas de profil : `results/<jeu>.profile.json`, écrit par `bench profile`, n'est pas à côté des résultats, et "
+    "`--profile` ne le nomme pas)_"
+)
 SPLIT = ("agreement_all", "agreement_nogemma", "by_language", "lang_change", "by_source", "by_origin", "by_tier",
          "task", "needs_tools")  # fmt: skip  # candidates and judges in two tables: the judges are the instrument
 SKIPPED = {
@@ -135,6 +147,11 @@ CAPTIONS = {
     "language-disagreements": "Part des ids où truth_lang ≠ truth_all (0–1), par langue et par source, avec les "
     "nombres d'ids",
     "needs-tools-pr": "Précision et rappel de needs_tools (0–1) selon le seuil de probabilité, sur {n_ids}",
+    "quality-vs-latency": "QWK contre truth_all ({n_ids}) contre la latence médiane par prompt (lot de 1, échelle "
+    "logarithmique) ; juges principaux : QWK contre les deux autres",
+    "quality-vs-footprint": "QWK contre truth_all ({n_ids}) contre le poids des fichiers de poids sur disque (échelle "
+    "logarithmique) ; juges principaux : QWK contre les deux autres",
+    "tier-distribution": "Part des ids de chaque palier (0–1), truth_all puis chaque candidat",
 }
 
 
@@ -198,7 +215,8 @@ def _summary(computed: dict[str, pa.Table]) -> dict[str, str]:
 
 def _render(table: pa.Table, name: str, keep=None, drop: Sequence[str] = ()) -> str:
     """One table of the report as French Markdown: the columns of `COLUMNS[name]` (minus `drop`), the rows where
-    `keep(row)` holds, the values of `VALUES` in French; "_(aucune ligne)_" for none."""
+    `keep(row)` holds, the values of `VALUES` in French, at `DIGITS` decimals (3 by default); "_(aucune ligne)_" for
+    none."""
     rows = [r for r in table.to_pylist() if keep is None or keep(r)]
     if not rows:
         return "_(aucune ligne)_"
@@ -212,7 +230,7 @@ def _render(table: pa.Table, name: str, keep=None, drop: Sequence[str] = ()) -> 
                 row[column] = mapping[row[column]]
     present = set(rows[0])
     columns = [c for c in COLUMNS[name] if c in present and c not in drop]
-    return markdown_table(pa.Table.from_pylist(rows), columns=columns, labels=LABELS)
+    return markdown_table(pa.Table.from_pylist(rows), columns=columns, digits=DIGITS.get(name, 3), labels=LABELS)
 
 
 def _why(row: dict) -> str:
@@ -230,6 +248,9 @@ def _why(row: dict) -> str:
 def _tables(computed: dict[str, pa.Table]) -> dict[str, str]:
     out = {}
     for name in COLUMNS:
+        if name not in computed:  # the profile, when there is none
+            out[f"table_{name}"] = NO_PROFILE
+            continue
         table = computed[name]
         if name in SPLIT:
             out[f"table_{name}_candidates"] = _render(table, name, lambda r: r["role"] == "candidate", drop=["role"])
@@ -513,6 +534,96 @@ def _reading(computed: dict[str, pa.Table], run: dict, sigma: float, classifiers
     }
 
 
+ON_DEVICE = {"cpu": "le CPU", "mps": "le GPU (MPS)", "gpu-mlx": "le GPU (MLX)"}  # a profile device, in a caption
+
+
+def _latency(value: float) -> str:
+    """A latency in ms as the captions write it: ms under a second, s above, one decimal ("9,1 ms", "42,8 s")."""
+    return f"{french(value, 1)} ms" if value < 1000 else f"{french(value / 1000, 1)} s"
+
+
+def _weight(value: float) -> str:
+    """A weight in MB (10^6 bytes) as the captions write it: Mo without decimal under 1 000 Mo, Go above."""
+    return f"{value:.0f} Mo" if value < 1000 else f"{french(value / 1000, 1)} Go"
+
+
+def _span(values: Sequence[float], unit, none: str) -> str:
+    """'a à b' from the smallest to the largest of `values` in `unit` ("1,6 à 9,1 ms", the unit once when both ends
+    share it; "0,1 ms à 1,2 s" otherwise), the value alone for one, `none` for none."""
+    values = [v for v in values if v is not None and not math.isnan(v)]
+    if not values:
+        return none
+    low, high = unit(min(values)), unit(max(values))
+    if low == high:
+        return low
+    (low_number, _, low_unit), high_unit = low.rpartition(" "), high.rpartition(" ")[2]
+    return f"{low_number if low_unit == high_unit else low} à {high}"
+
+
+def _tiers_used(computed: dict[str, pa.Table]) -> str:
+    """One line per bar of tier_distribution: how many tiers it uses, those it never uses and its largest share."""
+    rows = computed["tier_distribution"].to_pylist()
+    lines = []
+    for name in dict.fromkeys(r["name"] for r in rows):
+        bar = [r for r in rows if r["name"] == name]
+        used = sum(r["n_ids"] > 0 for r in bar)
+        text = f"- {_code(name)} : {used} palier{'s' if used > 1 else ''} sur {len(bar)}"
+        never = [_code(r["tier"]) for r in bar if r["n_ids"] == 0]
+        text += ", jamais " + _and(never) if never else ""
+        top = max(bar, key=lambda r: r["n_ids"])  # the first of the largest, in tier order
+        text += f" ; plus grande part : {_code(top['tier'])} {_percent(top['share'])}" if top["n_ids"] else ""
+        lines.append(text)
+    return "\n".join(lines) or "_(aucune ligne)_"
+
+
+def _captions(computed: dict[str, pa.Table]) -> dict[str, str]:
+    """The numbers of the captions under the figures: who is below `length`, the latencies and weights of the profile
+    (the headline alone, then the s1d1 variants, Laya, the main judges: a judge-level QWK is said of the headline only,
+    never of a span of variants), the tiers each bar uses, the QWK by language of the headline and of LiteLLM."""
+    agreement = {r["name"]: r for r in computed["agreement_all"].to_pylist() if r["role"] == "candidate"}
+    length = agreement.get(FLOOR)
+    if length is None or french(length["qwk"]) == "—":
+        below = f"pas de témoin {_code(FLOOR)} dans ce run"
+    else:
+        names = [
+            _code(name)
+            for name, row in agreement.items()
+            if name not in WITNESSES and french(row["qwk"]) != "—" and row["qwk"] < length["qwk"]
+        ]
+        below = _and(names) if names else "aucun candidat"
+    rows = computed["profile"].to_pylist() if "profile" in computed else []
+    none = "non mesuré (pas de profil)" if not rows else "—"
+    s1d1 = [r for r in rows if r["name"].startswith(CALIBRATED) and r["role"] == "candidate"]
+    headline = next((r for r in rows if r["name"] == HEADLINE[0]), None)
+    absent = none if not rows else f"non mesuré ({_code(HEADLINE[0])} absent du profil)"
+    cpu = [r for r in s1d1 if r["device"] == "cpu"]
+    judges = [r for r in rows if r["role"] == IN_TRUTH]
+    laya = [r for r in rows if r["name"].startswith(LAYA) and r["role"] == "candidate"]
+
+    def by_language(name: str) -> str:
+        found = [r for r in computed["by_language"].to_pylist() if r["name"] == name]
+        return ", ".join(f"{r['lang']} {french(r['qwk_all'])}" for r in found) or "absent de ce run"
+
+    return {
+        "below_length": below,
+        "latency_headline": (
+            f"{_latency(headline['latency_p50_ms'])} sur {ON_DEVICE.get(headline['device'], headline['device'])}"
+            if headline
+            else absent
+        ),
+        "weights_headline": _weight(headline["weights_mb"]) if headline else absent,
+        "latency_s1d1_cpu": _span([r["latency_p50_ms"] for r in cpu], _latency, none),
+        "p95_s1d1_cpu": _span([r["latency_p95_ms"] for r in cpu], _latency, none),
+        "latency_judges": _span([r["latency_p50_ms"] for r in judges], _latency, none),
+        "weights_s1d1": _span([r["weights_mb"] for r in s1d1], _weight, none),
+        "weights_laya": _span([r["weights_mb"] for r in laya], _weight, none),
+        "weights_judges": _span([r["weights_mb"] for r in judges], _weight, none),
+        "tiers_used": _tiers_used(computed),
+        "headline_by_language": by_language(HEADLINE[0]),
+        "litellm_by_language": by_language(LITELLM),
+    }
+
+
 def _missing(computed: dict[str, pa.Table], figures: Sequence[Figure]) -> str:
     lines = [
         f"- {SKIPPED.get(r['role'], r['role'])}, {_code(r['name'])} : {SKIPPED.get(r['consequence'], r['consequence'])}"
@@ -551,6 +662,7 @@ def write_index(
     values |= _sentence(tables, run)
     values |= _reading(tables, run, sigma, Path(classifiers_root) if classifiers_root is not None else None)
     values |= _tables(tables)
+    values |= _captions(tables)
     values |= _figures(figures, n_ids, n_base)
     text = fill(Path(template).read_text(encoding="utf-8"), values)
     lowered = text.lower()

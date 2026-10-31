@@ -1,4 +1,4 @@
-nom,seuil,précision,rappel
+name,threshold,precision,recall
 s1d1-compact-int8,1.0,1.0,0.038461538461538464
 s1d1-compact-int8,0.999,1.0,0.09615384615384616
 s1d1-compact-int8,0.995,1.0,0.15384615384615385
