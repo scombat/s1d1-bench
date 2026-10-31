@@ -9,7 +9,7 @@ description = "Open bench kit: judge s1d1 prompts with local LLM judges and meas
 readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
-license-files = ["LICENSE"]
+license-files = ["LICENSE", "src/s1d1_bench/vendor/litellm_heuristic/LICENSE"]
 authors = [{ name = "Steve Combat" }]
 dependencies = [
     "pyarrow",

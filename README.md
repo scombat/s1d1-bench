@@ -554,11 +554,17 @@ prompts de base en quatre versions, et les IC en tiennent compte.
 
 ## Licences
 
-- Code : [Apache-2.0](LICENSE).
+- Code : [Apache-2.0](LICENSE), **sauf** `src/s1d1_bench/vendor/litellm_heuristic/`, copie mot pour mot du scorer
+  heuristique de LiteLLM au tag v1.106.6, sous licence MIT (licence et notice des changements dans le dossier).
 - Prompts d'autres jeux publics : les prompts de `data/pool/*`, de `data/prompts/trial-50.*` et des lots sont repris
   tels quels de Dolly (CC-BY-SA-3.0), d'OASST2 et de m-ArenaHard (Apache-2.0) ; chacun garde sa licence, donnée ligne
   par ligne dans la colonne `licence` de `pool.parquet` et de `<jeu>.meta.parquet`. Le détail est dans
   [data/README.md](data/README.md).
+- Arena-Hard : les prompts anglais d'Arena-Hard viennent d'`arena-hard-auto` v0.1 (lmarena, Apache-2.0, prompts
+  d'utilisateurs de Chatbot Arena) et leurs traductions de `CohereLabs/m-ArenaHard` (Apache-2.0) ; les conditions de la
+  collecte amont auprès des utilisateurs de Chatbot Arena ne sont pas vérifiables en aval.
 - [CC-BY-4.0](data/LICENSE) (`data/LICENSE`) : les prompts écrits à la main et leurs traductions, les fichiers de juges
-  (`judges/`), les fichiers de classifieurs (`classifiers/`), les résultats (`results/`), les vérifications (`data/checks/`), la liste d'exclusion et les statistiques. Les traductions des prompts
-  d'un jeu public sont des œuvres dérivées et gardent la licence de la ligne (colonne `licence` de `meta.parquet`).
+  (`judges/`), les fichiers de classifieurs (`classifiers/`), les résultats (`results/`), le rapport (`report/<jeu>/`),
+  la rubrique `src/s1d1_bench/rubric/judge-rubric-v7.txt`, les consignes `consigne/`, les vérifications
+  (`data/checks/`), la liste d'exclusion et les statistiques. Les traductions des prompts d'un jeu public sont des
+  œuvres dérivées et gardent la licence de la ligne (colonne `licence` de `meta.parquet`).
