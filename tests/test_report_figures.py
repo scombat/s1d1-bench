@@ -152,9 +152,13 @@ def test_shade_and_family_colours():
 
     assert family("s1d1-full-int8") == ("s1d1", "#2a78d6")
     assert family("laya-english-tier") == ("Laya", "#eb6834")
-    assert family("litellm-heuristic") == ("third-party routers", "#1baf7a")
-    assert family("routellm-bert") == ("third-party routers", "#1baf7a")  # one hue for the two kinds of routers
+    kind = "third-party routers and classifiers"
+    assert family("litellm-heuristic") == (kind, "#1baf7a")
+    assert family("routellm-bert") == (kind, "#1baf7a")  # one hue for the three kinds of third-party systems
+    assert family("nvidia-ptcc-eng") == (kind, "#1baf7a")
     assert colour("litellm-heuristic") == "#1baf7a" and colour("routellm-bert") == shade("#1baf7a", 0.4)
+    assert colour("nvidia-ptcc-eng") == shade("#1baf7a", -0.3)  # three lightness steps: LiteLLM, RouteLLM, NVIDIA
+    assert len({colour("litellm-heuristic"), colour("routellm-bert"), colour("nvidia-ptcc-eng")}) == 3
     assert family("llm4b-gemma4-e4b-off") == ("LLM reading the v7 instructions", JUDGE)  # the colour of the judges
     assert family("length") == ("witnesses and others", "#7a7975")
     assert shade("#2a78d6", 0) == "#2a78d6"
