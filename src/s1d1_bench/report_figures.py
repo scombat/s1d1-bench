@@ -44,8 +44,15 @@ from s1d1_bench.rubric import LEVELS
 # the palette: text, secondary text, grid, paper; the family hues; the judges and the ceiling
 INK, MUTED, GRID, PAPER = "#0b0b0b", "#52514e", "#e6e5e1", "#fcfcfb"
 BLUE, ORANGE, GREEN, GREY = "#2a78d6", "#eb6834", "#1baf7a", "#7a7975"
+PURPLE, GOLD = "#7e57c2", "#b8860b"
 JUDGE, JUDGE_SOFT = "#0b0b0b", "#52514e"
-FAMILIES = (("s1d1-", "s1d1", BLUE), ("laya-", "Laya", ORANGE), ("litellm-", "LiteLLM", GREEN))
+FAMILIES = (
+    ("s1d1-", "s1d1", BLUE),
+    ("laya-", "Laya", ORANGE),
+    ("litellm-", "LiteLLM", GREEN),
+    ("routellm-", "RouteLLM", PURPLE),
+    ("llm4b-", "LLM 4B", GOLD),
+)
 OTHERS = ("witnesses and others", GREY)
 # within a family, the lightness step of a variant (shade: < 0 darker, > 0 lighter), by a word of its name
 VARIANTS = {
@@ -68,13 +75,17 @@ LABEL_OFFSETS: dict[tuple[str, str], tuple[float, float]] = {
     ("quality-vs-latency", "s1d1-compact-int8"): (6, -12),
     ("quality-vs-latency", "s1d1-small-int8"): (-8, 0),
     ("quality-vs-latency", "base-v1-gemma4-cap512"): (-8, 10),
-    ("quality-vs-latency", "base-v1-qwen3-cap512"): (-8, 0),
+    # the 4B model sits at 1.1 s, 0.79, in line with qwen3 (28 s): qwen3's label, right-aligned, drops below that line
+    # so as not to hide the 4B marker, whose own label is centred above its whisker
+    ("quality-vs-latency", "base-v1-qwen3-cap512"): (-8, -13),
+    ("quality-vs-latency", "llm4b-gemma4-e4b-off"): (0, 38),
     ("quality-vs-footprint", "s1d1-full-int8"): (0, 26),  # centred above its whisker: left of it, it named compact
     ("quality-vs-footprint", "s1d1-full-fp16"): (6, -16),  # below qwen3's label, which reaches back to 5 GB
     ("quality-vs-footprint", "s1d1-compact-int8"): (6, -14),
     ("quality-vs-footprint", "s1d1-small-int8"): (-8, 0),
     ("quality-vs-footprint", "base-v1-gemma4-cap512"): (-8, 10),
-    ("quality-vs-footprint", "base-v1-qwen3-cap512"): (-8, 0),
+    ("quality-vs-footprint", "base-v1-qwen3-cap512"): (-8, -16),  # below-left, clear of the 4B model's marker
+    ("quality-vs-footprint", "llm4b-gemma4-e4b-off"): (0, 38),  # centred above its whisker
 }
 RC = {
     "svg.hashsalt": "s1d1-bench",  # the ids of clip paths and glyphs, otherwise random

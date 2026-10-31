@@ -1,6 +1,6 @@
 # Rapport du banc : base-v1
 
-Écrit par `bench report` depuis les résultats de `bench run` du 2026-10-30. Entrées : prompts `data/prompts/base-v1.jsonl` (sha256 `e6a6d4c12ef8b95caea942337a3a1e16ec1622cb4e75c8ee0b473ef609a32490`), méta `data/prompts/base-v1.meta.parquet`, 5 juges, 11 classifieurs ; 360 ids, 90 prompts de base. Ce fichier se
+Écrit par `bench report` depuis les résultats de `bench run` du 2026-10-31. Entrées : prompts `data/prompts/base-v1.jsonl` (sha256 `e6a6d4c12ef8b95caea942337a3a1e16ec1622cb4e75c8ee0b473ef609a32490`), méta `data/prompts/base-v1.meta.parquet`, 5 juges, 13 classifieurs ; 360 ids, 90 prompts de base. Ce fichier se
 régénère : les tableaux sont dans `tables/` (CSV), les figures dans `figures/` (SVG, chacune avec son CSV). Le gabarit
 est `report/TEMPLATE.md` ; ses trous sont remplis par le code, chiffres tels qu'ils sortent.
 
@@ -110,7 +110,9 @@ caractères, seuils par quantiles) et `constant-low`. Entre les deux, le bruit d
 | laya-multilingual-tier | classifieur | candidat | convaiinnovations/laya/multilingual | laya 0.4.15 convaiinnovations/laya@7b928d828b7b0e022f929d9bd2e44165aa270148 | 2026-10-30 | — | — | — |
 | length | classifieur | candidat | witness:length | — | 2026-10-30 | — | — | — |
 | litellm-heuristic | classifieur | candidat | litellm:complexity_router:heuristic | v1.106.6 61c6ab78393ef45683dd7d963d2a315bd845e20b | 2026-10-30 | — | — | — |
+| llm4b-gemma4-e4b-off | classifieur | candidat | mlx-community/gemma-4-e4b-it-8bit | 4255b21bd9a9d3fc807ef7abd80373f5e3a52a73 | 2026-10-31 | — | — | — |
 | random | classifieur | candidat | witness:random | seed 0 | 2026-10-30 | — | — | — |
+| routellm-bert | classifieur | candidat | routellm/bert_gpt4_augmented | 86237e3df400762178ea98379477b8296e66d5e4 | 2026-10-31 | — | — | — |
 | s1d1-compact-int8 | classifieur | candidat | scombat/s1d1-router-6src-compact-onnx-int8 | 7e87870132a19d12b32dbad1f8233801b8145b9f | 2026-10-30 | — | — | — |
 | s1d1-full-fp16 | classifieur | candidat | scombat/s1d1-router | 7fb9a4e3d03e3d942a98648268ff76c6152c18d6 | 2026-10-30 | — | — | — |
 | s1d1-full-int8 | classifieur | candidat | scombat/s1d1-router-6src-full-onnx-int8 | 068d0d20d5901c2db6934c89fde48b87c973fed8 | 2026-10-30 | — | — | — |
@@ -130,7 +132,7 @@ des classifieurs que ce run n'a pas chargés : `laya-english`, `laya-multilingua
 | prompts | data/prompts/base-v1.jsonl |
 | sha256 des prompts | e6a6d4c12ef8b95caea942337a3a1e16ec1622cb4e75c8ee0b473ef609a32490 |
 | méta | data/prompts/base-v1.meta.parquet |
-| date du run | 2026-10-30 |
+| date du run | 2026-10-31 |
 | lignes | 360 ids |
 | prompts de base | 90 prompts de base |
 | langues | eng, fra, rus, zho |
@@ -156,7 +158,7 @@ le plancher (`length`, `constant-low`, les tirages de `random`) ; bande bleue : 
 étroite par nature (σ = 0,005). Le chiffre principal est à hauteur du plafond inter-juges quand son IC contient la
 moyenne du plafond ; ici, l'IC de `s1d1-full-int8` contient la moyenne du plafond.
 Les témoins font le plancher ; sous la longueur du prompt, en valeurs ponctuelles :
-`laya-english-tier`, `laya-multilingual-tier` et `litellm-heuristic`.
+`laya-english-tier`, `laya-multilingual-tier`, `litellm-heuristic` et `routellm-bert`.
 Une position sur la figure n'est pas une phrase de supériorité : seule la règle des 2 σ en permet une (l'IC de l'écart
 apparié exclut zéro et dépasse 2 σ = 0,010), voir [Les écarts appariés](#les-écarts-appariés).
 
@@ -167,7 +169,9 @@ apparié exclut zéro et dépasse 2 σ = 0,010), voir [Les écarts appariés](#l
 | laya-multilingual-tier | 360 | 0,119 [−0,040 ; 0,264] | 0,278 [0,203 ; 0,353] | 0,728 [0,653 ; 0,800] | 0,102 [−0,067 ; 0,250] | trivial |
 | length | 360 | 0,543 [0,424 ; 0,647] | 0,394 [0,300 ; 0,483] | 0,839 [0,761 ; 0,906] | 0,602 [0,463 ; 0,708] |  |
 | litellm-heuristic | 360 | 0,089 [0,026 ; 0,172] | 0,342 [0,250 ; 0,436] | 0,844 [0,772 ; 0,908] | 0,042 [−0,091 ; 0,147] | trivial, expert |
+| llm4b-gemma4-e4b-off | 356 | 0,789 [0,698 ; 0,853] | 0,545 [0,447 ; 0,643] | 0,989 [0,966 ; 1,000] | 0,782 [0,683 ; 0,851] |  |
 | random | 360 | −0,028 [−0,109 ; 0,050] | 0,183 [0,142 ; 0,228] | 0,528 [0,469 ; 0,583] | −0,056 [−0,153 ; 0,032] |  |
+| routellm-bert | 360 | 0,278 [0,132 ; 0,408] | 0,381 [0,303 ; 0,467] | 0,819 [0,744 ; 0,889] | 0,264 [0,078 ; 0,419] |  |
 | s1d1-compact-int8 | 360 | 0,759 [0,680 ; 0,813] | 0,633 [0,550 ; 0,714] | 0,989 [0,972 ; 1,000] | 0,769 [0,683 ; 0,826] | expert |
 | s1d1-full-fp16 | 360 | 0,814 [0,738 ; 0,865] | 0,678 [0,592 ; 0,756] | 0,992 [0,978 ; 1,000] | 0,813 [0,729 ; 0,869] | expert |
 | s1d1-full-int8 | 360 | 0,807 [0,734 ; 0,852] | 0,656 [0,569 ; 0,733] | 1,000 [1,000 ; 1,000] | 0,808 [0,725 ; 0,859] | expert |
@@ -225,7 +229,9 @@ moyenne, sans IC (la bande, ce sont eux).
 | laya-multilingual-tier | 0,687 [0,530 ; 0,836] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
 | length | 0,264 [0,159 ; 0,383] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
 | litellm-heuristic | 0,718 [0,614 ; 0,799] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
+| llm4b-gemma4-e4b-off | 0,018 [−0,067 ; 0,105] | ne passe pas | l'IC contient zéro |
 | random | 0,835 [0,734 ; 0,924] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
+| routellm-bert | 0,528 [0,388 ; 0,668] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
 | s1d1-compact-int8 | 0,048 [0,009 ; 0,089] | ne passe pas | l'IC exclut zéro, mais sa borne la plus proche de zéro n'est pas au-delà de 2 σ |
 | s1d1-full-fp16 | −0,008 [−0,031 ; 0,020] | ne passe pas | l'IC contient zéro |
 | s1d1-small-int8 | 0,035 [−0,004 ; 0,076] | ne passe pas | l'IC contient zéro |
@@ -257,7 +263,9 @@ avec elle se lit avec les paires « même modèle » du tableau des juges, qui m
 | laya-multilingual-tier | 360 | 0,115 [−0,020 ; 0,249] | 0,244 [0,169 ; 0,319] | 0,781 [0,717 ; 0,844] | 0,090 [−0,069 ; 0,246] | trivial |
 | length | 360 | 0,478 [0,344 ; 0,592] | 0,422 [0,325 ; 0,520] | 0,825 [0,750 ; 0,894] | 0,533 [0,373 ; 0,656] |  |
 | litellm-heuristic | 360 | 0,106 [0,038 ; 0,190] | 0,281 [0,194 ; 0,375] | 0,939 [0,889 ; 0,978] | 0,080 [−0,033 ; 0,173] | trivial, expert |
+| llm4b-gemma4-e4b-off | 356 | 0,713 [0,628 ; 0,774] | 0,396 [0,308 ; 0,492] | 0,975 [0,941 ; 1,000] | 0,709 [0,594 ; 0,780] |  |
 | random | 360 | 0,003 [−0,076 ; 0,088] | 0,200 [0,156 ; 0,242] | 0,558 [0,503 ; 0,619] | −0,043 [−0,149 ; 0,063] |  |
+| routellm-bert | 360 | 0,223 [0,092 ; 0,347] | 0,386 [0,308 ; 0,467] | 0,811 [0,736 ; 0,878] | 0,209 [0,035 ; 0,365] |  |
 | s1d1-compact-int8 | 360 | 0,722 [0,634 ; 0,786] | 0,600 [0,517 ; 0,681] | 0,994 [0,983 ; 1,000] | 0,733 [0,638 ; 0,797] | expert |
 | s1d1-full-fp16 | 360 | 0,794 [0,716 ; 0,845] | 0,656 [0,569 ; 0,736] | 0,997 [0,992 ; 1,000] | 0,803 [0,728 ; 0,854] | expert |
 | s1d1-full-int8 | 360 | 0,785 [0,713 ; 0,834] | 0,650 [0,569 ; 0,728] | 1,000 [1,000 ; 1,000] | 0,799 [0,728 ; 0,846] | expert |
@@ -331,6 +339,8 @@ pas sur un axe logarithmique : il est nommé sous la figure.
 | laya-english-tier | classifieur | candidat | mps | 25,1 | 50,8 | 30,0 | 842,6 | 2932,1 |
 | laya-multilingual-tier | classifieur | candidat | mps | 12,8 | 30,2 | 15,5 | 643,8 | 2708,9 |
 | litellm-heuristic | classifieur | candidat | cpu | 0,1 | 1,2 | 0,3 | 0,0 | 24,5 |
+| llm4b-gemma4-e4b-off | classifieur | candidat | gpu-mlx | 1098,5 | 1308,5 | 1127,0 | 8881,0 | — |
+| routellm-bert | classifieur | candidat | cpu | 16,3 | 52,9 | 21,0 | 1112,2 | 1357,8 |
 | s1d1-compact-int8 | classifieur | candidat | cpu | 8,9 | 78,7 | 20,0 | 138,5 | 914,4 |
 | s1d1-full-fp16 | classifieur | candidat | mps | 8,6 | 21,9 | 10,6 | 615,1 | 937,4 |
 | s1d1-full-int8 | classifieur | candidat | cpu | 9,1 | 76,8 | 20,1 | 310,3 | 1284,6 |
@@ -380,10 +390,18 @@ QWK de chaque candidat contre `truth_all` dans chaque langue, un même ordre des
 | litellm-heuristic | fra | 90 | 0,044 [−0,023 ; 0,135] | 0,322 [0,222 ; 0,422] | 0,037 [−0,028 ; 0,128] | 0,300 [0,200 ; 0,400] |
 | litellm-heuristic | rus | 90 | 0,061 [0,000 ; 0,149] | 0,344 [0,244 ; 0,444] | 0,038 [0,000 ; 0,101] | 0,322 [0,233 ; 0,422] |
 | litellm-heuristic | zho | 90 | 0,044 [−0,016 ; 0,132] | 0,322 [0,222 ; 0,422] | 0,054 [−0,014 ; 0,144] | 0,278 [0,189 ; 0,367] |
+| llm4b-gemma4-e4b-off | eng | 90 | 0,794 [0,691 ; 0,868] | 0,578 [0,478 ; 0,678] | 0,791 [0,680 ; 0,866] | 0,589 [0,489 ; 0,689] |
+| llm4b-gemma4-e4b-off | fra | 88 | 0,768 [0,656 ; 0,847] | 0,534 [0,432 ; 0,640] | 0,780 [0,667 ; 0,858] | 0,568 [0,466 ; 0,667] |
+| llm4b-gemma4-e4b-off | rus | 89 | 0,797 [0,721 ; 0,853] | 0,539 [0,427 ; 0,644] | 0,811 [0,738 ; 0,863] | 0,573 [0,467 ; 0,678] |
+| llm4b-gemma4-e4b-off | zho | 89 | 0,795 [0,722 ; 0,852] | 0,528 [0,419 ; 0,636] | 0,813 [0,745 ; 0,867] | 0,562 [0,449 ; 0,667] |
 | random | eng | 90 | −0,087 [−0,274 ; 0,100] | 0,222 [0,144 ; 0,311] | −0,115 [−0,311 ; 0,076] | 0,233 [0,156 ; 0,322] |
 | random | fra | 90 | −0,116 [−0,275 ; 0,042] | 0,133 [0,067 ; 0,200] | −0,096 [−0,261 ; 0,072] | 0,156 [0,089 ; 0,233] |
 | random | rus | 90 | 0,054 [−0,124 ; 0,223] | 0,233 [0,144 ; 0,322] | 0,106 [−0,084 ; 0,290] | 0,233 [0,144 ; 0,322] |
 | random | zho | 90 | 0,034 [−0,153 ; 0,218] | 0,144 [0,078 ; 0,222] | 0,054 [−0,140 ; 0,243] | 0,178 [0,100 ; 0,256] |
+| routellm-bert | eng | 90 | 0,367 [0,196 ; 0,514] | 0,356 [0,256 ; 0,456] | 0,366 [0,194 ; 0,514] | 0,344 [0,244 ; 0,444] |
+| routellm-bert | fra | 90 | 0,266 [0,091 ; 0,410] | 0,378 [0,278 ; 0,478] | 0,263 [0,084 ; 0,409] | 0,356 [0,267 ; 0,456] |
+| routellm-bert | rus | 90 | 0,303 [0,139 ; 0,457] | 0,400 [0,300 ; 0,500] | 0,245 [0,064 ; 0,424] | 0,422 [0,333 ; 0,533] |
+| routellm-bert | zho | 90 | 0,149 [0,001 ; 0,305] | 0,389 [0,300 ; 0,489] | 0,151 [0,010 ; 0,295] | 0,400 [0,311 ; 0,489] |
 | s1d1-compact-int8 | eng | 90 | 0,805 [0,720 ; 0,865] | 0,689 [0,578 ; 0,778] | 0,800 [0,719 ; 0,858] | 0,667 [0,567 ; 0,767] |
 | s1d1-compact-int8 | fra | 90 | 0,689 [0,576 ; 0,772] | 0,567 [0,456 ; 0,667] | 0,688 [0,575 ; 0,773] | 0,556 [0,444 ; 0,667] |
 | s1d1-compact-int8 | rus | 90 | 0,782 [0,689 ; 0,849] | 0,678 [0,589 ; 0,767] | 0,743 [0,637 ; 0,819] | 0,633 [0,533 ; 0,733] |
@@ -440,7 +458,9 @@ principaux sur la version elle-même (trois votes). Les deux sont publiées côt
 | laya-multilingual-tier | 90 | 0 | 0,522 [0,422 ; 0,622] | 1,100 [0,856 ; 1,345] |
 | length | 90 | 0 | 0,233 [0,156 ; 0,322] | 0,233 [0,156 ; 0,322] |
 | litellm-heuristic | 90 | 0 | 0,133 [0,067 ; 0,211] | 0,144 [0,067 ; 0,222] |
+| llm4b-gemma4-e4b-off | 87 | 3 | 0,184 [0,105 ; 0,267] | 0,184 [0,105 ; 0,267] |
 | random | 90 | 0 | 0,967 [0,922 ; 1,000] | 2,867 [2,633 ; 3,089] |
+| routellm-bert | 90 | 0 | 0,533 [0,433 ; 0,633] | 0,556 [0,444 ; 0,667] |
 | s1d1-compact-int8 | 90 | 0 | 0,378 [0,267 ; 0,478] | 0,378 [0,267 ; 0,478] |
 | s1d1-full-fp16 | 90 | 0 | 0,344 [0,256 ; 0,434] | 0,344 [0,256 ; 0,434] |
 | s1d1-full-int8 | 90 | 0 | 0,344 [0,256 ; 0,444] | 0,344 [0,256 ; 0,444] |
@@ -504,10 +524,18 @@ prompts de base qui ont au moins une version en désaccord.
 | litellm-heuristic | dolly | 72 | 0,542 [0,317 ; 0,750] | 0,013 [−0,004 ; 0,053] |
 | litellm-heuristic | handwritten | 40 | 0,000 [0,000 ; 0,000] | 0,031 [−0,008 ; 0,094] |
 | litellm-heuristic | oasst2 | 136 | 0,419 [0,259 ; 0,594] | 0,007 [−0,016 ; 0,041] |
+| llm4b-gemma4-e4b-off | arena_hard | 111 | 0,360 [0,187 ; 0,545] | 0,328 [0,154 ; 0,457] |
+| llm4b-gemma4-e4b-off | dolly | 72 | 0,667 [0,458 ; 0,867] | 0,345 [−0,090 ; 0,794] |
+| llm4b-gemma4-e4b-off | handwritten | 37 | 0,703 [0,387 ; 1,000] | 0,414 [0,094 ; 1,000] |
+| llm4b-gemma4-e4b-off | oasst2 | 136 | 0,588 [0,428 ; 0,738] | 0,723 [0,576 ; 0,816] |
 | random | arena_hard | 112 | 0,125 [0,067 ; 0,184] | −0,084 [−0,199 ; 0,025] |
 | random | dolly | 72 | 0,181 [0,091 ; 0,269] | −0,069 [−0,263 ; 0,056] |
 | random | handwritten | 40 | 0,200 [0,056 ; 0,364] | −0,026 [−0,106 ; 0,021] |
 | random | oasst2 | 136 | 0,228 [0,145 ; 0,315] | −0,068 [−0,164 ; 0,032] |
+| routellm-bert | arena_hard | 112 | 0,491 [0,328 ; 0,661] | −0,100 [−0,354 ; 0,205] |
+| routellm-bert | dolly | 72 | 0,250 [0,087 ; 0,429] | −0,007 [−0,219 ; 0,147] |
+| routellm-bert | handwritten | 40 | 0,450 [0,214 ; 0,700] | −0,095 [−0,345 ; 0,108] |
+| routellm-bert | oasst2 | 136 | 0,338 [0,221 ; 0,477] | 0,041 [−0,147 ; 0,207] |
 | s1d1-compact-int8 | arena_hard | 112 | 0,607 [0,454 ; 0,750] | 0,375 [0,161 ; 0,571] |
 | s1d1-compact-int8 | dolly | 72 | 0,667 [0,458 ; 0,839] | 0,416 [0,104 ; 0,648] |
 | s1d1-compact-int8 | handwritten | 40 | 0,575 [0,250 ; 0,875] | 0,017 [−0,262 ; 0,222] |
@@ -567,8 +595,12 @@ vérité, et son IC ne garde que les tirages où le sous-groupe en a au moins de
 | length | pool | 320 | 0,416 [0,313 ; 0,515] | 0,502 [0,370 ; 0,615] |
 | litellm-heuristic | handwritten | 40 | 0,000 [0,000 ; 0,000] | 0,031 [−0,008 ; 0,094] |
 | litellm-heuristic | pool | 320 | 0,384 [0,277 ; 0,494] | 0,086 [0,024 ; 0,153] |
+| llm4b-gemma4-e4b-off | handwritten | 37 | 0,703 [0,387 ; 1,000] | 0,414 [0,094 ; 1,000] |
+| llm4b-gemma4-e4b-off | pool | 319 | 0,527 [0,426 ; 0,630] | 0,722 [0,612 ; 0,803] |
 | random | handwritten | 40 | 0,200 [0,056 ; 0,364] | −0,026 [−0,106 ; 0,021] |
 | random | pool | 320 | 0,181 [0,133 ; 0,227] | −0,039 [−0,129 ; 0,039] |
+| routellm-bert | handwritten | 40 | 0,450 [0,214 ; 0,700] | −0,095 [−0,345 ; 0,108] |
+| routellm-bert | pool | 320 | 0,372 [0,287 ; 0,456] | 0,099 [−0,052 ; 0,239] |
 | s1d1-compact-int8 | handwritten | 40 | 0,575 [0,250 ; 0,875] | 0,017 [−0,262 ; 0,222] |
 | s1d1-compact-int8 | pool | 320 | 0,641 [0,555 ; 0,722] | 0,675 [0,569 ; 0,750] |
 | s1d1-full-fp16 | handwritten | 40 | 0,700 [0,406 ; 0,969] | 0,118 [0,000 ; 0,200] |
@@ -624,11 +656,21 @@ Les mêmes mesures par origine (tiré du pool ou écrit à la main).
 | litellm-heuristic | medium | 116 | 0,095 [0,022 ; 0,194] | −0,888 [−0,966 ; −0,788] |
 | litellm-heuristic | high | 52 | 0,000 [0,000 ; 0,000] | −1,923 [−1,979 ; −1,850] |
 | litellm-heuristic | expert | 8 | 0,000 [0,000 ; 0,000] | −2,500 [−3,000 ; −2,000] |
+| llm4b-gemma4-e4b-off | trivial | 68 | 0,500 [0,273 ; 0,719] | 0,588 [0,309 ; 0,933] |
+| llm4b-gemma4-e4b-off | low | 116 | 0,595 [0,417 ; 0,765] | 0,353 [0,164 ; 0,550] |
+| llm4b-gemma4-e4b-off | medium | 115 | 0,391 [0,250 ; 0,539] | 0,574 [0,400 ; 0,730] |
+| llm4b-gemma4-e4b-off | high | 49 | 0,776 [0,523 ; 1,000] | 0,224 [0,000 ; 0,477] |
+| llm4b-gemma4-e4b-off | expert | 8 | 1,000 [1,000 ; 1,000] | 0,000 [0,000 ; 0,000] |
 | random | trivial | 68 | 0,206 [0,141 ; 0,267] | 2,000 [1,708 ; 2,313] |
 | random | low | 116 | 0,216 [0,114 ; 0,326] | 0,914 [0,659 ; 1,167] |
 | random | medium | 116 | 0,147 [0,080 ; 0,214] | −0,147 [−0,436 ; 0,125] |
 | random | high | 52 | 0,173 [0,058 ; 0,306] | −1,096 [−1,477 ; −0,708] |
 | random | expert | 8 | 0,125 [0,000 ; 0,250] | −2,250 [−2,500 ; −2,000] |
+| routellm-bert | trivial | 68 | 0,015 [0,000 ; 0,050] | 1,544 [1,393 ; 1,691] |
+| routellm-bert | low | 116 | 0,388 [0,259 ; 0,523] | 0,629 [0,424 ; 0,840] |
+| routellm-bert | medium | 116 | 0,612 [0,452 ; 0,761] | −0,216 [−0,440 ; −0,009] |
+| routellm-bert | high | 52 | 0,385 [0,200 ; 0,614] | −0,750 [−1,156 ; −0,341] |
+| routellm-bert | expert | 8 | 0,000 [0,000 ; 0,000] | −1,625 [−2,000 ; −1,250] |
 | s1d1-compact-int8 | trivial | 68 | 0,412 [0,221 ; 0,583] | 0,588 [0,417 ; 0,779] |
 | s1d1-compact-int8 | low | 116 | 0,888 [0,807 ; 0,957] | 0,095 [0,024 ; 0,179] |
 | s1d1-compact-int8 | medium | 116 | 0,621 [0,491 ; 0,750] | −0,345 [−0,511 ; −0,176] |
@@ -700,7 +742,9 @@ exactitude. Paliers utilisés et part la plus grande de chaque barre :
 - `laya-multilingual-tier` : 4 paliers sur 5, jamais `trivial` ; plus grande part : `low` 62,2 %
 - `length` : 5 paliers sur 5 ; plus grande part : `low` 30,0 %
 - `litellm-heuristic` : 3 paliers sur 5, jamais `trivial` et `expert` ; plus grande part : `low` 93,3 %
+- `llm4b-gemma4-e4b-off` : 5 paliers sur 5 ; plus grande part : `high` 30,3 %
 - `random` : 5 paliers sur 5 ; plus grande part : `trivial` 21,7 %
+- `routellm-bert` : 5 paliers sur 5 ; plus grande part : `medium` 53,9 %
 - `s1d1-compact-int8` : 4 paliers sur 5, jamais `expert` ; plus grande part : `low` 50,6 %
 - `s1d1-full-fp16` : 4 paliers sur 5, jamais `expert` ; plus grande part : `low` 45,6 %
 - `s1d1-full-int8` : 4 paliers sur 5, jamais `expert` ; plus grande part : `low` 47,5 %
@@ -723,11 +767,12 @@ des juges principaux : là où l'instrument hésite.
 
 ## Tâche et `needs_tools`
 
-Seuls les candidats qui prédisent ces sorties ont une ligne : `random`, `s1d1-compact-int8`, `s1d1-full-fp16`, `s1d1-full-int8`, `s1d1-small-int8`, `s1d1-tiny-int8`. Sans ligne, parce qu'ils ne les
-prédisent pas : `constant-low`, `laya-english-tier`, `laya-multilingual-tier`, `length`, `litellm-heuristic`.
+Seuls les candidats qui prédisent ces sorties ont une ligne : `llm4b-gemma4-e4b-off`, `random`, `s1d1-compact-int8`, `s1d1-full-fp16`, `s1d1-full-int8`, `s1d1-small-int8`, `s1d1-tiny-int8`. Sans ligne, parce qu'ils ne les
+prédisent pas : `constant-low`, `laya-english-tier`, `laya-multilingual-tier`, `length`, `litellm-heuristic`, `routellm-bert`.
 
 | nom | ids | exactitude | F1 macro |
 |---|---|---|---|
+| llm4b-gemma4-e4b-off | 356 | 0,725 [0,634 ; 0,800] | 0,536 [0,421 ; 0,626] |
 | random | 360 | 0,053 [0,031 ; 0,075] | 0,040 [0,020 ; 0,056] |
 | s1d1-compact-int8 | 360 | 0,697 [0,614 ; 0,778] | 0,526 [0,410 ; 0,594] |
 | s1d1-full-fp16 | 360 | 0,750 [0,667 ; 0,822] | 0,581 [0,449 ; 0,662] |
@@ -747,6 +792,7 @@ F1 macro : moyenne des F1 par tâche sur l'union des tâches de la vérité et d
 
 | nom | ids | ids positifs | F1 | MCC | exactitude | AUROC |
 |---|---|---|---|---|---|---|
+| llm4b-gemma4-e4b-off | 356 | 52 | 0,737 [0,549 ; 0,878] | 0,691 [0,496 ; 0,854] | 0,916 [0,860 ; 0,964] | — |
 | random | 360 | 52 | 0,237 [0,117 ; 0,336] | 0,022 [−0,106 ; 0,135] | 0,500 [0,444 ; 0,558] | — |
 | s1d1-compact-int8 | 360 | 52 | 0,660 [0,452 ; 0,811] | 0,606 [0,385 ; 0,780] | 0,906 [0,856 ; 0,953] | 0,913 [0,832 ; 0,976] |
 | s1d1-full-fp16 | 360 | 52 | 0,654 [0,400 ; 0,818] | 0,594 [0,334 ; 0,788] | 0,897 [0,836 ; 0,950] | 0,934 [0,865 ; 0,983] |
@@ -754,7 +800,7 @@ F1 macro : moyenne des F1 par tâche sur l'union des tâches de la vérité et d
 | s1d1-small-int8 | 360 | 52 | 0,587 [0,333 ; 0,761] | 0,534 [0,271 ; 0,729] | 0,894 [0,839 ; 0,944] | 0,898 [0,817 ; 0,969] |
 | s1d1-tiny-int8 | 360 | 52 | 0,293 [0,151 ; 0,419] | 0,248 [0,087 ; 0,410] | 0,853 [0,792 ; 0,911] | 0,723 [0,603 ; 0,841] |
 
-Peu de positifs : 52 ids positifs sur 360 dans `truth_all`, l'IC le dit. L'AUROC n'existe que pour les candidats qui donnent une probabilité.
+Peu de positifs : 52 ids positifs sur 356 dans `truth_all`, l'IC le dit. L'AUROC n'existe que pour les candidats qui donnent une probabilité.
 
 | nom | rôle | ids | ids positifs | F1 | MCC | exactitude | AUROC |
 |---|---|---|---|---|---|---|---|
@@ -780,6 +826,7 @@ précision change ; la ligne pointillée grise est la part des positifs, la pré
 | laya-multilingual-tier | laya-multilingual-tier.raw_score | brut (hors échelle v7 : rangs seulement) | 360 | 0,351 [0,173 ; 0,517] | 0,672 [0,574 ; 0,761] | — |
 | length | length.score | brut (hors échelle v7 : rangs seulement) | 360 | 0,661 [0,531 ; 0,757] | 0,800 [0,708 ; 0,883] | — |
 | litellm-heuristic | litellm-heuristic.raw_score | brut (hors échelle v7 : rangs seulement) | 360 | 0,552 [0,435 ; 0,651] | 0,711 [0,626 ; 0,792] | — |
+| routellm-bert | routellm-bert.score | brut (hors échelle v7 : rangs seulement) | 360 | 0,356 [0,167 ; 0,511] | 0,792 [0,633 ; 0,924] | — |
 | s1d1-compact-int8 | s1d1-compact-int8.score | score v7 | 360 | 0,857 [0,789 ; 0,901] | 0,952 [0,904 ; 0,986] | — |
 | s1d1-full-fp16 | s1d1-full-fp16.score | score v7 | 360 | 0,865 [0,800 ; 0,905] | 0,953 [0,894 ; 0,991] | — |
 | s1d1-full-int8 | s1d1-full-int8.score | score v7 | 360 | 0,864 [0,797 ; 0,906] | 0,955 [0,900 ; 0,991] | — |
@@ -787,7 +834,7 @@ précision change ; la ligne pointillée grise est la part des positifs, la pré
 | s1d1-tiny-int8 | s1d1-tiny-int8.score | score v7 | 360 | 0,775 [0,696 ; 0,830] | 0,885 [0,813 ; 0,945] | — |
 
 Corrélation de rang (Spearman) du score avec le palier de la vérité, et AUROC du score pour « la vérité est high ou
-expert ». Les scores bruts (`laya-english-tier`, `laya-multilingual-tier`, `length`, `litellm-heuristic`) ne sont pas sur l'échelle v7 : seul leur ordre compte, ni MAE ni
+expert ». Les scores bruts (`laya-english-tier`, `laya-multilingual-tier`, `length`, `litellm-heuristic`, `routellm-bert`) ne sont pas sur l'échelle v7 : seul leur ordre compte, ni MAE ni
 calibration pour eux ; `constant-low` a un score constant (l'ancre de low) : ni rang ni AUROC ne le départagent.
 
 | nom | ids | MAE | Spearman | ECE |

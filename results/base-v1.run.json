@@ -46,10 +46,23 @@
       "revision": "v1.106.6 61c6ab78393ef45683dd7d963d2a315bd845e20b"
     },
     {
+      "date": "2026-10-31",
+      "model": "mlx-community/gemma-4-e4b-it-8bit",
+      "name": "llm4b-gemma4-e4b-off",
+      "revision": "4255b21bd9a9d3fc807ef7abd80373f5e3a52a73"
+    },
+    {
       "date": "2026-10-30",
       "model": "witness:random",
       "name": "random",
       "revision": "seed 0"
+    },
+    {
+      "date": "2026-10-31",
+      "model": "routellm/bert_gpt4_augmented",
+      "name": "routellm-bert",
+      "raw_decisions": true,
+      "revision": "86237e3df400762178ea98379477b8296e66d5e4"
     },
     {
       "date": "2026-10-30",
@@ -82,7 +95,7 @@
       "revision": "dac13b5c0356864ea4501fa151d74dcd8b3ea22a"
     }
   ],
-  "date": "2026-10-30",
+  "date": "2026-10-31",
   "gemma": [
     "base-v1-gemma4-cap512"
   ],

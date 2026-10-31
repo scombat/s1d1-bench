@@ -2,7 +2,7 @@ item,value
 prompts,data/prompts/base-v1.jsonl
 prompts_sha256,e6a6d4c12ef8b95caea942337a3a1e16ec1622cb4e75c8ee0b473ef609a32490
 meta,data/prompts/base-v1.meta.parquet
-date of the run,2026-10-30
+date of the run,2026-10-31
 rows,360 ids
 base keys,90 prompts de base
 languages,"eng, fra, rus, zho"

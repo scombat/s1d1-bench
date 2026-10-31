@@ -153,6 +153,8 @@ def test_shade_and_family_colours():
     assert family("s1d1-full-int8") == ("s1d1", "#2a78d6")
     assert family("laya-english-tier") == ("Laya", "#eb6834")
     assert family("litellm-heuristic") == ("LiteLLM", "#1baf7a")
+    assert family("routellm-bert") == ("RouteLLM", "#7e57c2")
+    assert family("llm4b-gemma4-e4b-off") == ("LLM 4B", "#b8860b")
     assert family("length") == ("witnesses and others", "#7a7975")
     assert shade("#2a78d6", 0) == "#2a78d6"
     assert shade("#000000", 0.5) == "#808080" and shade("#ffffff", -0.5) == "#808080"
