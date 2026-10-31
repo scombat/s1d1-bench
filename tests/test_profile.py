@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import shutil
 from pathlib import Path
 
 import pytest
@@ -154,6 +155,11 @@ def test_classifier_spec_reads_the_replay_line_of_the_real_folders():
     }
     assert profile.classifier_spec(_meta("laya-english-tier"))["laya_model"] == "english"
     assert profile.classifier_spec(_meta("litellm-heuristic")) == {"adapter": "litellm-heuristic"}
+    assert profile.classifier_spec(_meta("routellm-bert")) == {
+        "adapter": "routellm",
+        "router": "bert",
+        "revision": "86237e3df400762178ea98379477b8296e66d5e4",
+    }
     for witness in ("random", "length", "constant-low"):
         assert profile.classifier_spec(_meta(witness)) is None
 
@@ -235,6 +241,44 @@ def test_profile_skips_the_witnesses_and_profiles_the_models_and_judges(tmp_path
     assert (meta["warmup"], meta["batch_size"], meta["prompts"]) == (10, 1, setup["argv"][2])
     assert meta["prompts_sha256"] == hashlib.sha256(Path(setup["argv"][2]).read_bytes()).hexdigest()
     assert meta["machine"] and meta["date"]
+
+
+ROUTELLM = {
+    "model": "routellm/bert_gpt4_augmented",
+    "revision": "a" * 40,
+    "notes": f"Replay: uv run --group routellm bench classify routellm --routellm-router bert --revision {'a' * 40}",
+}
+LLM4B = {"model": "org/model", "revision": "f" * 40, "provider": "local", "notes": "a small LLM, judge format"}
+
+
+def test_profile_reloads_a_routellm_router_by_its_adapter(tmp_path, monkeypatch):
+    setup = _setup(tmp_path, {"routellm-bert": ROUTELLM}, judges=())
+    calls: list = []
+    monkeypatch.setattr(profile, "run_worker", _fake_worker(calls))
+    assert main(setup["argv"]) == 0
+    assert calls[0]["adapter"] == "routellm" and calls[0]["router"] == "bert" and calls[0]["revision"] == "a" * 40
+    (row,) = json.loads(setup["out"].read_text(encoding="utf-8"))["rows"]
+    assert (row["name"], row["kind"], row["model"]) == ("routellm-bert", "classifier", ROUTELLM["model"])
+
+
+def test_profile_times_a_judge_format_candidate_from_its_log_and_keeps_it_a_candidate(tmp_path, monkeypatch):
+    setup = _setup(tmp_path, {"llm4b": LLM4B, "s1d1-tiny-int8": S1D1}, judges=())
+    shutil.copy(
+        _judge_folder(tmp_path / "scratch", "j") / "log.jsonl", tmp_path / "classifiers" / "llm4b" / "log.jsonl"
+    )
+    calls: list = []
+    monkeypatch.setattr(profile, "run_worker", _fake_worker(calls))
+    assert main(setup["argv"]) == 0
+    data = json.loads(setup["out"].read_text(encoding="utf-8"))
+    assert [row["name"] for row in data["rows"]] == ["llm4b", "s1d1-tiny-int8"]
+    assert [spec["adapter"] for spec in calls] == ["s1d1"]  # the LLM never reached a worker: it is timed from its log
+    llm = data["rows"][0]
+    assert (llm["kind"], llm["device"], llm["peak_rss_mb"], llm["weights_mb"]) == ("classifier", "gpu-mlx", None, 2.0)
+    assert (llm["latency_p50_ms"], llm["latency_mean_ms"]) == (5000.0, 5000.0)
+    assert data["meta"]["skipped"] == []
+    assert main([*setup["argv"], "--only", "s1d1-tiny-int8"]) == 0
+    skipped = json.loads(setup["out"].read_text(encoding="utf-8"))["meta"]["skipped"]
+    assert skipped == [{"name": "llm4b", "reason": "not selected by --only"}]
 
 
 def test_profile_refuses_a_name_that_is_not_in_the_run(tmp_path, monkeypatch, capsys):
