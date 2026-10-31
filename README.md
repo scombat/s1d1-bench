@@ -6,7 +6,8 @@ notation v7 (palier de complexité, score, tâche, `needs_tools`).
 ## Ce que le banc mesure, et ce qu'il ne mesure pas
 
 - **Mesuré.** L'accord des quatre sorties d'un classifieur avec la médiane des juges : palier de complexité, score,
-  tâche et `needs_tools`, globalement puis par langue, par source et par palier. Les témoins aléatoire et longueur du
+  tâche et `needs_tools`, globalement, et pour le palier de complexité aussi par langue, par source, par origine et par
+  palier de la vérité. Les témoins aléatoire et longueur du
   prompt donnent le plancher, l'accord de chaque juge avec les autres donne le plafond.
 - **Non mesuré : la grille.** Si la grille elle-même correspond à « quel modèle suffit » relève d'un autre banc, celui
   des réponses, qui n'est pas traité ici.
@@ -33,6 +34,8 @@ notation v7 (palier de complexité, score, tâche, `needs_tools`).
   `labels.jsonl`).
 - `bench run` : réunit les dossiers de juges et de classifieurs d'un jeu en un tableau, une ligne par id, avec les vérités
   des juges principaux (`results/<jeu>.parquet` et `<jeu>.run.json`).
+- `bench report` : écrit le rapport d'un jeu (`report/<jeu>/index.md`, vingt-cinq tableaux CSV, sept figures SVG avec leur
+  CSV) depuis `results/<jeu>.parquet` ; voir [Le rapport](#le-rapport).
 
 Installation : `uv sync --group pool --group dev` (sur Apple silicon, pour faire tourner un juge :
 `uv sync --group pool --group judge --group dev`), puis `uv run bench --help`.
@@ -295,7 +298,7 @@ abstentions), et `bench validate` affiche `ok (1 abstention)`. Ce qu'une abstent
 [Les vérités](#les-vérités) et dans [judges/README.md](judges/README.md) ; la section n'y revient pas. Dans les accords
 ci-dessous, la colonne `abstained` compte les ids laissés hors de la paire.
 
-### Les onze classifieurs
+### Les treize dossiers de classifieurs (onze dans les résultats)
 
 | dossier | ce que c'est | révision | durée |
 |---|---|---|---|
@@ -437,13 +440,13 @@ est vrai pour 52 ids. Une médiane basse simple, à la place de la règle R5, ch
 
 ### Ce que `results/` est, et n'est pas
 
-`results/base-v1.parquet` (360 lignes, 90 colonnes) et `results/base-v1.run.json` (les dossiers chargés, leurs révisions,
+`results/base-v1.parquet` (360 lignes, 92 colonnes) et `results/base-v1.run.json` (les dossiers chargés, leurs révisions,
 les abstentions, les règles) sont **dérivés** des dossiers `judges/` et `classifiers/` : ils se régénèrent à chaque
 `bench run` ; les colonnes d'un classifieur sont `<nom>.complexity`, `<nom>.task`, `<nom>.needs_tools`, `<nom>.score` quand son
 `labels.jsonl` en a un et, quand il a un `decisions.jsonl`, `<nom>.raw_score` et `<nom>.raw_tier` (`litellm-heuristic` a
-ces deux-là et pas de `score` : cinq colonnes). Ce n'est pas un enregistrement immuable, à la différence des dossiers de
+ces deux-là et pas de `score` : cinq colonnes ; `laya-english-tier` et `laya-multilingual-tier` aussi). Ce n'est pas un enregistrement immuable, à la différence des dossiers de
 juges et de classifieurs, qu'on ajoute et qu'on ne réécrit pas : ce qui se rejoue, ce sont les entrées. Ce n'est pas non
-plus un rapport : aucune métrique, aucune figure ne s'y trouve, elles viennent dans la PR suivante.
+plus un rapport : aucune métrique, aucune figure ne s'y trouve, elles sont dans `report/` (voir [Le rapport](#le-rapport)).
 
 ### Les comptes des juges
 
@@ -477,6 +480,55 @@ Ces deux tableaux sont des comptes, donnés une fois ici. Le texte de l'interpr�
 ajoutera les intervalles de confiance et les métriques d'accord ; rien n'est dit ici de la valeur d'un juge ou d'un
 classifieur par rapport à un autre.
 
+## Le rapport
+
+`report/base-v1/` est écrit par `bench report` à partir de `results/base-v1.parquet` ; il est dérivé comme `results/`,
+et se régénère (même entrée, mêmes octets : le rapport est déterministe, SVG compris). Le refaire :
+
+```
+uv run --group report bench report --results results/base-v1.parquet --meta data/prompts/base-v1.meta.parquet \
+    --classifiers classifiers --out report/base-v1
+```
+
+`--classifiers` est la racine des dossiers : la bande du témoin aléatoire se lit dans `classifiers/random/draws.jsonl`
+(dix tirages), `results/base-v1.run.json` ne donnant que les noms. Une quinzaine de secondes. La commande refuse de
+tourner (code 1, un message) si un dossier de classifieur nommé par `run.json` manque à la racine, si le gabarit
+`report/TEMPLATE.md` est introuvable, ou si `matplotlib` (groupe `report`) n'est pas installé.
+
+**Ce qu'il contient.** `index.md` (lu de haut en bas : les deux prédictions de docs/34 § 7.4 d'abord, celle qui ne se
+vérifie pas en tête ; la phrase de docs/32 § 5 avec ses chiffres ; les mises en garde de docs/32 § 2 ; l'accord de chaque
+candidat et de chaque juge avec `truth_all` puis `truth_all_nogemma` ; le plafond, le plancher, les écarts appariés ; par
+langue, par source, par origine, par palier ; `task` et `needs_tools` ; les rangs et la calibration du score ; ce qui
+manque), `tables/` (vingt-cinq CSV) et `figures/` (sept SVG, chacun avec le CSV de ses données). Le gabarit
+`report/TEMPLATE.md` porte les mises en garde et la phrase à trous ; le code remplit les trous avec les chiffres tels
+qu'ils sortent, et les deux clauses finales de la phrase suivent des règles écrites dans `src/s1d1_bench/report_index.py`
+et citées dans le rapport. Les intervalles sont à 95 %, par rééchantillonnage des 90 prompts de base (1 000 tirages,
+graine 0, les quatre versions suivent leur prompt de base).
+
+**Ce qu'il dit.** Sur 360 ids (90 prompts de base en quatre langues), `s1d1-full-int8` s'accorde avec la médiane des trois
+juges principaux à QWK 0,807 [0,734 ; 0,852] et `s1d1-full-fp16` à 0,814 [0,738 ; 0,865] ; le plafond (chaque juge
+principal contre les deux autres, 8 votes) vaut 0,774 [0,718 ; 0,815] en moyenne ; le plancher informé, la longueur du
+prompt, 0,543 [0,424 ; 0,647], et le hasard −0,028 à 0,049 sur dix tirages. Laya, lu nom à nom, est à 0,405 [0,314 ; 0,490]
+(english) et 0,119 [−0,040 ; 0,264] (multilingual) ; l'heuristique de LiteLLM à 0,089 [0,026 ; 0,172]. **La prédiction 2 de
+docs/34 § 7.4 (LiteLLM entre `length` et s1d1) ne se vérifie pas** : LiteLLM est au-dessous de `length`, et sa prédiction
+de palier est `low` pour 93 % des ids, son exactitude (0,342) restant à côté de celle de `constant-low` (0,322). La
+prédiction 1 (son QWK tombe en français, russe et chinois) se vérifie sur les valeurs ponctuelles, sans que les IC se
+séparent. Chaque chiffre est dans un tableau de `report/base-v1/tables/`, cité dans `index.md`.
+
+**Ce qu'il ne prouve pas.** Il ne sépare pas `s1d1-full-int8` de `s1d1-full-fp16`, de `small` ni de `compact` :
+les écarts appariés de `fp16` et de `small` ont un IC qui contient zéro, celui de `compact` (0,048 [0,009 ; 0,089]) exclut
+zéro mais sa borne basse n'est pas au-delà de 2 σ = 0,010 (σ = 0,005, docs/18, lecture stricte écrite dans le rapport).
+Les trois juges principaux sont dans la vérité : leur accord avec elle compte leurs propres votes, et le chiffre qui les
+compare est le plafond. Gemma 4 a produit les étiquettes d'entraînement de s1d1 (docs/32 § 4.4) et est dans `truth_all` :
+le rapport donne l'accord contre la médiane sans Gemma (`truth_all_nogemma`, tableau « Sans Gemma 4 ») ; `s1d1-full-int8`
+y passe de 0,807 à 0,785, `length` de 0,543 à 0,478 et `laya-english-tier` de 0,405 à 0,347 : la baisse de s1d1 n'est pas plus
+forte que celle des candidats qui n'ont pas vu Gemma. Le rapport ne mesure pas la grille, le routage, la distribution
+réelle des prompts, les prompts agentiques ou multi-tours, ni les langues autres que les quatre ; trois analyses de
+docs/32 ne sont pas produites dans ce lot (la part des prompts notés 0,70 à 0,80 que les juges mettent en `high` ou
+au-dessus, les confusions entre tâches voisines, la matrice de confusion normalisée de la tâche), et `expert` n'a que 8
+ids sur 360 : tout ce qui touche ce palier est dit sur très peu de prompts. Les 360 ids ne sont pas 360 prompts
+indépendants : ce sont 90 prompts de base en quatre versions, et les IC en tiennent compte.
+
 ## Dépendances
 
 | Dépendance | Groupe | Raison |
@@ -488,6 +540,7 @@ classifieur par rapport à un autre.
 | `onnxruntime`, `tokenizers`, `numpy`, `huggingface_hub` | `s1d1` | classifieur s1d1 en ONNX int8 (CPU) |
 | `torch`, `transformers` | `s1d1-torch` | classifieur s1d1 en PyTorch fp16 |
 | `laya` (0.4.15) | `laya` | classifieur Laya |
+| `matplotlib` (et `numpy`, qu'il apporte) | `report` | figures SVG de `bench report` et statistiques de `metrics.py` |
 | aucune | aucun | classifieur `litellm-heuristic` : code de LiteLLM copié dans le dépôt, sans le paquet `litellm` |
 | `pytest` | `dev` | tests, sans réseau et sans modèle |
 | `ruff` | `dev` | lint et tri des imports |
