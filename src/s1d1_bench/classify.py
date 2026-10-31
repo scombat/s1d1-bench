@@ -48,8 +48,8 @@ def nearest_anchor(score: float) -> str:
     """The tier whose anchor is nearest to `score`; an exact midpoint between two anchors goes to the lower tier
     (0.375 is low, 0.875 is high). The midpoints are (a + b) / 2 of neighbouring anchors, compared with `<=`.
 
-    Kept from the first Laya adapter: the anchors are used by the constant witness only since lot 3b
-    (`constant_labels`), and no adapter calls this function any more."""
+    No adapter calls this function any more. The anchors (`ANCHORS`) serve the constant witness (`constant_labels`)
+    and the report; the function is kept for its tests."""
     for lower, upper in zip(LEVELS, LEVELS[1:], strict=False):
         if score <= (ANCHORS[lower] + ANCHORS[upper]) / 2:
             return lower

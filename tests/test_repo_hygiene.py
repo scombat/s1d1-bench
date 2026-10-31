@@ -40,7 +40,14 @@ def test_readme_names_the_mit_copy():
     assert "src/s1d1_bench/vendor/litellm_heuristic/" in section
 
 
-CITING_FILES = ("README.md", "judges/README.md", "report/TEMPLATE.md", "report/base-v1/index.md", "data/README.md")
+CITING_FILES = (
+    "README.md",
+    "judges/README.md",
+    "judges/MODELS.md",
+    "report/TEMPLATE.md",
+    "report/base-v1/index.md",
+    "data/README.md",
+)
 
 
 def test_every_cited_doc_is_present_or_explained():
@@ -125,12 +132,15 @@ LOCAL_PATH_EXCEPTIONS = {
 
 
 def test_no_local_paths():
-    """No `/Users/` nor `~/work/` in the code, the tests and the two READMEs, but in the named test files above."""
+    """No `/Users/` nor `~/work/` in the code, the tests and the public texts, but in the named test files above."""
     files = [
         *(REPO_ROOT / "src").rglob("*.py"),
         *(REPO_ROOT / "tests").rglob("*.py"),
+        *(REPO_ROOT / "docs").glob("*.md"),
         REPO_ROOT / "README.md",
-        REPO_ROOT / "docs" / "README.md",
+        REPO_ROOT / "judges" / "README.md",
+        REPO_ROOT / "report" / "TEMPLATE.md",
+        REPO_ROOT / "data" / "README.md",
     ]
     vendor = REPO_ROOT / "src" / "s1d1_bench" / "vendor"
     found = []
