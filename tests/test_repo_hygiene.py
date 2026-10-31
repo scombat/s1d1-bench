@@ -102,7 +102,10 @@ def test_readme_results_match_the_report():
 
     results = _readme_section("Résultats (`base-v1`, 2026-10-30)")
     candidates = _csv_rows("agreement_all.csv", "name")
-    shown = ("s1d1-full-int8", "s1d1-small-int8", "length", "laya-english-tier", "laya-multilingual-tier")
+    shown = (
+        "s1d1-full-int8", "s1d1-small-int8", "length", "laya-english-tier", "laya-multilingual-tier",
+        "routellm-bert", "llm4b-gemma4-e4b-off",
+    )  # fmt: skip
     for name in (*shown, "litellm-heuristic"):
         row = candidates[name]
         assert f"{_french(row['qwk'])} [{_french(row['qwk_lo'])} ; {_french(row['qwk_hi'])}]" in results, name
@@ -130,7 +133,7 @@ def test_readme_results_show_the_three_figures_with_a_caption_and_link_the_repor
         assert block.strip() and not block.strip().startswith("|"), figure
     assert "](report/base-v1/index.md)" in results
     table = [line for line in results.splitlines() if line.startswith("| ") and not line.startswith("| candidat")]
-    assert len(table) == 7  # the seven lines of the table
+    assert len(table) == 9  # the seven lines of the first lot, plus RouteLLM bert and the 4B model of lot B
 
 
 def _span(values: list[float], unit) -> str:
@@ -175,7 +178,7 @@ def test_readme_results_latency_and_weights_match_the_profile():
     # the tail of s1d1-full-int8, without a cause, and the judges' latency with and without reasoning
     tail = f"Au 95e centile, `s1d1-full-int8` met {_ms(float(full['latency_p95_ms']))} (la cause de cette\nqueue n'est"
     assert tail in results
-    off = [r for r in profile if r["name"].endswith("-off")]
+    off = [r for r in profile if r["name"].startswith("base-v1-") and r["name"].endswith("-off")]
     assert {r["name"] for r in off} == {"base-v1-gemma4-off", "base-v1-qwen3-off"}
     assert "puis en raisonnant (réflexion plafonnée à 512 jetons)" in results
     no_reasoning = _span([float(r["latency_p50_ms"]) for r in off], _ms)
@@ -219,6 +222,7 @@ LOCAL_PATH_EXCEPTIONS = {
     "tests/test_translate.py",
     "tests/test_classify.py",
     "tests/test_laya_backend.py",
+    "tests/test_routellm_backend.py",
 }
 
 

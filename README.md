@@ -77,6 +77,17 @@ QWK contre `truth_all` (la médiane des trois juges principaux), IC à 95 % sur 
 | Laya english (`laya-english-tier`) | 0,405 [0,314 ; 0,490] | 0,311 [0,247 ; 0,386] |
 | Laya multilingual (`laya-multilingual-tier`) | 0,119 [−0,040 ; 0,264] | 0,278 [0,203 ; 0,353] |
 | LiteLLM heuristic | 0,089 [0,026 ; 0,172] | 0,342 [0,250 ; 0,436] |
+| RouteLLM bert (`routellm-bert`) | 0,278 [0,132 ; 0,408] | 0,381 [0,303 ; 0,467] |
+| LLM 4B, Gemma 4 E4B 8 bits (`llm4b-gemma4-e4b-off`) | 0,789 [0,698 ; 0,853] | 0,545 [0,447 ; 0,643] |
+
+Les deux dernières lignes sont celles du lot B. `routellm-bert` est le routeur `bert` publié de RouteLLM, passé sur les
+prompts tels quels ; il prédit la probabilité que GPT-4 batte Mixtral sur une question anglaise, pas un palier, lu ici
+par cinq bornes égales de 0,2 ([le mapping](#les-routeurs-de-routellm-et-le-llm-de-4-milliards)) : son QWK est de 0,367 en anglais
+et de 0,149 à 0,303 dans les trois autres langues (valeurs ponctuelles, les IC se chevauchent), et l'écart apparié
+`s1d1-full-int8` − `routellm-bert` est de 0,528 [0,388 ; 0,668]. `llm4b-gemma4-e4b-off` est un petit LLM qui lit la
+consigne v7 comme les juges, sans réflexion ; son QWK, calculé sur 356 ids (4 abstentions), est proche de celui de
+`s1d1-full-int8`, et la règle des 2 σ ne les sépare pas (écart apparié 0,018 [−0,067 ; 0,105]). Il répond en 1,1 s par
+prompt sur le GPU et pèse 8,9 Go sur disque, `routellm-bert` en 16,3 ms sur le CPU pour 1,1 Go.
 
 Les juges sont l'instrument de mesure, pas des concurrents : aucun tableau ne range un candidat face à un juge, sauf le
 plafond. Aucune phrase « meilleur que » sans la règle des 2 σ (l'IC de l'écart apparié exclut zéro et dépasse 2 σ,
@@ -343,7 +354,7 @@ des deux juges s'est abstenu (colonne `abstained`).
 
 ## Les juges du rapport et les classifieurs
 
-Le rapport de `base-v1` s'appuie sur cinq séries de juges et onze classifieurs, tous sur `data/prompts/base-v1.jsonl` (360
+Le rapport de `base-v1` s'appuie sur cinq séries de juges et treize classifieurs, tous sur `data/prompts/base-v1.jsonl` (360
 lignes, SHA-256 `e6a6d4c12ef8b95caea942337a3a1e16ec1622cb4e75c8ee0b473ef609a32490`). Les juges ont tourné le 2026-10-30
 sur un Mac M4 Max 128 Go, avec `mlx-lm` 0.32.2, un modèle à la fois, température 0, `--max-tokens 1024`, consigne
 `v7-single`, révisions de [judges/MODELS.md](judges/MODELS.md).
@@ -376,7 +387,7 @@ abstentions), et `bench validate` affiche `ok (1 abstention)`. Ce qu'une abstent
 [Les vérités](#les-vérités) et dans [judges/README.md](judges/README.md) ; la section n'y revient pas. Dans les accords
 ci-dessous, la colonne `abstained` compte les ids laissés hors de la paire.
 
-### Les treize dossiers de classifieurs (onze dans les résultats)
+### Les quinze dossiers de classifieurs (treize dans les résultats)
 
 | dossier | ce que c'est | révision | durée |
 |---|---|---|---|
@@ -393,6 +404,8 @@ ci-dessous, la colonne `abstained` compte les ids laissés hors de la paire.
 | `classifiers/laya-english-tier` | Laya 0.4.15, point de contrôle english, mps, palier le plus probable nom à nom | `convaiinnovations/laya@7b928d82…` | ≈ 20 s (non chronométré) |
 | `classifiers/laya-multilingual-tier` | Laya 0.4.15, point de contrôle multilingual, mps, palier le plus probable nom à nom | `convaiinnovations/laya@7b928d82…` | ≈ 20 s (non chronométré) |
 | `classifiers/litellm-heuristic` | scorer heuristique intégré de LiteLLM (`classifier_type: heuristic`, configuration par défaut), code copié tel quel au tag v1.106.6, sans modèle | tag `v1.106.6`, commit `61c6ab78…` | moins d'une seconde |
+| `classifiers/routellm-bert` | routeur `bert` de RouteLLM (`routellm/bert_gpt4_augmented`, XLM-RoBERTa-base), PyTorch float32, CPU, score = probabilité de victoire du fort, cinq bornes égales | `86237e3df400762178ea98379477b8296e66d5e4` | 14 s |
+| `classifiers/llm4b-gemma4-e4b-off` | Gemma 4 E4B-it 8 bits (MLX) lisant la consigne v7 par `bench judge`, sans réflexion, au format d'un dossier de juge, candidat et non juge | `4255b21bd9a9d3fc807ef7abd80373f5e3a52a73` | ≈ 7 min |
 
 Les durées des classifieurs sont celles du classement des 360 prompts, avec le petit téléchargement du Hub, les poids étant
 déjà en cache. Trois révisions de s1d1 (`small`, `compact`, `full` int8) sont épinglées à la révision de la carte du dépôt.
@@ -412,6 +425,34 @@ et `task` et `needs_tools` restent `null`. Son score n'est pas sur l'échelle v7
 donc pas de `score`, et la décision brute du scorer (palier, score, signaux, cause) est dans `decisions.jsonl`, à côté de
 `labels.jsonl`. `bench run` la lit dans les colonnes `litellm-heuristic.raw_score` et `litellm-heuristic.raw_tier`, et
 marque `"raw_decisions": true` dans l'entrée du classifieur de `run.json`. Le score brut ne sert qu'aux mesures de rang.
+
+### Les routeurs de RouteLLM et le LLM de 4 milliards
+
+**Ce que mesurent les routeurs de RouteLLM.** RouteLLM (lm-sys, arXiv 2406.18665) publie des routeurs qui prédisent, pour
+une question anglaise, la probabilité que le modèle fort (GPT-4) batte le modèle faible (Mixtral 8x7B), appris sur des
+batailles de Chatbot Arena : ce n'est pas un palier de complexité. Le banc leur donne le prompt tel quel, dans les
+quatre langues (les routeurs sont anglais : ce que cela donne ailleurs est un résultat, pas un défaut corrigé), garde le
+`score` tel que le routeur le rend, sans calibration, et le lit sur les paliers par cinq bornes égales fixées d'avance :
+trivial [0 ; 0,2), low [0,2 ; 0,4), medium [0,4 ; 0,6), high [0,6 ; 0,8), expert [0,8 ; 1] (0,2 est low, 0,8 est expert,
+1,0 est expert). `task` et `needs_tools` sont `null` : le routeur ne les prédit pas. Ce mapping est un choix du banc, pas
+une propriété du routeur : un autre jeu de bornes donnerait d'autres paliers, et la mesure dit seulement ce que ces
+bornes-là donnent. `routellm-bert` est le seul routeur de RouteLLM passé : `mf` (factorisation de matrices) est exclu,
+parce que le dépôt de RouteLLM code en dur les embeddings `text-embedding-3-small` d'OpenAI (un appel d'API payant, que le
+banc ne fait pas ; aucune variante locale) ; `causal_llm` (Llama-3-8B affiné) n'est pas passé : ses poids (`routellm/
+causal_llm_gpt4_augmented`) se téléchargent, mais le code de RouteLLM charge son tokenizer depuis le dépôt à accès
+restreint `meta-llama/Meta-Llama-3-8B`, auquel ce compte n'a pas accès (réponse 403), et le banc ne demande pas cet accès ;
+la licence Llama 3 n'a donc pas été examinée. `bench classify routellm` rejoue le calcul de `BERTRouter` de RouteLLM
+(commit `0b64fdafe049e596a3f5657c219329f24af24198`) sans installer le paquet `routellm`, dans le groupe optionnel
+`routellm` (`torch`, `transformers`, `numpy`, `huggingface_hub`).
+
+**Le LLM de 4 milliards.** `classifiers/llm4b-gemma4-e4b-off` est Gemma 4 E4B-it (la famille du juge Gemma 4 31B), en 8 bits
+MLX, qui lit la même consigne v7 que les juges par `bench judge`, sans réflexion ; le dossier garde le format d'un
+dossier de juge (`provider: local`, `log.jsonl` avec le temps de chaque appel) et `bench run` le charge comme un
+classifieur : c'est un candidat, hors de `--main`. Quatre ids sont des abstentions (le modèle répond une tâche qui n'est
+pas l'une des 19 de la rubrique) : ils sont hors du QWK de ce candidat (356 ids). Son profil est lu dans son
+`log.jsonl` (voir [Le profil](#le-profil)). Les deux lignes de profil de ce lot ont été mesurées après coup, à part
+(`bench profile --only routellm-bert,llm4b-gemma4-e4b-off`, le 2026-10-31) et ajoutées à `results/base-v1.profile.json` sans
+toucher aux autres lignes, dont les latences ne se refont pas à l'identique (`meta.added_later` les nomme).
 
 **Révisions du Hub pour les dépôts int8.** Pour `small`, `compact` et `full`, la tête actuelle du Hub n'est pas la révision de
 la carte : les commits qui les séparent ne touchent que des métadonnées (`README.md`, `eval.json`, `footprint.json`,
@@ -479,6 +520,19 @@ autre nom.
   une autre table que celle du scorer de LiteLLM. Ils restent dans le dépôt, parce qu'un dossier de classifieur ne se
   modifie jamais, mais `bench run` ne les charge plus : ils ne sont ni dans les résultats ni dans les chiffres du rapport,
   qui dit seulement pourquoi.
+- **Un routeur de RouteLLM** (groupe `routellm`, CPU) :
+
+  ```
+  uv run --group routellm bench classify routellm --routellm-router bert --revision 86237e3df400762178ea98379477b8296e66d5e4 \
+      --prompts data/prompts/base-v1.jsonl --out classifiers/routellm-bert --author <nom>
+  ```
+- **Le LLM de 4 milliards** (Apple silicon, groupe `judge`, modèle dans `~/mlx-models/mlx-community--gemma-4-e4b-it-8bit`,
+  révision `4255b21bd9a9d3fc807ef7abd80373f5e3a52a73`) :
+
+  ```
+  uv run --group judge bench judge --model mlx-community/gemma-4-e4b-it-8bit --prompts data/prompts/base-v1.jsonl \
+      --out classifiers/llm4b-gemma4-e4b-off --author <nom> --thinking off --max-tokens 1024
+  ```
 - **Le scorer de LiteLLM** (sans modèle, sans groupe, sans réseau) :
 
   ```
@@ -490,8 +544,8 @@ autre nom.
   uv run bench run --prompts data/prompts/base-v1.jsonl --judges 'judges/base-v1-*' \
       --main base-v1-gemma4-cap512,base-v1-qwen3-cap512,base-v1-gptoss-cap512 \
       --classifiers 'classifiers/s1d1-*' classifiers/laya-english-tier classifiers/laya-multilingual-tier \
-      classifiers/litellm-heuristic classifiers/random classifiers/length classifiers/constant-low \
-      --out results/base-v1.parquet
+      classifiers/litellm-heuristic classifiers/routellm-bert classifiers/llm4b-gemma4-e4b-off classifiers/random \
+      classifiers/length classifiers/constant-low --out results/base-v1.parquet
   ```
 
   `--judges` et `--classifiers` prennent plusieurs valeurs à la suite (des globs entre apostrophes, que `bench run`
@@ -521,11 +575,11 @@ est vrai pour 52 ids. Une médiane basse simple, à la place de la règle R5, ch
 
 ### Ce que `results/` est, et n'est pas
 
-`results/base-v1.parquet` (360 lignes, 92 colonnes) et `results/base-v1.run.json` (les dossiers chargés, leurs révisions,
+`results/base-v1.parquet` (360 lignes, 101 colonnes) et `results/base-v1.run.json` (les dossiers chargés, leurs révisions,
 les abstentions, les règles) sont **dérivés** des dossiers `judges/` et `classifiers/` : ils se régénèrent à chaque
 `bench run` ; les colonnes d'un classifieur sont `<nom>.complexity`, `<nom>.task`, `<nom>.needs_tools`, `<nom>.score` quand son
 `labels.jsonl` en a un et, quand il a un `decisions.jsonl`, `<nom>.raw_score` et `<nom>.raw_tier` (`litellm-heuristic` a
-ces deux-là et pas de `score` : cinq colonnes ; `laya-english-tier` et `laya-multilingual-tier` aussi). Ce n'est pas un enregistrement immuable, à la différence des dossiers de
+ces deux-là et pas de `score` : cinq colonnes ; `laya-english-tier` et `laya-multilingual-tier` aussi ; `routellm-bert` a un `score` et ces deux colonnes). Ce n'est pas un enregistrement immuable, à la différence des dossiers de
 juges et de classifieurs, qu'on ajoute et qu'on ne réécrit pas : ce qui se rejoue, ce sont les entrées. Ce n'est pas non
 plus un rapport : aucune métrique, aucune figure ne s'y trouve, elles sont dans `report/` (voir [Le rapport](#le-rapport)).
 
