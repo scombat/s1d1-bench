@@ -370,169 +370,169 @@ To read before starting: the licences of the sources (the `licence` column of `p
 section [Licences](#licences)) and the exclusion list (`data/exclusions/`, which says what s1d1 has already seen: see
 [Reproducing the trial](#reproducing-the-trial), step 1).
 
-## Les vérités
+## The truths
 
-`bench run` réunit les dossiers de juges et de classifieurs d'un jeu en une table, une ligne par id ; les vérités ne
-viennent que des juges principaux (`--main`). Le palier vrai est la médiane ordinale (trivial < low < medium < high <
-expert) des votes non nuls, `truth_all` sur les 12 votes des quatre versions d'un prompt de base (3 juges × 4 langues),
-`truth_lang` sur les 3 votes de l'id. Règle R5 (docs/34 § 0.3) : un nombre impair de votes prend celui du milieu ; un
-nombre pair prend la moyenne des rangs des deux votes du milieu, arrondie vers le bas. C'est la médiane basse quand les
-deux votes du milieu sont égaux ou voisins (6/6 sur deux paliers voisins donne le plus bas), mais low et high donnent
-medium. Le palier est nul (`undecidable`) quand les `null` sont strictement majoritaires (7 sur 12 ; 6 sur 12 ne
-l'est pas). `task` et `needs_tools` vont au vote majoritaire, l'égalité tranchée par le premier juge de `--main`.
+`bench run` gathers the judge and classifier folders of a set into one table, one row per id; the truths come only from
+the main judges (`--main`). The true tier is the ordinal median (trivial < low < medium < high < expert) of the
+non-null votes, `truth_all` over the 12 votes of the four versions of a base prompt (3 judges × 4 languages),
+`truth_lang` over the 3 votes of the id. Rule R5 (docs/34 § 0.3): an odd number of votes takes the middle one; an even
+number takes the mean of the ranks of the two middle votes, rounded down. It is the lower median when the
+two middle votes are equal or adjacent (6/6 on two adjacent tiers gives the lower), but low and high give
+medium. The tier is null (`undecidable`) when the `null`s are a strict majority (7 out of 12; 6 out of 12 is not
+one). `task` and `needs_tools` go to the majority vote, a tie broken by the first judge of `--main`.
 
-Les abstentions : un juge dont la sortie ne donne pas d'étiquette lisible (refus, JSON illisible, réponse coupée :
-`json_error` ou `truncated`) a une ligne `"abstained"` dans `labels.jsonl` (voir [judges/README.md](judges/README.md)) ;
-une `error` du moteur n'en est pas une (elle peut être passagère : l'id reste sans ligne et `--resume` le redemande).
-Pour les vérités, une abstention est un vote nul sur les trois champs : hors médiane, hors majorité et hors `spread`,
-compté comme un `null` vers `undecidable`. `bench run` l'écrit dans la colonne `<juge>.abstained` et la liste dans
-`run.json` ; un id sans aucune ligne reste refusé, jamais rempli. `bench agree` laisse hors de la paire un id où l'un
-des deux juges s'est abstenu (colonne `abstained`).
+Abstentions: a judge whose output gives no readable label (refusal, unreadable JSON, truncated answer:
+`json_error` or `truncated`) has an `"abstained"` line in `labels.jsonl` (see [judges/README.md](judges/README.md));
+an engine `error` is not one (it may be transient: the id stays without a line and `--resume` asks for it again).
+For the truths, an abstention is a null vote on the three fields: outside the median, outside the majority and outside
+`spread`, counted as a `null` towards `undecidable`. `bench run` writes it in the `<judge>.abstained` column and the list
+in `run.json`; an id without any line is still refused, never filled. `bench agree` leaves out of the pair an id where
+one of the two judges abstained (column `abstained`).
 
-## Les juges du rapport et les classifieurs
+## The report's judges and the classifiers
 
-Le rapport de `base-v1` s'appuie sur cinq séries de juges et onze classifieurs, tous sur `data/prompts/base-v1.jsonl` (360
-lignes, SHA-256 `e6a6d4c12ef8b95caea942337a3a1e16ec1622cb4e75c8ee0b473ef609a32490`). Les juges ont tourné le 2026-10-30
-sur un Mac M4 Max 128 Go, avec `mlx-lm` 0.32.2, un modèle à la fois, température 0, `--max-tokens 1024`, consigne
-`v7-single`, révisions de [judges/MODELS.md](judges/MODELS.md).
+The `base-v1` report rests on five series of judges and eleven classifiers, all on `data/prompts/base-v1.jsonl` (360
+lines, SHA-256 `e6a6d4c12ef8b95caea942337a3a1e16ec1622cb4e75c8ee0b473ef609a32490`). The judges ran on 2026-10-30
+on a Mac M4 Max 128 GB, with `mlx-lm` 0.32.2, one model at a time, temperature 0, `--max-tokens 1024`, the `v7-single`
+instructions, revisions of [judges/MODELS.md](judges/MODELS.md).
 
-### Les cinq juges
+### The five judges
 
-| dossier | réglage | durée | rôle |
+| folder | setting | duration | role |
 |---|---|---|---|
-| `judges/base-v1-gemma4-cap512` | Gemma 4 31B, raisonnement plafonné à 512 | 4 h 28 min (4,48 h) | médiane principale |
-| `judges/base-v1-qwen3-cap512` | Qwen3.8 27B, raisonnement plafonné à 512 | 3 h 02 min (3,04 h) | médiane principale |
-| `judges/base-v1-gptoss-cap512` | gpt-oss-20b, raisonnement plafonné à 512 | 11 min 36 s (0,19 h) | médiane principale |
-| `judges/base-v1-gemma4-off` | Gemma 4 31B, sans raisonnement | 1 h 18 min (1,30 h) | effet de la réflexion, hors médiane |
-| `judges/base-v1-qwen3-off` | Qwen3.8 27B, sans raisonnement | 56 min 41 s (0,94 h) | effet de la réflexion, hors médiane |
+| `judges/base-v1-gemma4-cap512` | Gemma 4 31B, reasoning capped at 512 | 4 h 28 min (4.48 h) | main median |
+| `judges/base-v1-qwen3-cap512` | Qwen3.8 27B, reasoning capped at 512 | 3 h 02 min (3.04 h) | main median |
+| `judges/base-v1-gptoss-cap512` | gpt-oss-20b, reasoning capped at 512 | 11 min 36 s (0.19 h) | main median |
+| `judges/base-v1-gemma4-off` | Gemma 4 31B, without reasoning | 1 h 18 min (1.30 h) | effect of reasoning, outside the median |
+| `judges/base-v1-qwen3-off` | Qwen3.8 27B, without reasoning | 56 min 41 s (0.94 h) | effect of reasoning, outside the median |
 
-Les durées vont du début à la fin de chaque série, soit 9 h 57 min 38 s au total (le plan en prévoyait 8,4 h) ; celle de
-gpt-oss ne compte pas les 9 s de la reprise qui a écrit l'abstention. La première série (`qwen3-off`) a tourné seule sur
-la machine ; les autres ont tourné pendant que des sous-agents de relecture et des essais légers s'en servaient aussi :
-les durées ne se comparent donc pas à la seconde près. Les trois juges `cap512` forment la médiane principale : Gemma 4
-est le réglage du juge de l'entraînement, et [docs/32](docs/32-open-bench-kit.md) demande au moins trois juges locaux,
-gpt-oss étant le troisième modèle qui lit le JSON sur les 50 prompts de l'essai
-([docs/34](docs/34-bench-run-report-lot3.md) décision 2). Les deux dossiers `off` mesurent l'effet « réflexion » sur les
-360 prompts ; ils figurent dans le tableau des juges mais pas dans la médiane principale, parce que deux réglages d'un
-même modèle ne sont pas deux juges indépendants.
+The durations run from the start to the end of each series, that is 9 h 57 min 38 s in total (the plan foresaw 8.4 h);
+the gpt-oss one does not count the 9 s of the resume that wrote the abstention. The first series (`qwen3-off`) ran alone on
+the machine; the others ran while review subagents and light trials were also using it:
+the durations therefore cannot be compared to the nearest second. The three `cap512` judges form the main median: Gemma 4
+is the setting of the training judge, and [docs/32](docs/32-open-bench-kit.md) asks for at least three local judges,
+gpt-oss being the third model that reads the JSON on the 50 prompts of the trial
+([docs/34](docs/34-bench-run-report-lot3.md) decision 2). The two `off` folders measure the effect of reasoning on the
+360 prompts; they appear in the judges table but not in the main median, because two settings of the same
+model are not two independent judges.
 
-**Le cas d'abstention vient en premier.** `judges/base-v1-gptoss-cap512` compte 359 étiquettes et une abstention : gpt-oss
-refuse l'id `3ce175ed3ef6b933-zho` (le prompt chinois de synthèse de l'acide chlorhydrique) et rend un JSON illisible
-(`json_error`). Ce n'est pas une étiquette inventée : le dossier porte, pour cet id, une ligne `"abstained": "json_error"`
-aux trois champs `null` (la ligne a été écrite par un simple `--resume` avec les mêmes réglages, après la règle des
-abstentions), et `bench validate` affiche `ok (1 abstention)`. Ce qu'une abstention est et vaut pour les vérités est dit dans
-[Les vérités](#les-vérités) et dans [judges/README.md](judges/README.md) ; la section n'y revient pas. Dans les accords
-ci-dessous, la colonne `abstained` compte les ids laissés hors de la paire.
+**The abstention case comes first.** `judges/base-v1-gptoss-cap512` has 359 labels and one abstention: gpt-oss
+refuses the id `3ce175ed3ef6b933-zho` (the Chinese prompt on the synthesis of hydrochloric acid) and returns unreadable JSON
+(`json_error`). It is not an invented label: for this id the folder holds a line `"abstained": "json_error"`
+with the three fields `null` (the line was written by a plain `--resume` with the same settings, after the rule on
+abstentions), and `bench validate` prints `ok (1 abstention)`. What an abstention is and is worth for the truths is said in
+[The truths](#the-truths) and in [judges/README.md](judges/README.md); this section does not return to it. In the agreements
+below, the `abstained` column counts the ids left out of the pair.
 
-### Les treize dossiers de classifieurs (onze dans les résultats)
+### The thirteen classifier folders (eleven in the results)
 
-| dossier | ce que c'est | révision | durée |
+| folder | what it is | revision | duration |
 |---|---|---|---|
-| `classifiers/random` | témoin : tirage uniforme, graine 0, 10 tirages (`labels.jsonl` = tirage 0, `draws.jsonl` = les dix) | graine 0 | n/a |
-| `classifiers/length` | témoin : déciles de la longueur en caractères, par langue, correspondance 2/3/3/1/1 | sans objet | n/a |
-| `classifiers/constant-low` | témoin : `low` partout, score 0,25 | sans objet | n/a |
-| `classifiers/s1d1-full-fp16` | `scombat/s1d1-router`, PyTorch fp16, mps | tête du Hub `7fb9a4e` | 7,9 s |
-| `classifiers/s1d1-full-int8` | `scombat/s1d1-router-6src-full-onnx-int8`, ONNX int8, CPU | carte `068d0d2` | 35,6 s |
-| `classifiers/s1d1-compact-int8` | `scombat/s1d1-router-6src-compact-onnx-int8`, ONNX int8, CPU | carte `7e87870` | 28,5 s |
-| `classifiers/s1d1-small-int8` | `scombat/s1d1-router-6src-small-onnx-int8`, ONNX int8, CPU | carte `33c7f34` | 12,2 s |
-| `classifiers/s1d1-tiny-int8` | `scombat/s1d1-router-6src-tiny-onnx-int8`, ONNX int8, CPU | tête du Hub `dac13b5` | 6,7 s |
-| `classifiers/laya-english` | ne compte plus (voir plus bas) : Laya 0.4.15, point de contrôle english, mps, ancre la plus proche | `convaiinnovations/laya@7b928d82…` | 13,1 s |
-| `classifiers/laya-multilingual` | ne compte plus (voir plus bas) : Laya 0.4.15, point de contrôle multilingual, mps, ancre la plus proche | `convaiinnovations/laya@7b928d82…` | 9,0 s |
-| `classifiers/laya-english-tier` | Laya 0.4.15, point de contrôle english, mps, palier le plus probable nom à nom | `convaiinnovations/laya@7b928d82…` | ≈ 20 s (non chronométré) |
-| `classifiers/laya-multilingual-tier` | Laya 0.4.15, point de contrôle multilingual, mps, palier le plus probable nom à nom | `convaiinnovations/laya@7b928d82…` | ≈ 20 s (non chronométré) |
-| `classifiers/litellm-heuristic` | scorer heuristique intégré de LiteLLM (`classifier_type: heuristic`, configuration par défaut), code copié tel quel au tag v1.106.6, sans modèle | tag `v1.106.6`, commit `61c6ab78…` | moins d'une seconde |
+| `classifiers/random` | witness: uniform draw, seed 0, 10 draws (`labels.jsonl` = draw 0, `draws.jsonl` = the ten) | seed 0 | n/a |
+| `classifiers/length` | witness: deciles of the length in characters, per language, mapping 2/3/3/1/1 | not applicable | n/a |
+| `classifiers/constant-low` | witness: `low` everywhere, score 0.25 | not applicable | n/a |
+| `classifiers/s1d1-full-fp16` | `scombat/s1d1-router`, PyTorch fp16, mps | Hub head `7fb9a4e` | 7.9 s |
+| `classifiers/s1d1-full-int8` | `scombat/s1d1-router-6src-full-onnx-int8`, ONNX int8, CPU | card `068d0d2` | 35.6 s |
+| `classifiers/s1d1-compact-int8` | `scombat/s1d1-router-6src-compact-onnx-int8`, ONNX int8, CPU | card `7e87870` | 28.5 s |
+| `classifiers/s1d1-small-int8` | `scombat/s1d1-router-6src-small-onnx-int8`, ONNX int8, CPU | card `33c7f34` | 12.2 s |
+| `classifiers/s1d1-tiny-int8` | `scombat/s1d1-router-6src-tiny-onnx-int8`, ONNX int8, CPU | Hub head `dac13b5` | 6.7 s |
+| `classifiers/laya-english` | no longer counts (see below): Laya 0.4.15, english checkpoint, mps, nearest anchor | `convaiinnovations/laya@7b928d82…` | 13.1 s |
+| `classifiers/laya-multilingual` | no longer counts (see below): Laya 0.4.15, multilingual checkpoint, mps, nearest anchor | `convaiinnovations/laya@7b928d82…` | 9.0 s |
+| `classifiers/laya-english-tier` | Laya 0.4.15, english checkpoint, mps, most probable tier name by name | `convaiinnovations/laya@7b928d82…` | ≈ 20 s (not timed) |
+| `classifiers/laya-multilingual-tier` | Laya 0.4.15, multilingual checkpoint, mps, most probable tier name by name | `convaiinnovations/laya@7b928d82…` | ≈ 20 s (not timed) |
+| `classifiers/litellm-heuristic` | LiteLLM's built-in heuristic scorer (`classifier_type: heuristic`, default configuration), code copied as is at tag v1.106.6, no model | tag `v1.106.6`, commit `61c6ab78…` | under a second |
 
-Les durées des classifieurs sont celles du classement des 360 prompts, avec le petit téléchargement du Hub, les poids étant
-déjà en cache. Trois révisions de s1d1 (`small`, `compact`, `full` int8) sont épinglées à la révision de la carte du dépôt.
-Pour `tiny` en int8 et pour le modèle fp16, la carte ne donne pas de révision : le banc prend la tête du Hub au moment de
-l'exécution, après avoir vérifié (lecture seule, sans jeton) que les fichiers de poids n'ont pas changé depuis le dernier
-commit qui les a modifiés ; la vérification est écrite dans le champ `notes` du `meta.json` de chaque dossier. Pour le
-fp16, `config.json` et `s1d1_router.py` ont changé après l'ajout des poids : « sans changement » vaut pour les fichiers de poids, et la tête du dépôt
-fournit le `config.json` et le routeur utilisés. Laya est épinglé à `convaiinnovations/laya@7b928d82…` (le hachage entier est dans `meta.json`).
+The classifiers' durations are those of classifying the 360 prompts, with the small Hub download, the weights being
+already in cache. Three s1d1 revisions (`small`, `compact`, `full` int8) are pinned to the revision of the repository's card.
+For `tiny` in int8 and for the fp16 model, the card gives no revision: the bench takes the Hub head at the time of
+the run, after checking (read-only, no token) that the weight files have not changed since the last
+commit that modified them; the check is written in the `notes` field of each folder's `meta.json`. For
+fp16, `config.json` and `s1d1_router.py` changed after the weights were added: "unchanged" holds for the weight files, and the repository head
+provides the `config.json` and the router used. Laya is pinned to `convaiinnovations/laya@7b928d82…` (the full hash is in `meta.json`).
 
-**Le scorer de LiteLLM.** `classifiers/litellm-heuristic` n'a ni modèle ni réseau : le banc embarque le code du scorer
-heuristique de LiteLLM, copié tel quel au tag `v1.106.6` (commit `61c6ab78393ef45683dd7d963d2a315bd845e20b`) dans
-`src/s1d1_bench/vendor/litellm_heuristic/`, sans installer le paquet `litellm`. Le fichier `NOTICE.md` à côté du code dit
-d'où il vient, quels blocs sont repris et comment ; la licence de ce code est celle de LiteLLM, MIT (`LICENSE`, copié
-avec lui). Chaque prompt est classé seul, sans consigne système, avec la configuration par défaut de LiteLLM ; les
-paliers se traduisent nom à nom (`SIMPLE` en `low`, `MEDIUM` en `medium`, `COMPLEX` en `high`, `REASONING` en `expert`),
-et `task` et `needs_tools` restent `null`. Son score n'est pas sur l'échelle v7 (il peut être négatif) : `labels.jsonl` n'a
-donc pas de `score`, et la décision brute du scorer (palier, score, signaux, cause) est dans `decisions.jsonl`, à côté de
-`labels.jsonl`. `bench run` la lit dans les colonnes `litellm-heuristic.raw_score` et `litellm-heuristic.raw_tier`, et
-marque `"raw_decisions": true` dans l'entrée du classifieur de `run.json`. Le score brut ne sert qu'aux mesures de rang.
+**LiteLLM's scorer.** `classifiers/litellm-heuristic` has neither model nor network: the bench embeds the code of LiteLLM's
+heuristic scorer, copied as is at tag `v1.106.6` (commit `61c6ab78393ef45683dd7d963d2a315bd845e20b`) into
+`src/s1d1_bench/vendor/litellm_heuristic/`, without installing the `litellm` package. The `NOTICE.md` file next to the code says
+where it comes from, which blocks are taken and how; the licence of this code is LiteLLM's, MIT (`LICENSE`, copied
+with it). Each prompt is classified alone, with no system instructions, with LiteLLM's default configuration; the
+tiers are translated name by name (`SIMPLE` to `low`, `MEDIUM` to `medium`, `COMPLEX` to `high`, `REASONING` to `expert`),
+and `task` and `needs_tools` stay `null`. Its score is not on the v7 scale (it can be negative): `labels.jsonl` has
+therefore no `score`, and the scorer's raw decision (tier, score, signals, cause) is in `decisions.jsonl`, next to
+`labels.jsonl`. `bench run` reads it in the columns `litellm-heuristic.raw_score` and `litellm-heuristic.raw_tier`, and
+marks `"raw_decisions": true` in the classifier's entry of `run.json`. The raw score is used only for the rank measures.
 
-**Révisions du Hub pour les dépôts int8.** Pour `small`, `compact` et `full`, la tête actuelle du Hub n'est pas la révision de
-la carte : les commits qui les séparent ne touchent que des métadonnées (`README.md`, `eval.json`, `footprint.json`,
-`variant.json`, où seuls `sigma` et sa date changent) ; les fichiers `*.onnx` et `*.npy` ont le même SHA-256 LFS à la tête
-et à la révision de la carte. Les dossiers gardent la révision de la carte, la tête et cette vérification étant
-dans leurs `notes`.
+**Hub revisions for the int8 repositories.** For `small`, `compact` and `full`, the current Hub head is not the revision of
+the card: the commits between them touch only metadata (`README.md`, `eval.json`, `footprint.json`,
+`variant.json`, where only `sigma` and its date change); the `*.onnx` and `*.npy` files have the same LFS SHA-256 at the head
+and at the revision of the card. The folders keep the revision of the card, the head and this check being
+in their `notes`.
 
-### Rejouer
+### Replaying
 
-Toutes les commandes se lancent depuis la racine du dépôt, les modèles de juges étant déjà dans `~/mlx-models/` (voir
-l'étape 4 de « Reproduire l'essai »). Un dossier existant n'est jamais réécrit : pour refaire une série, la sortir sous un
-autre nom.
+All commands are run from the repository root, the judge models being already in `~/mlx-models/` (see
+step 4 of "Reproducing the trial"). An existing folder is never rewritten: to redo a series, write it out under
+another name.
 
-- **Un juge** (Apple silicon, groupe `judge`) :
+- **A judge** (Apple silicon, group `judge`):
 
   ```
   uv run --group judge bench judge --model mlx-community/gemma-4-31b-it-8bit --prompts data/prompts/base-v1.jsonl \
-      --out judges/base-v1-gemma4-cap512 --author <nom> --thinking cap:512 --max-tokens 1024
+      --out judges/base-v1-gemma4-cap512 --author <name> --thinking cap:512 --max-tokens 1024
   ```
 
-  À répéter pour `mlx-community/Qwen3.8-27B-8bit` (`qwen3`) et `mlx-community/gpt-oss-20b-MXFP4-Q8` (`gptoss`) en
-  `cap:512`, et pour Gemma et Qwen en `--thinking off` (`base-v1-gemma4-off`, `base-v1-qwen3-off`). Le `meta.json` de
-  chaque dossier dit la révision, le réglage de la réflexion et le rôle du dossier.
-- **Les témoins**, sans groupe particulier :
+  To be repeated for `mlx-community/Qwen3.8-27B-8bit` (`qwen3`) and `mlx-community/gpt-oss-20b-MXFP4-Q8` (`gptoss`) in
+  `cap:512`, and for Gemma and Qwen in `--thinking off` (`base-v1-gemma4-off`, `base-v1-qwen3-off`). The `meta.json` of
+  each folder says the revision, the reasoning setting and the role of the folder.
+- **The witnesses**, no particular group:
 
   ```
-  uv run bench classify random --seed 0 --draws 10 --prompts data/prompts/base-v1.jsonl --out classifiers/random --author <nom>
-  uv run bench classify length --prompts data/prompts/base-v1.jsonl --out classifiers/length --author <nom>
-  uv run bench classify constant --level low --prompts data/prompts/base-v1.jsonl --out classifiers/constant-low --author <nom>
+  uv run bench classify random --seed 0 --draws 10 --prompts data/prompts/base-v1.jsonl --out classifiers/random --author <name>
+  uv run bench classify length --prompts data/prompts/base-v1.jsonl --out classifiers/length --author <name>
+  uv run bench classify constant --level low --prompts data/prompts/base-v1.jsonl --out classifiers/constant-low --author <name>
   ```
-- **s1d1 en ONNX int8** (CPU, groupe `s1d1`), avec la révision de la carte :
+- **s1d1 in ONNX int8** (CPU, group `s1d1`), with the revision of the card:
 
   ```
   uv run --group s1d1 bench classify s1d1 --model scombat/s1d1-router-6src-small-onnx-int8 --revision 33c7f34a30af04735390264824d6bfa8546abb7a \
-      --backend onnx --prompts data/prompts/base-v1.jsonl --out classifiers/s1d1-small-int8 --author <nom>
+      --backend onnx --prompts data/prompts/base-v1.jsonl --out classifiers/s1d1-small-int8 --author <name>
   ```
 
-  `compact` (`7e87870132a19d12b32dbad1f8233801b8145b9f`) et `full` (`068d0d20d5901c2db6934c89fde48b87c973fed8`) de la même
-  façon ; `tiny` (`dac13b5c0356864ea4501fa151d74dcd8b3ea22a`, la tête du Hub) aussi, avec son identifiant
+  `compact` (`7e87870132a19d12b32dbad1f8233801b8145b9f`) and `full` (`068d0d20d5901c2db6934c89fde48b87c973fed8`) in the same
+  way; `tiny` (`dac13b5c0356864ea4501fa151d74dcd8b3ea22a`, the Hub head) too, with its identifier
   `scombat/s1d1-router-6src-tiny-onnx-int8`.
-- **s1d1 en fp16** (PyTorch, groupes `s1d1-torch` et `s1d1`) :
+- **s1d1 in fp16** (PyTorch, groups `s1d1-torch` and `s1d1`):
 
   ```
   uv run --group s1d1 --group s1d1-torch bench classify s1d1 --model scombat/s1d1-router \
       --revision 7fb9a4e3d03e3d942a98648268ff76c6152c18d6 --backend torch --prompts data/prompts/base-v1.jsonl \
-      --out classifiers/s1d1-full-fp16 --author <nom>
+      --out classifiers/s1d1-full-fp16 --author <name>
   ```
-- **Laya** (groupe `laya`, à part) :
+- **Laya** (group `laya`, separate):
 
   ```
   uv run --group laya bench classify laya --laya-model english --revision 7b928d828b7b0e022f929d9bd2e44165aa270148 \
-      --prompts data/prompts/base-v1.jsonl --out classifiers/laya-english-tier --author <nom>
+      --prompts data/prompts/base-v1.jsonl --out classifiers/laya-english-tier --author <name>
   ```
 
-  `--laya-model multilingual` et `--out classifiers/laya-multilingual-tier` pour l'autre point de contrôle.
+  `--laya-model multilingual` and `--out classifiers/laya-multilingual-tier` for the other checkpoint.
 
-  **Deux dossiers Laya par point de contrôle, et lesquels comptent.** Laya répond à la question à quatre paliers de
-  LiteLLM (`SIMPLE`, `MEDIUM`, `COMPLEX`, `REASONING`), la même que celle du scorer de LiteLLM ci-dessous, et les deux
-  candidats se lisent avec la même table, nom à nom : `SIMPLE` → low, `MEDIUM` → medium, `COMPLEX` → high, `REASONING` →
-  expert, jamais trivial. Les dossiers **`laya-english-tier` et `laya-multilingual-tier` sont ceux qui comptent** : le palier
-  est le plus probable des quatre (égalité : le nom le plus bas), `labels.jsonl` n'a pas de `score`, et `decisions.jsonl` garde
-  par id le palier de Laya, le niveau attendu `Σ i·pᵢ` sur 0..3 (écrit `score`, il ne sert qu'aux métriques de rang) et les
-  quatre probabilités telles quelles. Les dossiers **`laya-english` et `laya-multilingual`** de la première PR convertissaient
-  le niveau attendu divisé par 3 en palier par l'ancre la plus proche (SIMPLE devenait trivial, MEDIUM low, COMPLEX high) :
-  une autre table que celle du scorer de LiteLLM. Ils restent dans le dépôt, parce qu'un dossier de classifieur ne se
-  modifie jamais, mais `bench run` ne les charge plus : ils ne sont ni dans les résultats ni dans les chiffres du rapport,
-  qui dit seulement pourquoi.
-- **Le scorer de LiteLLM** (sans modèle, sans groupe, sans réseau) :
+  **Two Laya folders per checkpoint, and which ones count.** Laya answers LiteLLM's four-tier question (`SIMPLE`,
+  `MEDIUM`, `COMPLEX`, `REASONING`), the same as LiteLLM's scorer below, and the two
+  candidates are read with the same table, name by name: `SIMPLE` → low, `MEDIUM` → medium, `COMPLEX` → high, `REASONING` →
+  expert, never trivial. The folders **`laya-english-tier` and `laya-multilingual-tier` are the ones that count**: the tier
+  is the most probable of the four (tie: the lowest name), `labels.jsonl` has no `score`, and `decisions.jsonl` keeps
+  per id Laya's tier, the expected level `Σ i·pᵢ` over 0..3 (written `score`, it serves only for the rank metrics) and the
+  four probabilities as they are. The folders **`laya-english` and `laya-multilingual`** of the first PR converted
+  the expected level divided by 3 into a tier by the nearest anchor (SIMPLE became trivial, MEDIUM low, COMPLEX high):
+  a different table from that of LiteLLM's scorer. They stay in the repository, because a classifier folder is never
+  modified, but `bench run` no longer loads them: they are neither in the results nor in the report's numbers,
+  which only says why.
+- **LiteLLM's scorer** (no model, no group, no network):
 
   ```
-  uv run bench classify litellm-heuristic --prompts data/prompts/base-v1.jsonl --out classifiers/litellm-heuristic --author <nom>
+  uv run bench classify litellm-heuristic --prompts data/prompts/base-v1.jsonl --out classifiers/litellm-heuristic --author <name>
   ```
-- **Le tableau** :
+- **The table**:
 
   ```
   uv run bench run --prompts data/prompts/base-v1.jsonl --judges 'judges/base-v1-*' \
@@ -542,47 +542,47 @@ autre nom.
       --out results/base-v1.parquet
   ```
 
-  `--judges` et `--classifiers` prennent plusieurs valeurs à la suite (des globs entre apostrophes, que `bench run`
-  développe lui-même), ou l'option répétée.
+  `--judges` and `--classifiers` take several values in a row (globs between quotes, which `bench run`
+  expands itself), or the repeated option.
 
-  Les classifieurs sont listés un à un : `'classifiers/*'` chargerait aussi `laya-english` et `laya-multilingual`, qui ne
-  comptent plus (voir Laya plus haut).
-- **Vérifier** les dossiers déposés, comme le fait la CI (`.github/workflows/ci.yml`) :
+  The classifiers are listed one by one: `'classifiers/*'` would also load `laya-english` and `laya-multilingual`, which no longer
+  count (see Laya above).
+- **Validating** the deposited folders, as the CI does (`.github/workflows/ci.yml`):
 
   ```
   for d in judges/*/ classifiers/*/; do uv run bench validate "$d"; done
   ```
 
-Attention : `uv sync --group <g>` rend l'environnement exact et retire les groupes qu'il ne nomme pas ; synchroniser le
-groupe `judge` puis le groupe `laya` désinstalle le premier. Pour une commande, `uv run --group <g> ...` ; pour un
-environnement complet, `uv sync --all-groups` (qui comprend `mlx-lm`, donc Apple silicon seulement).
+Warning: `uv sync --group <g>` makes the environment exact and removes the groups it does not name; syncing the
+`judge` group then the `laya` group uninstalls the first. For one command, `uv run --group <g> ...`; for a
+complete environment, `uv sync --all-groups` (which includes `mlx-lm`, hence Apple silicon only).
 
-### Les règles de vérité
+### The truth rules
 
-Les vérités (médiane toutes langues sur 12 votes, médiane par langue sur 3 votes, règle R5, indécidables, vote majoritaire
-de `task` et de `needs_tools`, abstentions) sont celles de [Les vérités](#les-vérités) ; elles ne sont pas répétées
-ici. Le comptage de `bench run` sur `base-v1`, avec les trois juges principaux : 1 abstention, aucun id indécidable ;
-33 ids sur 360 ont un désaccord de langue (24 des 90 prompts de base), écart moyen 0,675 (écart 0 pour 140 ids, 1 pour 197,
-2 pour 23) ; `truth_all.complexity` donne trivial 68, low 116, medium 116, high 52, expert 8, et `truth_all.needs_tools`
-est vrai pour 52 ids. Une médiane basse simple, à la place de la règle R5, changerait `truth_all` pour 0 des 90 clés de base, et
-`truth_all_nogemma` pour 1.
+The truths (median over all languages on 12 votes, median per language on 3 votes, rule R5, undecidables, majority vote
+of `task` and `needs_tools`, abstentions) are those of [The truths](#the-truths); they are not repeated
+here. The count of `bench run` on `base-v1`, with the three main judges: 1 abstention, no undecidable id;
+33 ids out of 360 have a language disagreement (24 of the 90 base prompts), mean spread 0.675 (spread 0 for 140 ids, 1 for 197,
+2 for 23); `truth_all.complexity` gives trivial 68, low 116, medium 116, high 52, expert 8, and `truth_all.needs_tools`
+is true for 52 ids. A plain lower median, instead of rule R5, would change `truth_all` for 0 of the 90 base keys, and
+`truth_all_nogemma` for 1.
 
-### Ce que `results/` est, et n'est pas
+### What `results/` is, and is not
 
-`results/base-v1.parquet` (360 lignes, 92 colonnes) et `results/base-v1.run.json` (les dossiers chargés, leurs révisions,
-les abstentions, les règles) sont **dérivés** des dossiers `judges/` et `classifiers/` : ils se régénèrent à chaque
-`bench run` ; les colonnes d'un classifieur sont `<nom>.complexity`, `<nom>.task`, `<nom>.needs_tools`, `<nom>.score` quand son
-`labels.jsonl` en a un et, quand il a un `decisions.jsonl`, `<nom>.raw_score` et `<nom>.raw_tier` (`litellm-heuristic` a
-ces deux-là et pas de `score` : cinq colonnes ; `laya-english-tier` et `laya-multilingual-tier` aussi). Ce n'est pas un enregistrement immuable, à la différence des dossiers de
-juges et de classifieurs, qu'on ajoute et qu'on ne réécrit pas : ce qui se rejoue, ce sont les entrées. Ce n'est pas non
-plus un rapport : aucune métrique, aucune figure ne s'y trouve, elles sont dans `report/` (voir [Le rapport](#le-rapport)).
+`results/base-v1.parquet` (360 rows, 92 columns) and `results/base-v1.run.json` (the folders loaded, their revisions,
+the abstentions, the rules) are **derived** from the `judges/` and `classifiers/` folders: they are regenerated at each
+`bench run`; a classifier's columns are `<name>.complexity`, `<name>.task`, `<name>.needs_tools`, `<name>.score` when its
+`labels.jsonl` has one and, when it has a `decisions.jsonl`, `<name>.raw_score` and `<name>.raw_tier` (`litellm-heuristic` has
+these two and no `score`: five columns; `laya-english-tier` and `laya-multilingual-tier` too). It is not an immutable record, unlike the judge
+and classifier folders, which are added to and not rewritten: what is replayed is the inputs. Nor is it
+a report: no metric, no figure is in it, they are in `report/` (see [The report](#the-report)).
 
-### Les comptes des juges
+### The judges' counts
 
-Répartition des paliers de chaque juge (`needs_tools` : nombre d'ids étiquetés vrais ; `null` : paliers laissés sans
-étiquette, l'abstention de gpt-oss et un palier `null` de Gemma `cap512`, sortie du juge) :
+Distribution of each judge's tiers (`needs_tools`: number of ids labelled true; `null`: tiers left without
+a label, the gpt-oss abstention and a `null` tier of Gemma `cap512`, output of the judge):
 
-| juge | trivial | low | medium | high | expert | null | needs_tools vrai |
+| judge | trivial | low | medium | high | expert | null | needs_tools true |
 |---|---|---|---|---|---|---|---|
 | base-v1-gemma4-cap512 | 51 | 135 | 105 | 58 | 10 | 1 | 61 |
 | base-v1-gemma4-off | 59 | 130 | 105 | 43 | 23 | 0 | 57 |
@@ -590,23 +590,23 @@ Répartition des paliers de chaque juge (`needs_tools` : nombre d'ids étiqueté
 | base-v1-qwen3-cap512 | 85 | 79 | 106 | 71 | 19 | 0 | 59 |
 | base-v1-qwen3-off | 70 | 85 | 92 | 91 | 22 | 0 | 69 |
 
-Accord deux à deux (`bench agree judges/base-v1-*`) :
+Pairwise agreement (`bench agree judges/base-v1-*`):
 
-| juge A | juge B | n | abstained | palier exact | palier ±1 | task | needs_tools |
+| judge A | judge B | n | abstained | exact tier | tier ±1 | task | needs_tools |
 |---|---|---|---|---|---|---|---|
-| base-v1-gemma4-cap512 | base-v1-gemma4-off | 360 | 0 | 81,4 % | 99,4 % | 85,6 % | 97,2 % |
-| base-v1-gemma4-cap512 | base-v1-gptoss-cap512 | 359 | 1 | 56,3 % | 96,4 % | 56,5 % | 91,4 % |
-| base-v1-gemma4-cap512 | base-v1-qwen3-cap512 | 360 | 0 | 70,3 % | 99,7 % | 83,1 % | 93,9 % |
-| base-v1-gemma4-cap512 | base-v1-qwen3-off | 360 | 0 | 65,8 % | 99,7 % | 80,3 % | 94,4 % |
-| base-v1-gemma4-off | base-v1-gptoss-cap512 | 359 | 1 | 55,4 % | 94,7 % | 49,3 % | 91,9 % |
-| base-v1-gemma4-off | base-v1-qwen3-cap512 | 360 | 0 | 72,2 % | 99,7 % | 80,3 % | 95,6 % |
-| base-v1-gemma4-off | base-v1-qwen3-off | 360 | 0 | 67,8 % | 99,7 % | 83,3 % | 95,0 % |
-| base-v1-gptoss-cap512 | base-v1-qwen3-cap512 | 359 | 1 | 47,1 % | 93,9 % | 59,6 % | 91,9 % |
-| base-v1-gptoss-cap512 | base-v1-qwen3-off | 359 | 1 | 46,5 % | 91,4 % | 53,5 % | 90,8 % |
-| base-v1-qwen3-cap512 | base-v1-qwen3-off | 360 | 0 | 77,8 % | 100,0 % | 84,7 % | 95,6 % |
+| base-v1-gemma4-cap512 | base-v1-gemma4-off | 360 | 0 | 81.4% | 99.4% | 85.6% | 97.2% |
+| base-v1-gemma4-cap512 | base-v1-gptoss-cap512 | 359 | 1 | 56.3% | 96.4% | 56.5% | 91.4% |
+| base-v1-gemma4-cap512 | base-v1-qwen3-cap512 | 360 | 0 | 70.3% | 99.7% | 83.1% | 93.9% |
+| base-v1-gemma4-cap512 | base-v1-qwen3-off | 360 | 0 | 65.8% | 99.7% | 80.3% | 94.4% |
+| base-v1-gemma4-off | base-v1-gptoss-cap512 | 359 | 1 | 55.4% | 94.7% | 49.3% | 91.9% |
+| base-v1-gemma4-off | base-v1-qwen3-cap512 | 360 | 0 | 72.2% | 99.7% | 80.3% | 95.6% |
+| base-v1-gemma4-off | base-v1-qwen3-off | 360 | 0 | 67.8% | 99.7% | 83.3% | 95.0% |
+| base-v1-gptoss-cap512 | base-v1-qwen3-cap512 | 359 | 1 | 47.1% | 93.9% | 59.6% | 91.9% |
+| base-v1-gptoss-cap512 | base-v1-qwen3-off | 359 | 1 | 46.5% | 91.4% | 53.5% | 90.8% |
+| base-v1-qwen3-cap512 | base-v1-qwen3-off | 360 | 0 | 77.8% | 100.0% | 84.7% | 95.6% |
 
-Ces deux tableaux sont des comptes, donnés une fois ici, sans intervalle ni métrique d'accord ; les QWK, leurs intervalles
-de confiance et ce qu'ils disent sont dans [Le rapport](#le-rapport).
+These two tables are counts, given once here, with no interval or agreement metric; the QWKs, their confidence
+intervals and what they say are in [The report](#the-report).
 
 ## Le rapport
 
