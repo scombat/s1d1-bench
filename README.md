@@ -344,6 +344,31 @@ quels (leur SHA-256 est celui que `bench validate` demande aux dossiers `check-*
 un fichier de prompts qu'un dossier de juge épingle par son SHA-256 si le contenu change. `meta.parquet` porte `translator`
 (`modèle@révision`, vide en anglais) et `corrected`.
 
+## Apporter ses prompts
+
+`base-v1` est le premier jeu d'une série : rien n'oblige les suivants à reprendre ses prompts, ses langues ou ses
+sources. Pour proposer un jeu `<jeu>` :
+
+1. **Un vivier.** `bench pool` (`--exclusions` pour la liste des clés à écarter, `--candidates` et `--per-source` pour les
+   candidats) construit le vivier ; `bench export --select <clés> --name <jeu>` en fait le fichier de prompts
+   `data/prompts/<jeu>.*`, avec `--langs` et `--translations` pour les langues autres que l'anglais.
+2. **Un pré-tri par un juge qui n'est pas du banc.** Un modèle autre que les trois juges principaux étiquette les
+   candidats (`bench judge`), dans un dossier de juge ordinaire, comme `judges/presort-qwen3-off` pour `base-v1`.
+3. **Un tirage publié.** `bench draw --presort … --meta … --out … --seed <graine> --veto <fichier>` ; publiez les clés
+   tirées, la graine, le veto et ses raisons : le tirage se rejoue (voir [Le tirage](#le-tirage-des-prompts-de-base)).
+4. **Une traduction relue.** `bench translate` traduit chaque langue, `bench check` signale ce qu'il faut relire, et un
+   locuteur de la langue relit (voir [La traduction](#la-traduction)).
+5. **Les juges du banc.** `bench judge` fait juger le jeu par les trois juges principaux, puis `bench validate`,
+   `bench agree`, `bench classify`, `bench run` et `bench report` produisent les dossiers et le rapport du jeu.
+
+Une PR ajoute : un dossier de prompts, ses dossiers de juges et de classifieurs, et son rapport (`report/<jeu>/`, avec
+`results/<jeu>.parquet` qui le nourrit). Elle ne touche jamais un fichier existant : ni les juges, ni les classifieurs,
+ni les résultats, ni les prompts d'un jeu déjà publié. Un jeu qui voudrait corriger `base-v1` est un autre jeu.
+
+À lire avant de commencer : les licences des sources (la colonne `licence` de `pool.parquet` et de `<jeu>.meta.parquet`,
+section [Licences](#licences)) et la liste d'exclusion (`data/exclusions/`, qui dit ce que s1d1 a déjà vu : voir
+[Reproduire l'essai](#reproduire-lessai), étape 1).
+
 ## Les vérités
 
 `bench run` réunit les dossiers de juges et de classifieurs d'un jeu en une table, une ligne par id ; les vérités ne
