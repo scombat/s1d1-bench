@@ -1,5 +1,14 @@
 # s1d1-bench
 
+> **In English, in short.** An open, replayable bench of how well a prompt classifier agrees with local LLM judges on
+> the v7 rubric (complexity tier, score, task, `needs_tools`). On `base-v1`, 90 base prompts in four languages (360
+> ids), `s1d1-full-int8` agrees with the median of three judges at QWK 0,807 [0,734 ; 0,852]; the inter-judge ceiling is
+> 0,774, the prompt-length witness 0,543, Laya 0,405 (english) and 0,119 (multilingual), LiteLLM's heuristic 0,089. The
+> judges are the instrument, not competitors; no "better than" claim is made unless the paired difference passes the 2 σ
+> rule. Everything below is in French: the [results](#résultats-base-v1-2026-10-30), the three commands, how to replay,
+> and the [full report](report/base-v1/index.md). Licences: code Apache-2.0 (one MIT copy), data CC-BY-4.0 or its
+> source's.
+
 Banc ouvert pour mesurer à quel point un classifieur de prompts s'accorde avec des juges LLM locaux, sur la grille de
 notation v7 (palier de complexité, score, tâche, `needs_tools`).
 
