@@ -170,8 +170,30 @@ def test_parser_declares_every_option_of_the_brief(prompts_file, tmp_path):
     assert (args.seed, args.draws, args.level, args.backend, args.notes) == (0, 10, "low", "auto", "")
     assert args.model is None and args.revision is None and args.laya_model is None
     full = build_parser().parse_args(
-        ["classify", "laya", "--prompts", "p", "--out", "o", "--author", "a", "--model", "m", "--revision", "r",
-         "--backend", "onnx", "--laya-model", "multilingual", "--level", "high", "--seed", "3", "--draws", "2"]
+        [
+            "classify",
+            "laya",
+            "--prompts",
+            "p",
+            "--out",
+            "o",
+            "--author",
+            "a",
+            "--model",
+            "m",
+            "--revision",
+            "r",
+            "--backend",
+            "onnx",
+            "--laya-model",
+            "multilingual",
+            "--level",
+            "high",
+            "--seed",
+            "3",
+            "--draws",
+            "2",
+        ]
     )
     assert (full.laya_model, full.level, full.seed, full.draws) == ("multilingual", "high", 3, 2)
     with pytest.raises(SystemExit):

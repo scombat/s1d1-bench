@@ -174,7 +174,12 @@ def _random(args, prompts: list[dict], digest: str) -> int:
     )
     every_draw = [{"draw": d, **row} for d, draw in enumerate(draws) for row in draw]
     return write_run(
-        args, digest, draws[0] if draws else [], model="witness:random", revision=f"seed {args.seed}", notes=notes,
+        args,
+        digest,
+        draws[0] if draws else [],
+        model="witness:random",
+        revision=f"seed {args.seed}",
+        notes=notes,
         extra={"draws.jsonl": every_draw},
     )
 
@@ -194,8 +199,12 @@ def _constant(args, prompts: list[dict], digest: str) -> int:
         "task and needs_tools are null."
     )
     return write_run(
-        args, digest, constant_labels([p["id"] for p in prompts], args.level),
-        model=f"witness:constant-{args.level}", revision="n/a", notes=notes,
+        args,
+        digest,
+        constant_labels([p["id"] for p in prompts], args.level),
+        model=f"witness:constant-{args.level}",
+        revision="n/a",
+        notes=notes,
     )
 
 
@@ -221,7 +230,12 @@ def _s1d1(args, prompts: list[dict], digest: str) -> int:
         "router's MAX_LENGTH; tier = complexity_tier of decode() (capped at high), score = complexity_score."
     )
     return write_run(
-        args, digest, rows, model=info["model"], revision=info["revision"], notes=notes,
+        args,
+        digest,
+        rows,
+        model=info["model"],
+        revision=info["revision"],
+        notes=notes,
         quantization=info["quantization"],
     )
 
@@ -266,7 +280,12 @@ def _laya(args, prompts: list[dict], digest: str) -> int:
         f"{info['truncated']} prompts truncated at the token budget of the checkpoint."
     )
     return write_run(
-        args, digest, rows, model=info["model"], revision=info["revision"], notes=notes,
+        args,
+        digest,
+        rows,
+        model=info["model"],
+        revision=info["revision"],
+        notes=notes,
         extra={"decisions.jsonl": raw},
     )
 
@@ -275,12 +294,9 @@ def _litellm_heuristic(args, prompts: list[dict], digest: str) -> int:
     from s1d1_bench.vendor.litellm_heuristic import COMMIT, TAG, classify
 
     decisions = [(p["id"], classify(p["prompt"])) for p in prompts]
-    rows = [
-        {"id": i, "complexity": TIER_TO_LEVEL[d.tier], "task": None, "needs_tools": None} for i, d in decisions
-    ]
+    rows = [{"id": i, "complexity": TIER_TO_LEVEL[d.tier], "task": None, "needs_tools": None} for i, d in decisions]
     raw = [
-        {"id": i, "tier": d.tier, "score": d.score, "signals": list(d.signals), "cause": d.cause}
-        for i, d in decisions
+        {"id": i, "tier": d.tier, "score": d.score, "signals": list(d.signals), "cause": d.cause} for i, d in decisions
     ]
     notes = (
         "Replay: uv run bench classify litellm-heuristic --prompts ... --out ... --author ... (no model, no network). "
@@ -291,7 +307,12 @@ def _litellm_heuristic(args, prompts: list[dict], digest: str) -> int:
         f"needs_tools are null. Code copied verbatim ({TAG}), see src/s1d1_bench/vendor/litellm_heuristic/NOTICE.md."
     )
     return write_run(
-        args, digest, rows, model="litellm:complexity_router:heuristic", revision=f"{TAG} {COMMIT}", notes=notes,
+        args,
+        digest,
+        rows,
+        model="litellm:complexity_router:heuristic",
+        revision=f"{TAG} {COMMIT}",
+        notes=notes,
         extra={"decisions.jsonl": raw},
     )
 

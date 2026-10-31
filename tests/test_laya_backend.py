@@ -345,10 +345,12 @@ def test_english_checkpoint_scores_two_prompts_from_the_hub():
     pytest.importorskip("laya")
     classify, meta = laya_backend.make_laya_classifier("english", None)
     assert meta["laya_version"] and len(meta["commit"]) == 40
-    out = classify([
-        "What is the capital of Australia?",
-        "Prove that there are infinitely many primes and discuss the tradeoffs of three proof strategies.",
-    ])
+    out = classify(
+        [
+            "What is the capital of Australia?",
+            "Prove that there are infinitely many primes and discuss the tradeoffs of three proof strategies.",
+        ]
+    )
     assert len(out) == 2
     for row in out:
         assert list(row["probabilities"]) == list(LABELS)

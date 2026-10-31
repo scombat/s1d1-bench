@@ -485,8 +485,20 @@ def test_bench_judge_writes_a_meta_that_validate_accepts(tmp_path, monkeypatch):
     prompts, digest = prompts_dir_with(tmp_path, PROMPTS_3)
     generate, seen = fake_backend(monkeypatch, [GOOD] * 3)
     out = tmp_path / "judges" / "qwen-test"
-    code = judge_cmd("--model", "org/model-8bit", "--prompts", prompts / "set.jsonl", "--out", out,
-                     "--author", "steve", "--thinking", "cap:512", "--max-tokens", 900)
+    code = judge_cmd(
+        "--model",
+        "org/model-8bit",
+        "--prompts",
+        prompts / "set.jsonl",
+        "--out",
+        out,
+        "--author",
+        "steve",
+        "--thinking",
+        "cap:512",
+        "--max-tokens",
+        900,
+    )
     assert code == 0
     assert seen == {"model_id": "org/model-8bit", "thinking": "cap:512", "max_tokens": 900}
     meta = json.loads((out / "meta.json").read_text())
@@ -515,8 +527,22 @@ def test_bench_judge_name_and_notes(tmp_path, monkeypatch):
     prompts, _ = prompts_dir_with(tmp_path, PROMPTS_3)
     fake_backend(monkeypatch, [GOOD] * 3)
     out = tmp_path / "j"
-    judge_cmd("--model", "org/m", "--prompts", prompts / "set.jsonl", "--out", out, "--author", "a",
-              "--thinking", "off", "--judge", "my-judge", "--notes", "first run")
+    judge_cmd(
+        "--model",
+        "org/m",
+        "--prompts",
+        prompts / "set.jsonl",
+        "--out",
+        out,
+        "--author",
+        "a",
+        "--thinking",
+        "off",
+        "--judge",
+        "my-judge",
+        "--notes",
+        "first run",
+    )
     meta = json.loads((out / "meta.json").read_text())
     assert meta["judge"] == "my-judge" and meta["thinking"] == "off"
     assert meta["notes"] == "fake: no reasoning. first run"  # what the backend does first, then the user's notes
@@ -534,8 +560,9 @@ def test_bench_judge_writes_meta_before_generating(tmp_path, monkeypatch):
     from s1d1_bench import mlx_backend
 
     monkeypatch.setattr(mlx_backend, "make_mlx_generate", lambda m, t, max_tokens=1024: (answer, dict(BACKEND_META)))
-    judge_cmd("--model", "org/m", "--prompts", prompts / "set.jsonl", "--out", out, "--author", "a",
-              "--thinking", "off")
+    judge_cmd(
+        "--model", "org/m", "--prompts", prompts / "set.jsonl", "--out", out, "--author", "a", "--thinking", "off"
+    )
     assert seen_meta == [True]
 
 
@@ -554,8 +581,9 @@ def test_bench_judge_refuses_bad_prompts_before_creating_anything(tmp_path, monk
     prompts, _ = prompts_dir_with(tmp_path, rows)
     generate, _ = fake_backend(monkeypatch, [GOOD] * 3)
     out = tmp_path / "j"
-    code = judge_cmd("--model", "org/m", "--prompts", prompts / "set.jsonl", "--out", out, "--author", "a",
-                     "--thinking", "off")
+    code = judge_cmd(
+        "--model", "org/m", "--prompts", prompts / "set.jsonl", "--out", out, "--author", "a", "--thinking", "off"
+    )
     err = capsys.readouterr().err
     assert code == 1 and generate.calls == 0
     assert err.startswith("bench judge:") and fragment in err and "Traceback" not in err
@@ -565,8 +593,18 @@ def test_bench_judge_refuses_bad_prompts_before_creating_anything(tmp_path, monk
 def test_bench_judge_prints_counts_and_median_tokens_per_second(tmp_path, monkeypatch, capsys):
     prompts, _ = prompts_dir_with(tmp_path, PROMPTS_3)
     fake_backend(monkeypatch, [GOOD, BAD, BAD, result(GOOD, completion_tokens=30, wall_s=1.0)])
-    judge_cmd("--model", "org/m", "--prompts", prompts / "set.jsonl", "--out", tmp_path / "j", "--author", "a",
-              "--thinking", "off")
+    judge_cmd(
+        "--model",
+        "org/m",
+        "--prompts",
+        prompts / "set.jsonl",
+        "--out",
+        tmp_path / "j",
+        "--author",
+        "a",
+        "--thinking",
+        "off",
+    )
     out = capsys.readouterr().out
     assert "ok 2" in out and "json_error 1" in out
     assert "median 10.0 tokens/s" in out  # per generation: 10, 10, 10, 30
@@ -578,8 +616,9 @@ def test_bench_judge_refuses_an_existing_folder_without_resume(tmp_path, monkeyp
     out = tmp_path / "j"
     out.mkdir()
     (out / "meta.json").write_text("{}")
-    code = judge_cmd("--model", "org/m", "--prompts", prompts / "set.jsonl", "--out", out, "--author", "a",
-                     "--thinking", "off")
+    code = judge_cmd(
+        "--model", "org/m", "--prompts", prompts / "set.jsonl", "--out", out, "--author", "a", "--thinking", "off"
+    )
     assert code != 0 and generate.calls == 0
     assert (out / "meta.json").read_text() == "{}"
     assert "--resume" in capsys.readouterr().err
@@ -628,13 +667,15 @@ def test_bench_judge_resume_refuses_another_prompts_file(tmp_path, monkeypatch, 
     prompts, _ = prompts_dir_with(tmp_path, PROMPTS_3)
     out = tmp_path / "j"
     fake_backend(monkeypatch, [GOOD, BAD, BAD, BAD, BAD])
-    judge_cmd("--model", "org/m", "--prompts", prompts / "set.jsonl", "--out", out, "--author", "a",
-              "--thinking", "off")
+    judge_cmd(
+        "--model", "org/m", "--prompts", prompts / "set.jsonl", "--out", out, "--author", "a", "--thinking", "off"
+    )
     other = tmp_path / "other.jsonl"
     other.write_text((prompts / "set.jsonl").read_text() + "\n")  # same prompts, other bytes
     generate, _ = fake_backend(monkeypatch, [GOOD, GOOD])
-    code = judge_cmd("--model", "org/m", "--prompts", other, "--out", out, "--author", "a", "--thinking", "off",
-                     "--resume")
+    code = judge_cmd(
+        "--model", "org/m", "--prompts", other, "--out", out, "--author", "a", "--thinking", "off", "--resume"
+    )
     assert code != 0 and generate.calls == 0
     assert "prompts_sha256" in capsys.readouterr().err
 
@@ -643,8 +684,20 @@ def test_bench_judge_unknown_revision_is_not_replayable_and_says_why(tmp_path, m
     prompts, _ = prompts_dir_with(tmp_path, PROMPTS_3)
     fake_backend(monkeypatch, [GOOD] * 3, meta={**BACKEND_META, "revision": "unknown"})
     out = tmp_path / "j"
-    judge_cmd("--model", "org/m", "--prompts", prompts / "set.jsonl", "--out", out, "--author", "a",
-              "--thinking", "off", "--notes", "mine")
+    judge_cmd(
+        "--model",
+        "org/m",
+        "--prompts",
+        prompts / "set.jsonl",
+        "--out",
+        out,
+        "--author",
+        "a",
+        "--thinking",
+        "off",
+        "--notes",
+        "mine",
+    )
     meta = json.loads((out / "meta.json").read_text())
     assert meta["replayable"] is False and meta["revision"] == "unknown"
     assert meta["notes"].startswith("fake: no reasoning.") and "revision unknown" in meta["notes"]
@@ -659,8 +712,20 @@ def test_bench_judge_refuses_a_local_path_in_meta(tmp_path, monkeypatch, capsys,
     generate, _ = fake_backend(monkeypatch, [GOOD] * 3)
     out = tmp_path / "j"
     notes = notes.format(home=Path.home(), tmp=tmp_path / "x")
-    code = judge_cmd("--model", "org/m", "--prompts", prompts / "set.jsonl", "--out", out, "--author", "a",
-                     "--thinking", "off", "--notes", notes)
+    code = judge_cmd(
+        "--model",
+        "org/m",
+        "--prompts",
+        prompts / "set.jsonl",
+        "--out",
+        out,
+        "--author",
+        "a",
+        "--thinking",
+        "off",
+        "--notes",
+        notes,
+    )
     assert code == 1 and generate.calls == 0 and not out.exists()
     assert "local path" in capsys.readouterr().err
 
@@ -674,8 +739,18 @@ def test_bench_judge_backend_errors_are_one_line_not_a_traceback(tmp_path, monke
 
     monkeypatch.setattr(mlx_backend, "make_mlx_generate", make)
     prompts, _ = prompts_dir_with(tmp_path, PROMPTS_3)
-    code = judge_cmd("--model", "org/m", "--prompts", prompts / "set.jsonl", "--out", tmp_path / "j",
-                     "--author", "a", "--thinking", "off")
+    code = judge_cmd(
+        "--model",
+        "org/m",
+        "--prompts",
+        prompts / "set.jsonl",
+        "--out",
+        tmp_path / "j",
+        "--author",
+        "a",
+        "--thinking",
+        "off",
+    )
     assert code == 1 and capsys.readouterr().err.startswith("bench judge: ")
     assert not (tmp_path / "j").exists()
 

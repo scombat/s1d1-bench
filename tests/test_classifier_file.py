@@ -73,8 +73,13 @@ def test_read_classifier_labels_fills_the_optional_keys_with_none(tmp_path, prom
     rows = [ROWS[0], {"id": "b-eng", **full, "needs_tools_probability": 0.25}]
     write_classifier_dir(out, rows, classifier_meta(prompts_sha))
     assert read_classifier_labels(out / "labels.jsonl") == {
-        "a-eng": {"complexity": "trivial", "task": None, "needs_tools": None, "score": 0.0,
-                  "needs_tools_probability": None},
+        "a-eng": {
+            "complexity": "trivial",
+            "task": None,
+            "needs_tools": None,
+            "score": 0.0,
+            "needs_tools_probability": None,
+        },
         "b-eng": {**full, "score": None, "needs_tools_probability": 0.25},
     }
 
@@ -93,4 +98,3 @@ def test_read_classifier_labels_refuses_duplicates(tmp_path, prompts_sha):
     write_classifier_dir(out, [ROWS[0], ROWS[0]], classifier_meta(prompts_sha))
     with pytest.raises(ValueError, match="a-eng"):
         read_classifier_labels(out / "labels.jsonl")
-

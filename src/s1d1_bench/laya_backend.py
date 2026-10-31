@@ -63,9 +63,7 @@ def expected_level(probabilities: dict[str, float]) -> float:
     return sum(i * probabilities[label] for i, label in enumerate(CRITERIA))
 
 
-def make_laya_classifier(
-    laya_model: str, revision: str | None
-) -> tuple[Callable[[list[str]], list[dict]], dict]:
+def make_laya_classifier(laya_model: str, revision: str | None) -> tuple[Callable[[list[str]], list[dict]], dict]:
     """(classify, meta): `classify(prompts)` asks the `tier` question of the Laya checkpoint `laya_model` (`english` or
     `multilingual`) by batches of 32 sorted by length, and returns, in the order of the prompts, dicts with one key,
     `probabilities` (the four names of `CRITERIA`, in that order, as Laya gives them). `meta` holds `model`,

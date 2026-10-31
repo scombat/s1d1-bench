@@ -100,9 +100,7 @@ def resolve_revision(repo: str, revision: str | None) -> str:
 # ---------- batches ----------
 
 
-def plan_batches(
-    prompts: list[str], max_prompts: int, max_tokens: int, max_length: int
-) -> list[list[int]]:
+def plan_batches(prompts: list[str], max_prompts: int, max_tokens: int, max_length: int) -> list[list[int]]:
     """Indices of `prompts` in batches: sorted by length in characters (equal lengths in the order of the list), at
     most `max_prompts` per batch and `len(batch) * tokens(longest)` at most `max_tokens`, a token being 3 characters
     and a prompt never more than `max_length` tokens. A prompt too big for the budget is a batch of its own."""
