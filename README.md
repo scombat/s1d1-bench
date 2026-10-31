@@ -49,8 +49,8 @@ QWK contre `truth_all` (la médiane des trois juges principaux), IC à 95 % sur 
 
 Les juges sont l'instrument de mesure, pas des concurrents : aucun tableau ne range un candidat face à un juge, sauf le
 plafond. Aucune phrase « meilleur que » sans la règle des 2 σ (l'IC de l'écart apparié exclut zéro et dépasse 2 σ,
-σ = 0,005) : `s1d1-full-int8` ne la passe ni contre `s1d1-full-fp16`, ni contre `small`, ni contre `compact`, les
-variantes s1d1 de cette taille ne se départagent pas (seul `tiny` est séparé). Tout le reste est dans
+σ = 0,005) : la règle ne sépare pas `s1d1-full-int8` de `s1d1-full-fp16`, de `s1d1-small-int8` ni de
+`s1d1-compact-int8` (seul `tiny` en est séparé). Tout le reste est dans
 [`report/base-v1/index.md`](report/base-v1/index.md) ; pour le régénérer, depuis la racine du dépôt :
 
 ```
@@ -612,5 +612,6 @@ quatre versions, et les IC en tiennent compte.
 - [CC-BY-4.0](data/LICENSE) (`data/LICENSE`) : les prompts écrits à la main et leurs traductions, les fichiers de juges
   (`judges/`), les fichiers de classifieurs (`classifiers/`), les résultats (`results/`), le rapport (`report/<jeu>/`),
   la rubrique `src/s1d1_bench/rubric/judge-rubric-v7.txt`, les consignes `consigne/`, les vérifications
-  (`data/checks/`), la liste d'exclusion et les statistiques. Les traductions des prompts d'un jeu public sont des
+  (`data/checks/`), les documents copiés dans `docs/` (voir [docs/README.md](docs/README.md)), la liste d'exclusion
+  et les statistiques. Les traductions des prompts d'un jeu public sont des
   œuvres dérivées et gardent la licence de la ligne (colonne `licence` de `meta.parquet`).

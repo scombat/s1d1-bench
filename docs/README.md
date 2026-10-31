@@ -3,7 +3,7 @@
 Les trois documents de ce dossier, `32-open-bench-kit.md`, `33-translation-lot2.md` et `34-bench-run-report-lot3.md`,
 sont des copies, à l'identique, de trois pièces du cahier de décisions du projet s1d1 (un dépôt de recherche privé).
 La numérotation du cahier est conservée, d'où des numéros qui sautent. Ils ont été copiés le 2026-10-31 et sont
-sous licence CC-BY-4.0. Le banc les cite sous la forme `docs/NN`.
+sous licence [CC-BY-4.0](../data/LICENSE). Le banc les cite sous la forme `docs/NN`.
 
 ## Ce que quatre documents non copiés apportent au banc
 
