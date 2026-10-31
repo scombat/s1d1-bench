@@ -1,0 +1,15 @@
+item,value
+prompts,data/prompts/base-v1.jsonl
+prompts_sha256,e6a6d4c12ef8b95caea942337a3a1e16ec1622cb4e75c8ee0b473ef609a32490
+meta,data/prompts/base-v1.meta.parquet
+date of the run,2026-10-30
+rows,360 ids
+base keys,90 prompts de base
+languages,"eng, fra, rus, zho"
+main judges,"base-v1-gemma4-cap512, base-v1-qwen3-cap512, base-v1-gptoss-cap512"
+gemma,base-v1-gemma4-cap512
+undecidable,0 ids
+abstentions,1 ids
+bootstrap,"1000 tirages des 90 prompts de base, graine 0, IC 95 %"
+random draws,10 tirages
+sigma,0.005

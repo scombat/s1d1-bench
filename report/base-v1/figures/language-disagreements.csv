@@ -1,0 +1,10 @@
+group,value,n_ids,n_ids_disagreement,share_of_ids,n_keys,n_keys_disagreement
+all,all,360,33,0.09166666666666666,90,24
+lang,eng,90,6,0.06666666666666667,90,6
+lang,fra,90,9,0.1,90,9
+lang,rus,90,11,0.12222222222222222,90,11
+lang,zho,90,7,0.07777777777777778,90,7
+source,arena_hard,112,12,0.10714285714285714,28,8
+source,dolly,72,7,0.09722222222222222,18,5
+source,handwritten,40,4,0.1,10,3
+source,oasst2,136,10,0.07352941176470588,34,8

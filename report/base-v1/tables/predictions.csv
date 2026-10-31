@@ -1,0 +1,8 @@
+prediction,statement,name,lang,qwk,qwk_lo,qwk_hi,qwk_draws_used,verified
+prediction_1,"les listes de mots-clés de litellm-heuristic sont anglaises : son QWK en fra, rus et zho est chacun au-dessous de son QWK en eng",litellm-heuristic,eng,0.20548459804658148,0.09378985481926656,0.32754547100440085,1000,true
+prediction_1,"les listes de mots-clés de litellm-heuristic sont anglaises : son QWK en fra, rus et zho est chacun au-dessous de son QWK en eng",litellm-heuristic,fra,0.04401913875598085,-0.023119281826494763,0.13530201261263008,1000,true
+prediction_1,"les listes de mots-clés de litellm-heuristic sont anglaises : son QWK en fra, rus et zho est chacun au-dessous de son QWK en eng",litellm-heuristic,rus,0.06088454910970709,0.0,0.1494980972621717,1000,true
+prediction_1,"les listes de mots-clés de litellm-heuristic sont anglaises : son QWK en fra, rus et zho est chacun au-dessous de son QWK en eng",litellm-heuristic,zho,0.04365307294658238,-0.015557670613410056,0.13189224828604035,1000,true
+prediction_2,"QWK(length) < QWK(litellm-heuristic) < QWK(s1d1-full-int8), contre truth_all",length,all,0.5426287744227354,0.42353267406755896,0.6465085075869959,1000,false
+prediction_2,"QWK(length) < QWK(litellm-heuristic) < QWK(s1d1-full-int8), contre truth_all",litellm-heuristic,all,0.08906882591093113,0.025855435992100374,0.17243106060958702,1000,false
+prediction_2,"QWK(length) < QWK(litellm-heuristic) < QWK(s1d1-full-int8), contre truth_all",s1d1-full-int8,all,0.8067331670822943,0.734356600777181,0.8517143573984576,1000,false
