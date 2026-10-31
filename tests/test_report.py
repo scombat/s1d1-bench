@@ -680,34 +680,30 @@ def test_report_command_on_the_fake_set(tmp_path, capsys):
     assert "laya-rank" in {row[0] for t in markdown_tables(text) if "AUROC (high ou expert)" in t[0] for row in t[1:]}
 
 
-def test_figure_csv_headers_are_french_and_say_what_the_index_says(tmp_path):
+def test_figure_csv_headers_are_english_like_the_figures(tmp_path):
     pytest.importorskip("matplotlib")
     from s1d1_bench.cli import main
     from s1d1_bench.report_figures import HEADERS
-    from s1d1_bench.report_index import LABELS
 
     args, _ = fake_report_inputs(tmp_path)
     out = tmp_path / "out"
     assert main([*args, "--out", str(out)]) == 0
-    for column, label in HEADERS.items():  # the same word as the Markdown tables of the index for the same column
-        assert LABELS.get(column, label) == label or column in {"kind", "value", "lo", "hi"}, column
     headers = {}
     for path in sorted((out / "figures").glob("*.csv")):
         with open(path, encoding="utf-8", newline="") as f:
             headers[path.stem] = next(csv.reader(f))
-    english = {column for column in HEADERS if column not in HEADERS.values()}
     for stem, header in headers.items():
         assert len(set(header)) == len(header), stem
-        assert not english & set(header), stem  # no internal (English) column name is left in a header
+        assert set(header) <= set(HEADERS.values()), stem  # every header is one of the readable English words
     assert headers["qwk-bars"] == [
-        "type", "nom", "famille", "valeur", "borne basse", "borne haute", "tirages utilisés",
+        "kind", "name", "family", "value", "lower bound", "upper bound", "draws used",
     ]  # fmt: skip
     with open(out / "figures" / "language-disagreements.csv", encoding="utf-8", newline="") as f:
         first = next(csv.DictReader(f))
-    assert (first["groupe"], first["valeur"]) == ("tout", "tous les ids")
+    assert (first["group"], first["value"]) == ("all", "all")
     with open(out / "figures" / "qwk-bars.csv", encoding="utf-8", newline="") as f:
-        names = {row["type"]: row["nom"] for row in csv.DictReader(f)}
-    assert names["plafond (moyenne)"] == "moyenne"
+        names = {row["kind"]: row["name"] for row in csv.DictReader(f)}
+    assert names["ceiling (mean)"] == "mean"
     with open(out / "tables" / "ceiling.csv", encoding="utf-8", newline="") as f:
         assert "judge" in next(csv.reader(f))  # the tables keep their names: only the figure CSVs are translated
 

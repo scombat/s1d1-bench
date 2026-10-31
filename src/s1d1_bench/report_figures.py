@@ -6,10 +6,19 @@ matplotlib (the `report` dependency group) is imported inside `figures` only, so
 SVG is byte-identical from one run to the next: a fixed `svg.hashsalt`, no date in the metadata, text kept as text
 (`svg.fonttype: none`).
 
-Colours: the Okabe-Ito palette (colour-blind safe), one hue per candidate family and the same in every figure: s1d1
-blue, Laya orange, LiteLLM bluish green; the witnesses and any other candidate grey, the judges (ceiling, spread,
-language disagreements) black or grey: three hues and the neutrals. Within a family the candidates differ by hatch,
-marker or line style, never by a new hue.
+The style (docs/36 § 2 of the model repository) is one for every figure, and the helpers below (`style`, `title`,
+`better`, `legend_below`, `label`, `colour`) carry it:
+
+- English only in a figure (the French captions live under it, in `index.md`): no accented letter in an SVG.
+- Title in bold at the top left, a grey subtitle under it with the unit and the number of ids; nothing else inside
+  the frame but the marks, their value labels and their point labels.
+- Each measured axis says, in grey at its end, "higher is better →" or "← lower is better".
+- Identity by colour and written label, never by shape: one hue per family (s1d1 blue, Laya orange, LiteLLM green,
+  witnesses grey, judges and ceiling black or dark grey); within a family, the variants differ by lightness steps of
+  the same hue and by their label written beside the mark. No hatch, one marker shape (`o`), one line style per role
+  of line (a reference line has its own style, a candidate's line is always solid).
+- The legend sits below the frame, one entry per family and one per reference line, never one per variant; a figure
+  of a single series has none.
 
 A candidate or role a figure needs that is absent from the tables loses its panel (or its line), and a French line
 saying so is returned for the index; a figure left with nothing to draw is not written (and a stale file of that name
@@ -17,29 +26,59 @@ is removed). Never an error.
 """
 
 import math
+import re
 from collections.abc import Sequence
 from pathlib import Path
 from typing import NamedTuple
 
 import pyarrow as pa
 
-from s1d1_bench.report import CONSTANT, FLOOR, LITELLM, RANDOM, REFERENCE, french, write_csv
+from s1d1_bench.report import CONSTANT, FLOOR, LITELLM, RANDOM, REFERENCE, write_csv
 from s1d1_bench.rubric import LEVELS
 
-BLUE, ORANGE, GREEN, GREY, LIGHT, BLACK = "#0072B2", "#E69F00", "#009E73", "#999999", "#DDDDDD", "#000000"
+# the palette: text, secondary text, grid, paper; the family hues; the judges and the ceiling
+INK, MUTED, GRID, PAPER = "#0b0b0b", "#52514e", "#e6e5e1", "#fcfcfb"
+BLUE, ORANGE, GREEN, GREY = "#2a78d6", "#eb6834", "#1baf7a", "#7a7975"
+JUDGE, JUDGE_SOFT = "#0b0b0b", "#52514e"
 FAMILIES = (("s1d1-", "s1d1", BLUE), ("laya-", "Laya", ORANGE), ("litellm-", "LiteLLM", GREEN))
-OTHERS = ("témoins et autres", GREY)
+OTHERS = ("witnesses and others", GREY)
+# within a family, the lightness step of a variant (shade: < 0 darker, > 0 lighter), by a word of its name
+VARIANTS = {
+    "s1d1-": (("fp16", -0.25), ("compact", 0.25), ("small", 0.45), ("tiny", 0.6)),
+    "laya-": (("multilingual", 0.4),),
+}
 CONFUSION = (REFERENCE, "laya-multilingual-tier", LITELLM, FLOOR)  # the four panels of `confusion`
-HATCHES = ("", "//", "\\\\", "xx", "--", "++")  # per language, or per candidate within a family
-MARKERS = ("o", "s", "^", "D", "v", "P")
-LINES = ("-", "--", ":", "-.", (0, (5, 1, 1, 1, 1, 1)), (0, (8, 2)))  # solid, dashed, dotted, dash-dot, dash-dot-dot
-SHADES = (0.0, -0.35, 0.4, -0.6, 0.6, -0.2)  # within a family: the same hue, darker (< 0) or lighter (> 0)
+HEAT = (0.9, 0.0, -0.5)  # the single-hue heat maps: blue lightened (value 0), blue, blue darkened (the top)
 RC = {
     "svg.hashsalt": "s1d1-bench",  # the ids of clip paths and glyphs, otherwise random
     "svg.fonttype": "none",
+    "font.family": "sans-serif",  # DejaVu Sans first, then the fallbacks of matplotlib, in the SVG
     "font.size": 9,
+    "text.color": INK,
+    "figure.facecolor": PAPER,
+    "savefig.facecolor": PAPER,
+    "axes.facecolor": PAPER,
+    "axes.edgecolor": MUTED,
+    "axes.linewidth": 0.8,
+    "axes.labelcolor": MUTED,
+    "axes.labelsize": 8.5,
+    "axes.titlesize": 9,
+    "axes.titlelocation": "left",
+    "axes.titlecolor": INK,
     "axes.spines.top": False,
     "axes.spines.right": False,
+    "axes.axisbelow": True,
+    "grid.color": GRID,
+    "grid.linewidth": 0.8,
+    "xtick.color": MUTED,
+    "ytick.color": MUTED,
+    "xtick.labelcolor": INK,
+    "ytick.labelcolor": INK,
+    "xtick.labelsize": 8,
+    "ytick.labelsize": 8,
+    "legend.frameon": False,
+    "legend.fontsize": 8,
+    "axes.unicode_minus": True,
 }
 NAMES = (
     "qwk-bars",
@@ -51,24 +90,18 @@ NAMES = (
     "needs-tools-pr",
 )
 
-
-# The CSV beside each figure is written in French like the Markdown tables of the index: the header of each plotted
-# column below (the same words as `report_index.LABELS` for the same column), and the few English cell values. The
-# SVG and the numbers are untouched: only the header row and these words differ from the internal column names.
+# The CSV beside each figure is in English like the figure: the header of each plotted column below. The numbers are
+# those of the tables, untouched: only the header row differs from the internal column names.
 HEADERS = {
-    "kind": "type", "name": "nom", "family": "famille", "value": "valeur", "lo": "borne basse", "hi": "borne haute",
-    "draws_used": "tirages utilisés", "lang": "langue", "n_ids": "ids", "qwk": "QWK", "candidate": "candidat",
-    "truth_tier": "palier de truth_all", "pred_tier": "palier prédit", "row_share": "part de la ligne",
-    "bin_low": "case : borne basse", "bin_high": "case : borne haute", "mean_score": "score moyen",
-    "mean_anchor": "ancre moyenne", "tier": "palier", "spread": "écart (crans)", "n_ids_tier": "ids du palier",
-    "mean_spread_tier": "écart moyen du palier (crans)", "n_ids_null_spread_tier": "ids du palier sans écart",
-    "group": "groupe", "n_ids_disagreement": "ids en désaccord", "share_of_ids": "part des ids",
-    "n_keys": "prompts de base", "n_keys_disagreement": "prompts de base en désaccord", "threshold": "seuil",
-    "precision": "précision", "recall": "rappel",
-}  # fmt: skip
-CELLS = {  # figure -> column -> English cell value -> French
-    "language-disagreements": {"group": {"all": "tout", "lang": "langue", "source": "source"},
-                               "value": {"all": "tous les ids"}},
+    "kind": "kind", "name": "name", "family": "family", "value": "value", "lo": "lower bound", "hi": "upper bound",
+    "draws_used": "draws used", "lang": "language", "n_ids": "ids", "qwk": "QWK", "candidate": "candidate",
+    "truth_tier": "truth_all tier", "pred_tier": "predicted tier", "row_share": "share of the row",
+    "bin_low": "bin: lower bound", "bin_high": "bin: upper bound", "mean_score": "mean score",
+    "mean_anchor": "mean anchor", "tier": "tier", "spread": "spread (steps)", "n_ids_tier": "ids of the tier",
+    "mean_spread_tier": "mean spread of the tier (steps)", "n_ids_null_spread_tier": "ids of the tier without spread",
+    "group": "group", "n_ids_disagreement": "ids in disagreement", "share_of_ids": "share of ids",
+    "n_keys": "base prompts", "n_keys_disagreement": "base prompts in disagreement", "threshold": "threshold",
+    "precision": "precision", "recall": "recall",
 }  # fmt: skip
 
 
@@ -81,46 +114,228 @@ class Figure(NamedTuple):
     notes: tuple[str, ...]
 
 
+# --- the style ------------------------------------------------------------------------------------------------------
+
+
+def style():
+    """The common style `RC` as a context manager (`with style(): ...`); the global rcParams are left alone."""
+    import matplotlib
+
+    return matplotlib.rc_context(RC)
+
+
 def family(name: str) -> tuple[str, str]:
     """(family label, colour) of a candidate, by the prefix of its name."""
-    for prefix, label, colour in FAMILIES:
+    for prefix, label, hue in FAMILIES:
         if name.startswith(prefix):
-            return label, colour
+            return label, hue
     return OTHERS
 
 
-def _family_order(names: Sequence[str]) -> list[str]:
-    """The candidates grouped by family (s1d1, Laya, LiteLLM, the others), table order within a family."""
-    rank = {label: n for n, (_, label, _) in enumerate(FAMILIES)}
-    return sorted(names, key=lambda name: rank.get(family(name)[0], len(FAMILIES)))
-
-
-def _shade(colour: str, amount: float) -> str:
-    """`colour` (#RRGGBB) mixed with black (amount < 0) or white (amount > 0): the same hue, another lightness."""
+def shade(colour: str, amount: float) -> str:
+    """`colour` (#rrggbb) mixed with black (amount < 0) or white (amount > 0): the same hue, another lightness."""
     rgb = [int(colour[i : i + 2], 16) for i in (1, 3, 5)]
     target = 255 if amount > 0 else 0
     mixed = [round(c + (target - c) * abs(amount)) for c in rgb]
-    return "#" + "".join(f"{c:02X}" for c in mixed)
+    return "#" + "".join(f"{c:02x}" for c in mixed)
 
 
-def _series(name: str, n: int) -> dict:
-    """The line style of the n-th series of a figure with several lines of one family: its hue at another lightness,
-    its own dash pattern and marker."""
-    return {
-        "color": _shade(family(name)[1], SHADES[n % len(SHADES)]),
-        "linestyle": LINES[n % len(LINES)],
-        "marker": MARKERS[n % len(MARKERS)],
-    }
+def _step(name: str) -> float:
+    """The lightness step of a candidate within its family (0 for the first variant and for every other name)."""
+    for prefix, steps in VARIANTS.items():
+        if name.startswith(prefix):
+            return next((amount for word, amount in steps if word in name), 0.0)
+    return 0.0
 
 
-def _rank_in_family(names: Sequence[str]) -> dict[str, int]:
-    """The position of each candidate within its family (its hatch, marker and line style)."""
-    seen: dict[str, int] = {}
-    out = {}
-    for name in names:
-        label = family(name)[0]
-        out[name] = seen.get(label, 0)
-        seen[label] = out[name] + 1
+def colour(name: str) -> str:
+    """The colour of a candidate: its family hue at the lightness of its variant."""
+    return shade(family(name)[1], _step(name))
+
+
+def title(ax, head: str, sub: str) -> None:
+    """The bold title and the grey subtitle above the top-left corner of `ax` (for a figure of panels, the top-left
+    panel; call it after the panel titles, so that it rises above them). Figure texts anchored to the axes, so that
+    they follow the layout; `bbox_inches="tight"` keeps them in the saved file."""
+    from matplotlib.transforms import offset_copy
+
+    fig = ax.figure
+    panels = any(a.get_title(loc) for a in fig.axes for loc in ("left", "center", "right"))
+    base = 6 + (17 if panels else 0)  # points above the frame, past the panel titles
+    lines = sub.count("\n") + 1
+    fig.text(
+        0,
+        1,
+        sub,
+        transform=offset_copy(ax.transAxes, fig, y=base, units="points"),
+        ha="left",
+        va="bottom",
+        color=MUTED,
+        fontsize=8.5,
+        linespacing=1.3,
+    )
+    fig.text(
+        0,
+        1,
+        head,
+        transform=offset_copy(ax.transAxes, fig, y=base + 13 * lines + 2, units="points"),
+        ha="left",
+        va="bottom",
+        color=INK,
+        fontsize=11.5,
+        fontweight="bold",
+    )
+
+
+def better(ax, axis: str, higher: bool = True) -> None:
+    """The reading direction of a measured axis, in grey at its better end: "higher is better →" at the right (top)
+    end, "← lower is better" at the left (bottom) end. The axis label moves to the other end, on the same line."""
+    text = "higher is better →" if higher else "← lower is better"
+    grey = {"color": MUTED, "fontsize": 7.5, "annotation_clip": False}
+    if axis == "x":
+        ax.xaxis.label.set(x=0 if higher else 1, horizontalalignment="left" if higher else "right")
+        ax.annotate(
+            text,
+            xy=(1 if higher else 0, 0.5),
+            xycoords=(ax.transAxes, ax.xaxis.label),
+            ha="right" if higher else "left",
+            va="center",
+            **grey,
+        )
+    elif axis == "y":
+        ax.yaxis.label.set(y=0 if higher else 1, horizontalalignment="left" if higher else "right")
+        ax.annotate(
+            text,
+            xy=(0.5, 1 if higher else 0),
+            xycoords=(ax.yaxis.label, ax.transAxes),
+            rotation=90,
+            ha="center",
+            va="top" if higher else "bottom",
+            **grey,
+        )
+    else:
+        raise ValueError(f"axis must be 'x' or 'y', not {axis!r}")
+
+
+def legend_below(fig, handles: Sequence, ncol: int | None = None):
+    """The one legend of the figure, below the frame, left-aligned with the first panel; none when `handles` is
+    empty. `handles`: one per family (`family_handles`) and one per reference line."""
+    if not handles:
+        return None
+    from matplotlib.transforms import blended_transform_factory
+
+    anchor = blended_transform_factory(fig.axes[0].transAxes, fig.transFigure)
+    return fig.legend(
+        handles=list(handles),
+        loc="upper left",
+        bbox_to_anchor=(0, 0),
+        bbox_transform=anchor,
+        ncol=ncol or min(len(handles), 3),
+        frameon=False,
+        borderaxespad=0,
+        handlelength=1.8,
+        columnspacing=1.8,
+        handletextpad=0.6,
+    )
+
+
+def family_handles(names: Sequence[str], mpl, line: bool = False) -> list:
+    """One legend handle per family present among `names`, in the order of `FAMILIES` (the others last): a patch of
+    the family hue, or a solid line for a figure of lines."""
+    present = {family(name) for name in names}
+    ordered = [(label, hue) for _, label, hue in FAMILIES if (label, hue) in present]
+    ordered += [OTHERS] if OTHERS in present else []
+    if line:
+        return [mpl.lines.Line2D([], [], color=hue, linewidth=2, label=label) for label, hue in ordered]
+    return [mpl.patches.Patch(facecolor=hue, edgecolor="none", label=label) for label, hue in ordered]
+
+
+def label(ax, x: float, y: float, text: str, dx: float = 4, dy: float = 0, color: str = INK, **kw):
+    """A value or point label beside (x, y) in data coordinates, `dx`, `dy` points away (left-aligned when dx >= 0),
+    on a patch of paper so that a reference line behind it does not cross the text."""
+    return ax.annotate(
+        text,
+        (x, y),
+        xytext=(dx, dy),
+        textcoords="offset points",
+        ha="left" if dx >= 0 else "right",
+        va="center",
+        fontsize=7.5,
+        color=color,
+        annotation_clip=False,
+        bbox={"boxstyle": "square,pad=0.15", "facecolor": PAPER, "edgecolor": "none"},
+        **kw,
+    )
+
+
+def number(value, digits: int = 2) -> str:
+    """A number in English for a figure: `.` as decimal point, a true minus sign, "n/a" for nan."""
+    if _nan(value):
+        return "n/a"
+    return f"{value:.{digits}f}".replace("-", "−")
+
+
+def _tick(value: float, _position=None) -> str:
+    """A tick label: at most two decimals, no trailing zero, a true minus sign."""
+    text = f"{value:.2f}".rstrip("0").rstrip(".") if value else "0"
+    return text.replace("-", "−")
+
+
+def _axes(ax, x: bool = True, y: bool = True, grid: str | None = None) -> None:
+    """Tick labels of the measured axes (`_tick`), and the thin light grid along `grid` ("x", "y" or "both")."""
+    from matplotlib.ticker import FuncFormatter
+
+    if x:
+        ax.xaxis.set_major_formatter(FuncFormatter(_tick))
+    if y:
+        ax.yaxis.set_major_formatter(FuncFormatter(_tick))
+    if grid:
+        ax.grid(True, axis=grid)
+    for axis, measured in (("x", x), ("y", y)):
+        if measured:
+            ax.tick_params(axis=axis, length=3, width=0.8)
+
+
+def _heat(mpl):
+    """The colour map of the heat maps: one hue (blue), light to dark."""
+    return mpl.colors.LinearSegmentedColormap.from_list("s1d1-heat", [shade(BLUE, amount) for amount in HEAT])
+
+
+def _ink(rgba) -> str:
+    """Black or white text, whichever reads on a cell of that RGBA colour (relative luminance)."""
+    r, g, b = rgba[:3]
+    return INK if 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.5 else "#ffffff"
+
+
+# --- the data ---------------------------------------------------------------------------------------------------------
+
+
+def _family_order(names: Sequence[str], value: dict[str, float] | None = None) -> list[str]:
+    """The candidates grouped by family (s1d1, Laya, LiteLLM, the others); within a family by decreasing `value`
+    (nan last), table order when no value is given or on a tie."""
+    rank = {label: n for n, (_, label, _) in enumerate(FAMILIES)}
+
+    def key(name):
+        v = (value or {}).get(name)
+        return rank.get(family(name)[0], len(FAMILIES)), (math.inf if _nan(v) else -v)
+
+    return sorted(names, key=key)
+
+
+def _variant_order(names: Sequence[str]) -> list[str]:
+    """The variants of a family from the darkest to the lightest (fp16, full, compact, small, tiny), families first."""
+    rank = {label: n for n, (_, label, _) in enumerate(FAMILIES)}
+    return sorted(names, key=lambda name: (rank.get(family(name)[0], len(FAMILIES)), _step(name)))
+
+
+def _positions(names: Sequence[str], gap: float = 0.6) -> list[float]:
+    """The y of each bar from the top (0) down, with a gap between two families."""
+    out, y = [], 0.0
+    for n, name in enumerate(names):
+        if n and family(name) != family(names[n - 1]):
+            y += gap
+        out.append(y)
+        y += 1
     return out
 
 
@@ -132,31 +347,18 @@ def _rows(table: pa.Table, **where) -> list[dict]:
     return [r for r in table.to_pylist() if all(r.get(k) == v for k, v in where.items())]
 
 
-def _units(computed: dict[str, pa.Table]) -> tuple[str, str]:
-    """("360 ids", "90 prompts de base") as `inputs_summary` says them."""
+def _count(text: str | None) -> int | None:
+    """The leading integer of a line of `inputs_summary` ("360 ids" -> 360), None when there is none."""
+    found = re.match(r"\s*(\d+)", text or "")
+    return int(found.group(1)) if found else None
+
+
+def _units(computed: dict[str, pa.Table]) -> tuple[str, str, str]:
+    """("360 ids", "90 base prompts", "1,000 bootstrap draws") from `inputs_summary`, "?" for a missing count."""
     summary = {r["item"]: r["value"] for r in computed["inputs_summary"].to_pylist()}
-    return summary.get("rows", "? ids"), summary.get("base keys", "? prompts de base")
-
-
-def _tick(value: float, _position=None) -> str:
-    """A tick label in French: decimal comma, true minus sign."""
-    text = f"{value:.2f}".rstrip("0").rstrip(".") if value else "0"
-    return text.replace(".", ",").replace("-", "−")
-
-
-def _french_axes(ax, x: bool = True, y: bool = True) -> None:
-    from matplotlib.ticker import FuncFormatter
-
-    if x:
-        ax.xaxis.set_major_formatter(FuncFormatter(_tick))
-    if y:
-        ax.yaxis.set_major_formatter(FuncFormatter(_tick))
-
-
-def _ink(colour) -> str:
-    """Black or white text, whichever reads on a cell of that RGBA colour (relative luminance)."""
-    r, g, b = colour[:3]
-    return BLACK if 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.5 else "white"
+    ids, base, draws = (_count(summary.get(item)) for item in ("rows", "base keys", "bootstrap"))
+    say = lambda n, unit: f"{n:,} {unit}" if n is not None else f"? {unit}"  # noqa: E731
+    return say(ids, "ids"), say(base, "base prompts"), say(draws, "bootstrap draws")
 
 
 def _errors(rows: list[dict], value: str, lo: str, hi: str) -> list[list[float]]:
@@ -170,21 +372,48 @@ def _errors(rows: list[dict], value: str, lo: str, hi: str) -> list[list[float]]
     return [below, above]
 
 
-# --- the figures: each returns (matplotlib figure or None, CSV columns, CSV rows, notes) --------------------------
+def _hbars(ax, names: Sequence[str], rows: dict[str, dict], value: str, lo: str, hi: str, digits: int = 3) -> None:
+    """Thin horizontal bars, one per name from the top, in the candidate's colour, the 95 % CI as a thin black
+    whisker and the value written past the end of the whisker; the names as tick labels beside the bars."""
+    ys = _positions(names)
+    for y, name in zip(ys, names, strict=True):
+        r = rows[name]
+        if _nan(r[value]):
+            label(ax, 0, y, "n/a", color=MUTED)
+            continue
+        ax.barh(y, r[value], height=0.62, color=colour(name), linewidth=0, zorder=2)
+        ax.errorbar(
+            r[value], y, xerr=_errors([r], value, lo, hi), fmt="none", ecolor=INK, capsize=0, elinewidth=1, zorder=3
+        )  # no cap: one marker shape in a figure
+        end = max(v for v in (r[value], r[lo], r[hi], 0.0) if not _nan(v))
+        label(ax, end, y, number(r[value], digits), zorder=4)
+    ax.set_yticks(ys, list(names))
+    ax.set_ylim(ys[-1] + 0.7, -0.7)
+    ax.tick_params(axis="y", length=0)
+    ax.spines["left"].set_visible(False)
+
+
+def _xlim_qwk(ax, values: Sequence[float]) -> None:
+    """The QWK axis: from below the lowest bound (at least −0.2) to 1."""
+    finite = [v for v in values if not _nan(v)]
+    ax.set_xlim(min([-0.2, *finite]) - 0.02, 1.0)
+
+
+# --- the figures: each returns (matplotlib figure or None, CSV columns, CSV rows, notes) ------------------------------
 
 
 def _qwk_bars(computed: dict[str, pa.Table], sigma: float, mpl):
-    n_ids, n_base = _units(computed)
+    n_ids, n_base, n_draws = _units(computed)
     notes: list[str] = []
     candidates = _rows(computed["agreement_all"], role="candidate")
     by_name = {r["name"]: r for r in candidates}
-    order = _family_order([r["name"] for r in candidates])
-    if not order:
+    table_order = _family_order([r["name"] for r in candidates])
+    if not table_order:
         return None, [], [], ["aucun candidat : figure non tracée"]
     columns = ["kind", "name", "family", "value", "lo", "hi", "draws_used"]
     data = [
         {
-            "kind": "candidat",
+            "kind": "candidate",
             "name": name,
             "family": family(name)[0],
             "value": by_name[name]["qwk"],
@@ -192,46 +421,44 @@ def _qwk_bars(computed: dict[str, pa.Table], sigma: float, mpl):
             "hi": by_name[name]["qwk_hi"],
             "draws_used": by_name[name]["qwk_draws_used"],
         }
-        for name in order
+        for name in table_order
     ]
-    fig = mpl.figure.Figure(figsize=(8.5, 0.4 * len(order) + 1.6))
+    order = _family_order(table_order, {name: by_name[name]["qwk"] for name in table_order})
+    fig = mpl.figure.Figure(figsize=(8.0, 0.27 * len(order) + 1.9))
     ax = fig.add_subplot()
-    ranks = _rank_in_family(order)
-    y = list(range(len(order)))[::-1]
-    for pos, row in zip(y, data, strict=True):
-        if _nan(row["value"]):
-            continue
-        _, colour = family(row["name"])
-        ax.barh(pos, row["value"], color=colour, hatch=HATCHES[ranks[row["name"]] % len(HATCHES)], edgecolor="white")
-        error = _errors([row], "value", "lo", "hi")
-        ax.errorbar(row["value"], pos, xerr=error, fmt="none", ecolor=BLACK, capsize=3, linewidth=1)
-        # the point estimate as a marker: a bar of length 0 (constant-low's QWK of 0) stays visible
-        ax.plot(row["value"], pos, marker="D", markersize=5, color=colour, markeredgecolor=BLACK, zorder=3)
-    ax.set_yticks(y, [f"{name} ({french(by_name[name]['qwk'], 3)})" for name in order])
+    _hbars(ax, order, by_name, "qwk", "qwk_lo", "qwk_hi")
+    handles = family_handles(order, mpl)
     ceiling = computed["ceiling"].to_pylist()
+    mean = [r for r in ceiling if r["judge"] == "mean"]
+    if mean:
+        ax.axvline(mean[0]["qwk"], color=JUDGE, linewidth=2, zorder=1.6)  # behind the bars
+        handles.append(mpl.lines.Line2D([], [], color=JUDGE, linewidth=2, label="ceiling: mean of the main judges"))
     judges = [r for r in ceiling if r["judge"] != "mean"]
-    for n, r in enumerate(judges):
-        label = "plafond : chaque juge principal contre les deux autres (8 votes)" if n == 0 else None
-        ax.axvline(r["qwk"], color=BLACK, linestyle=":", linewidth=1, label=label)
+    for r in judges:
+        ax.axvline(r["qwk"], color=JUDGE_SOFT, linewidth=1, zorder=1.5)
         data.append(
             {
-                "kind": "plafond (juge)",
+                "kind": "ceiling (judge)",
                 "name": r["judge"],
-                "family": "juges",
+                "family": "judges",
                 "value": r["qwk"],
                 "lo": r["qwk_lo"],
                 "hi": r["qwk_hi"],
                 "draws_used": r["qwk_draws_used"],
             }
         )
-    mean = [r for r in ceiling if r["judge"] == "mean"]
+    if judges:
+        handles.append(
+            mpl.lines.Line2D(
+                [], [], color=JUDGE_SOFT, linewidth=1, label="ceiling: each main judge against the other two (8 votes)"
+            )
+        )
     if mean:
-        ax.axvline(mean[0]["qwk"], color=BLACK, linewidth=2, label="plafond : moyenne des trois")
         data.append(
             {
-                "kind": "plafond (moyenne)",
-                "name": "moyenne",
-                "family": "juges",
+                "kind": "ceiling (mean)",
+                "name": "mean",
+                "family": "judges",
                 "value": mean[0]["qwk"],
                 "lo": mean[0]["qwk_lo"],
                 "hi": mean[0]["qwk_hi"],
@@ -241,14 +468,15 @@ def _qwk_bars(computed: dict[str, pa.Table], sigma: float, mpl):
     else:
         notes.append("plafond absent (pas de juge principal) : lignes du plafond non tracées")
     floor = computed["floor"].to_pylist()
-    for name, style, shade in ((FLOOR, "--", GREY), (CONSTANT, "-.", "#555555")):
+    floors = []
+    for name in (FLOOR, CONSTANT):
         found = [r for r in floor if r["name"] == name and r["draw"] is None]
         if found:
-            ax.axvline(found[0]["qwk"], color=shade, linestyle=style, linewidth=1.5, label=f"plancher : {name}",
-                       zorder=2.5)  # fmt: skip
+            ax.axvline(found[0]["qwk"], color=GREY, linestyle=(0, (4, 2)), linewidth=2, zorder=1.5)
+            floors.append(name)
             data.append(
                 {
-                    "kind": "plancher",
+                    "kind": "floor",
                     "name": name,
                     "family": family(name)[0],
                     "value": found[0]["qwk"],
@@ -259,18 +487,23 @@ def _qwk_bars(computed: dict[str, pa.Table], sigma: float, mpl):
             )
         else:
             notes.append(f"`{name}` absent : sa ligne de plancher n'est pas tracée")
+    if floors:
+        handles.append(
+            mpl.lines.Line2D(
+                [], [], color=GREY, linestyle=(0, (4, 2)), linewidth=2, label="floor: " + " and ".join(floors)
+            )
+        )
     band = {r["kind"]: r["qwk"] for r in floor if r["name"] == RANDOM and r["kind"].startswith("random ")}
     if {"random min", "random max", "random mean"} <= set(band):
-        ax.axvspan(
-            band["random min"],
-            band["random max"],
-            color=LIGHT,
-            zorder=0,
-            label=f"plancher : {RANDOM}, min–max des tirages",
+        ax.axvspan(band["random min"], band["random max"], color=GREY, alpha=0.22, linewidth=0, zorder=0)
+        handles.append(
+            mpl.patches.Patch(
+                facecolor=GREY, alpha=0.22, edgecolor="none", label=f"floor: {RANDOM}, min-max of its draws"
+            )
         )
         data.append(
             {
-                "kind": "bande random (min–max des tirages, valeur = moyenne)",
+                "kind": "random band (min-max of the draws, value = mean)",
                 "name": RANDOM,
                 "family": family(RANDOM)[0],
                 "value": band["random mean"],
@@ -283,17 +516,15 @@ def _qwk_bars(computed: dict[str, pa.Table], sigma: float, mpl):
         notes.append(f"tirages de `{RANDOM}` absents : bande du plancher non tracée")
     if REFERENCE in by_name and not _nan(by_name[REFERENCE]["qwk"]):
         ref = by_name[REFERENCE]["qwk"]
-        ax.axvspan(
-            ref - 2 * sigma,
-            ref + 2 * sigma,
-            color=BLUE,
-            alpha=0.3,
-            zorder=0,
-            label=f"± 2 σ autour de {REFERENCE} (σ = {french(sigma, 3)}, étroite par nature)",
+        ax.axvspan(ref - 2 * sigma, ref + 2 * sigma, color=BLUE, alpha=0.25, linewidth=0, zorder=0)
+        handles.append(
+            mpl.patches.Patch(
+                facecolor=BLUE, alpha=0.25, edgecolor="none", label=f"± 2σ around {REFERENCE} (σ = {sigma:g})"
+            )
         )
         data.append(
             {
-                "kind": "bande ± 2 σ",
+                "kind": "± 2σ band",
                 "name": REFERENCE,
                 "family": family(REFERENCE)[0],
                 "value": ref,
@@ -304,77 +535,70 @@ def _qwk_bars(computed: dict[str, pa.Table], sigma: float, mpl):
         )
     else:
         notes.append(f"`{REFERENCE}` absent : bande ± 2 σ non tracée")
-    lows = [r["lo"] for r in data if not _nan(r["lo"])] + [r["value"] for r in data if not _nan(r["value"])]
-    ax.set_xlim(min([-0.2, *lows]) - 0.02, 1.0)
-    ax.set_xlabel(f"QWK contre truth_all ({n_ids} ; IC 95 % : 1 000 tirages des {n_base})")
-    ax.set_title("Accord de chaque candidat avec la médiane des juges principaux")
-    ax.legend(loc="upper center", bbox_to_anchor=(0.4, -0.1), ncol=2, fontsize=7, frameon=False)
-    _french_axes(ax, y=False)
+    _xlim_qwk(ax, [r["lo"] for r in data] + [r["value"] for r in data])
+    ax.set_xlabel("QWK against truth_all")
+    _axes(ax, y=False, grid="x")
+    better(ax, "x", higher=True)
+    title(
+        ax,
+        "Agreement with the median of the main judges",
+        f"QWK against truth_all, {n_ids} ({n_base}); whiskers: 95% CI, {n_draws} of the base prompts",
+    )
     fig.tight_layout()
+    legend_below(fig, handles, ncol=2)
     return fig, columns, data, notes
 
 
 def _qwk_by_language(computed: dict[str, pa.Table], sigma: float, mpl):
-    _, n_base = _units(computed)
+    _, n_base, n_draws = _units(computed)
     rows = _rows(computed["by_language"], role="candidate")
-    order = _family_order(list(dict.fromkeys(r["name"] for r in rows)))
-    if not order:
+    table_order = _family_order(list(dict.fromkeys(r["name"] for r in rows)))
+    if not table_order:
         return None, [], [], ["aucun candidat : figure non tracée"]
     langs = sorted({r["lang"] for r in rows})
     cell = {(r["name"], r["lang"]): r for r in rows}
     per_lang = max((r["n_ids_all"] for r in rows), default=0)
     columns = ["name", "family", "lang", "n_ids", "qwk", "lo", "hi", "draws_used"]
-    data = []
-    fig = mpl.figure.Figure(figsize=(max(7.0, 0.8 * len(order) + 2), 4.8))
-    ax = fig.add_subplot()
-    width = 0.8 / len(langs)
-    for k, lang in enumerate(langs):
-        found = [cell[name, lang] for name in order if (name, lang) in cell]
-        xs = [order.index(r["name"]) - 0.4 + width * (k + 0.5) for r in found]
-        for x, r in zip(xs, found, strict=True):
-            data.append(
-                {
-                    "name": r["name"],
-                    "family": family(r["name"])[0],
-                    "lang": lang,
-                    "n_ids": r["n_ids_all"],
-                    "qwk": r["qwk_all"],
-                    "lo": r["qwk_all_lo"],
-                    "hi": r["qwk_all_hi"],
-                    "draws_used": r["qwk_all_draws_used"],
-                }
-            )
-            if _nan(r["qwk_all"]):
-                continue
-            ax.bar(
-                x,
-                r["qwk_all"],
-                width,
-                color=family(r["name"])[1],
-                hatch=HATCHES[k % len(HATCHES)],
-                edgecolor="white",
-                linewidth=0,
-            )
-            ax.errorbar(
-                x,
-                r["qwk_all"],
-                yerr=_errors([r], "qwk_all", "qwk_all_lo", "qwk_all_hi"),
-                fmt="none",
-                ecolor=BLACK,
-                capsize=1.5,
-                linewidth=0.8,
-            )
-    ax.axhline(0, color=BLACK, linewidth=0.6)
-    ax.set_xticks(range(len(order)), order, rotation=35, ha="right")
-    handles = [
-        mpl.patches.Patch(facecolor=GREY, edgecolor="white", hatch=HATCHES[k % len(HATCHES)], label=lang)
-        for k, lang in enumerate(langs)
+    data = [
+        {
+            "name": name,
+            "family": family(name)[0],
+            "lang": lang,
+            "n_ids": cell[name, lang]["n_ids_all"],
+            "qwk": cell[name, lang]["qwk_all"],
+            "lo": cell[name, lang]["qwk_all_lo"],
+            "hi": cell[name, lang]["qwk_all_hi"],
+            "draws_used": cell[name, lang]["qwk_all_draws_used"],
+        }
+        for lang in langs
+        for name in table_order
+        if (name, lang) in cell
     ]
-    ax.legend(handles=handles, title="langue (hachure)", fontsize=7, title_fontsize=7, frameon=False, ncol=len(langs))
-    ax.set_ylabel(f"QWK contre truth_all ({per_lang} ids par langue)")
-    ax.set_title(f"QWK par langue, IC 95 % : 1 000 tirages des {n_base}")
-    _french_axes(ax, x=False)
-    fig.tight_layout()
+    # one row order in every panel (the candidates' overall QWK), so that a candidate is read across the languages
+    overall = {r["name"]: r["qwk"] for r in _rows(computed["agreement_all"], role="candidate")}
+    order = _family_order(table_order, overall)
+    ncols = 2 if len(langs) > 1 else 1
+    nrows = math.ceil(len(langs) / ncols)
+    fig = mpl.figure.Figure(figsize=(8.6 if ncols == 2 else 5.0, nrows * (0.24 * len(order) + 1.0) + 0.8))
+    axes = fig.subplots(nrows, ncols, squeeze=False, sharex=True).ravel()
+    for ax, lang in zip(axes, langs, strict=False):
+        here = [name for name in order if (name, lang) in cell]
+        _hbars(ax, here, {name: cell[name, lang] for name in here}, "qwk_all", "qwk_all_lo", "qwk_all_hi", 2)
+        ax.set_title(f"{lang} ({max(cell[name, lang]['n_ids_all'] for name in here)} ids)", fontweight="bold")
+        _axes(ax, y=False, grid="x")
+    for ax in axes[len(langs) :]:
+        ax.set_visible(False)
+    _xlim_qwk(axes[0], [r[k] for r in data for k in ("qwk", "lo")])
+    for ax in axes[(nrows - 1) * ncols : len(langs)]:
+        ax.set_xlabel("QWK against truth_all")
+        better(ax, "x", higher=True)
+    title(
+        axes[0],
+        "Agreement with the median of the main judges, by language",
+        f"QWK against truth_all, {per_lang} ids per language; whiskers: 95% CI, {n_draws} of the {n_base}",
+    )
+    fig.tight_layout(h_pad=1.6, w_pad=2.0)
+    legend_below(fig, family_handles(order, mpl), ncol=4)
     return fig, columns, data, []
 
 
@@ -386,58 +610,84 @@ def _confusion(computed: dict[str, pa.Table], sigma: float, mpl):
         return None, [], [], notes
     columns = ["candidate", "truth_tier", "pred_tier", "n_ids", "row_share"]
     data = []
-    fig = mpl.figure.Figure(figsize=(3.3 * len(present), 3.9))
+    cmap = _heat(mpl)
+    fig = mpl.figure.Figure(figsize=(2.55 * len(present) + 1.0, 3.5))
     axes = fig.subplots(1, len(present), squeeze=False)[0]
-    for ax, name in zip(axes, present, strict=True):
+    first_totals = None
+    for k, (ax, name) in enumerate(zip(axes, present, strict=True)):
         cells = {(r["truth_tier"], r["pred_tier"]): r for r in _rows(table, candidate=name)}
         data += [cells[t, p] | {"candidate": name} for t in LEVELS for p in LEVELS]
         share = [[cells[t, p]["row_share"] for p in LEVELS] for t in LEVELS]
         totals = {t: sum(cells[t, p]["n_ids"] for p in LEVELS) for t in LEVELS}
-        cmap = mpl.colors.LinearSegmentedColormap.from_list(name, ["#FFFFFF", family(name)[1]])
         ax.imshow(share, cmap=cmap, vmin=0, vmax=1)
         for i, t in enumerate(LEVELS):
             for j in range(len(LEVELS)):
                 value = share[i][j]
-                text = "–" if not totals[t] else french(value, 2)
-                ax.text(j, i, text, ha="center", va="center", fontsize=7, color=_ink(cmap(value)))
-        ax.set_xticks(range(len(LEVELS)), LEVELS, rotation=45, ha="right")
-        ax.set_yticks(range(len(LEVELS)), [f"{t} ({totals[t]})" for t in LEVELS])
-        ax.set_xlabel("palier prédit")
-        ax.set_title(f"{name} ({sum(totals.values())} ids)", fontsize=8)
-        ax.spines[:].set_visible(True)
-    axes[0].set_ylabel("palier de truth_all (ids)")
-    fig.suptitle("Matrices de confusion, normalisées par ligne : part des ids du palier de la vérité (0–1)")
-    fig.tight_layout()
+                text = "–" if not totals[t] else number(value, 2)
+                ax.text(j, i, text, ha="center", va="center", fontsize=7.5, color=_ink(cmap(value)))
+        ax.set_xticks(range(len(LEVELS)), LEVELS, rotation=45, ha="right", rotation_mode="anchor")
+        if k == 0 or totals != first_totals:
+            ax.set_yticks(range(len(LEVELS)), [f"{t} ({totals[t]})" for t in LEVELS])
+        else:
+            ax.set_yticks(range(len(LEVELS)), [])
+        first_totals = first_totals or totals
+        ax.set_xlabel("predicted tier")
+        ax.set_title(f"{name} ({sum(totals.values())} ids)", fontsize=8.5, fontweight="bold")
+        ax.tick_params(length=0)
+        ax.spines[:].set_visible(False)
+    axes[0].set_ylabel("truth_all tier (ids)")
+    title(
+        axes[0],
+        "Confusion matrices against truth_all",
+        "each row: the ids of a truth_all tier by predicted tier, as shares of the row (rows sum to 1)",
+    )
+    fig.tight_layout(w_pad=1.2)
     return fig, columns, data, notes
 
 
 def _reliability(computed: dict[str, pa.Table], sigma: float, mpl):
     bins = [r for r in computed["calibration_bins"].to_pylist() if not _nan(r["mean_score"])]
-    names = list(dict.fromkeys(r["candidate"] for r in bins))
+    names = _variant_order(list(dict.fromkeys(r["candidate"] for r in bins)))
     if not names:
         return None, [], [], ["aucun candidat s1d1 à score v7 : figure non tracée"]
+    n_ids, _, _ = _units(computed)
     columns = ["candidate", "bin_low", "bin_high", "n_ids", "mean_score", "mean_anchor"]
-    fig = mpl.figure.Figure(figsize=(5.6, 5.2))
-    ax = fig.add_subplot()
-    ax.plot([0, 1], [0, 1], color=GREY, linewidth=0.8, label="score = ancre (calibration parfaite)")
-    for n, name in enumerate(names):
+    fig = mpl.figure.Figure(figsize=(2.15 * len(names) + 0.9, 3.4))
+    axes = fig.subplots(1, len(names), squeeze=False, sharex=True, sharey=True)[0]
+    for ax, name in zip(axes, names, strict=True):
+        ax.plot([0, 1], [0, 1], color=GREY, linestyle=(0, (4, 2)), linewidth=1.2, zorder=1)
         found = [r for r in bins if r["candidate"] == name]
         ax.plot(
             [r["mean_score"] for r in found],
             [r["mean_anchor"] for r in found],
-            **_series(name, n),
-            linewidth=1.2,
+            color=colour(name),
+            linewidth=2,
+            marker="o",
             markersize=4,
-            label=name,
+            zorder=3,
         )
-    ax.set_xlim(0, 1)
-    ax.set_ylim(0, 1.02)
-    ax.set_xlabel("score, moyenne de la case (échelle v7, 0–1 ; 10 cases de score)")
-    ax.set_ylabel("ancre du palier de truth_all, moyenne de la case (0–1)")
-    ax.set_title("Fiabilité du score de s1d1 contre l'ancre du palier de la vérité")
-    ax.legend(fontsize=7, frameon=False, loc="upper left")
-    _french_axes(ax)
-    fig.tight_layout()
+        ax.set_title(name, fontsize=8.5, fontweight="bold")
+        ax.set_xlim(0, 1)
+        ax.set_ylim(0, 1)
+        ax.set_aspect("equal")
+        ax.set_xticks([0, 0.5, 1])
+        ax.set_yticks([0, 0.5, 1])
+        ax.set_xlabel("mean score of the bin")
+        _axes(ax, grid="both")
+    axes[0].set_ylabel("mean truth_all anchor of the bin")
+    title(
+        axes[0],
+        "Reliability of the s1d1 score against the truth_all tier anchor",
+        f"v7 scale, 0-1; 10 bins of score, {n_ids} per candidate; a point on the diagonal is calibrated",
+    )
+    fig.tight_layout(w_pad=0.8)
+    handles = family_handles(names, mpl, line=True)
+    handles.append(
+        mpl.lines.Line2D(
+            [], [], color=GREY, linestyle=(0, (4, 2)), linewidth=1.2, label="perfect calibration (score = anchor)"
+        )
+    )
+    legend_below(fig, handles)
     return fig, columns, bins, []
 
 
@@ -445,106 +695,142 @@ def _judge_spread(computed: dict[str, pa.Table], sigma: float, mpl):
     rows = computed["judge_spread_by_tier"].to_pylist()
     if not rows:
         return None, [], [], ["pas d'écart entre juges : figure non tracée"]
+    n_ids, _, _ = _units(computed)
     columns = ["tier", "spread", "n_ids", "n_ids_tier", "mean_spread_tier", "n_ids_null_spread_tier"]
     spreads = sorted({r["spread"] for r in rows})
     counts = [[next(r["n_ids"] for r in rows if r["tier"] == t and r["spread"] == s) for s in spreads] for t in LEVELS]
     tier_rows = {t: next(r for r in rows if r["tier"] == t) for t in LEVELS}
-    fig = mpl.figure.Figure(figsize=(6.4, 3.8))
+    fig = mpl.figure.Figure(figsize=(6.6, 3.4))
     ax = fig.add_subplot()
     top = max((c for line in counts for c in line), default=0) or 1
-    cmap = mpl.colors.LinearSegmentedColormap.from_list("judges", ["#FFFFFF", "#444444"])
+    cmap = _heat(mpl)
     ax.imshow(counts, cmap=cmap, vmin=0, vmax=top, aspect="auto")
     for i, line in enumerate(counts):
         for j, value in enumerate(line):
             ax.text(j, i, str(value), ha="center", va="center", fontsize=8, color=_ink(cmap(value / top)))
     labels = [
-        f"{t} ({tier_rows[t]['n_ids_tier']} ids, moyenne {french(tier_rows[t]['mean_spread_tier'], 2)})" for t in LEVELS
+        f"{t} ({tier_rows[t]['n_ids_tier']} ids, mean {number(tier_rows[t]['mean_spread_tier'], 2)})" for t in LEVELS
     ]
     ax.set_yticks(range(len(LEVELS)), labels)
     ax.set_xticks(range(len(spreads)), [str(s) for s in spreads])
-    ax.set_xlabel("écart entre les juges principaux sur l'id (max − min des paliers, en crans)")
-    ax.set_ylabel("palier de truth_all")
-    ax.set_title("Écart entre juges par palier de la vérité (nombre d'ids)")
-    ax.spines[:].set_visible(True)
+    ax.set_xlabel("spread between the main judges on the id (max - min of their tiers, in steps)")
+    ax.set_ylabel("truth_all tier")
+    ax.tick_params(length=0)
+    ax.spines[:].set_visible(False)
+    title(ax, "Spread between the main judges, by truth_all tier", f"number of ids in each cell; {n_ids} in all")
     fig.tight_layout()
     return fig, columns, rows, []
 
 
 def _language_disagreements(computed: dict[str, pa.Table], sigma: float, mpl):
     rows = computed["truth_lang_vs_all"].to_pylist()
-    groups = [("lang", "par langue"), ("source", "par source")]
-    present = [(g, title) for g, title in groups if any(r["group"] == g for r in rows)]
+    groups = [("lang", "by language"), ("source", "by source")]
+    present = [(g, head) for g, head in groups if any(r["group"] == g for r in rows)]
     if not present:
         return None, [], [], ["pas de désaccord de langue mesuré : figure non tracée"]
     columns = ["group", "value", "n_ids", "n_ids_disagreement", "share_of_ids", "n_keys", "n_keys_disagreement"]
     data = [r | {"share_of_ids": r["n_ids_disagreement"] / r["n_ids"] if r["n_ids"] else math.nan} for r in rows]
     overall = next((r for r in data if r["group"] == "all"), None)
-    fig = mpl.figure.Figure(figsize=(8.0, 3.8))
-    axes = fig.subplots(1, len(present), squeeze=False, sharey=True)[0]
-    for ax, (group, title) in zip(axes, present, strict=True):
+    longest = max(sum(r["group"] == g for r in data) for g, _ in present)
+    fig = mpl.figure.Figure(figsize=(4.2 * len(present), 0.3 * longest + 1.9))
+    axes = fig.subplots(1, len(present), squeeze=False, sharex=True)[0]
+    top = max((r["share_of_ids"] for r in data if not _nan(r["share_of_ids"])), default=0)
+    for ax, (group, head) in zip(axes, present, strict=True):
         found = [r for r in data if r["group"] == group]
-        xs = range(len(found))
-        ax.bar(xs, [r["share_of_ids"] for r in found], color=GREY, edgecolor=BLACK, linewidth=0.6)
-        for x, r in zip(xs, found, strict=True):
-            ax.text(
-                x, r["share_of_ids"], f"{r['n_ids_disagreement']}/{r['n_ids']}", ha="center", va="bottom", fontsize=7
-            )
-        ax.set_xticks(list(xs), [r["value"] for r in found], rotation=20 if group == "source" else 0)
-        ax.set_title(title, fontsize=8)
-        _french_axes(ax, x=False)
-    axes[0].set_ylabel("part des ids où truth_lang ≠ truth_all (0–1)")
-    head = "Désaccords de langue (étiquette : ids en désaccord / ids)"
+        ys = list(range(len(found)))
+        for y, r in zip(ys, found, strict=True):
+            if _nan(r["share_of_ids"]):
+                label(ax, 0, y, "n/a", color=MUTED)
+                continue
+            ax.barh(y, r["share_of_ids"], height=0.62, color=JUDGE_SOFT, linewidth=0, zorder=2)
+            text = f"{number(r['share_of_ids'], 3)} ({r['n_ids_disagreement']}/{r['n_ids']})"
+            label(ax, r["share_of_ids"], y, text)
+        ax.set_yticks(ys, [r["value"] for r in found])
+        ax.set_ylim(len(found) - 0.4, -0.6)
+        ax.set_title(head, fontsize=8.5, fontweight="bold")
+        ax.tick_params(axis="y", length=0)
+        ax.spines["left"].set_visible(False)
+        ax.set_xlabel("share of ids where truth_lang ≠ truth_all")
+        _axes(ax, y=False, grid="x")
+        better(ax, "x", higher=False)
+    axes[0].set_xlim(0, max(0.05, top * 1.45))
+    axes[0].xaxis.set_major_locator(mpl.ticker.MaxNLocator(nbins=4))
+    sub = "share of the ids of each group (label: share, ids in disagreement / ids)"
     if overall:
-        head += (
-            f" ; en tout {overall['n_ids_disagreement']}/{overall['n_ids']} ids, "
-            f"{overall['n_keys_disagreement']}/{overall['n_keys']} prompts de base"
+        sub += (
+            f"; in all {overall['n_ids_disagreement']}/{overall['n_ids']} ids, "
+            f"{overall['n_keys_disagreement']}/{overall['n_keys']} base prompts"
         )
-    fig.suptitle(head, fontsize=8)
-    fig.tight_layout()
+    title(axes[0], "Disagreements between the truth by language and truth_all", sub)
+    fig.tight_layout(w_pad=2.5)
     return fig, columns, data, []
 
 
 def _needs_tools_pr(computed: dict[str, pa.Table], sigma: float, mpl):
     curve = computed["needs_tools_pr"].to_pylist()
-    names = list(dict.fromkeys(r["name"] for r in curve))
+    names = _variant_order(list(dict.fromkeys(r["name"] for r in curve)))
     if not names:
         return None, [], [], ["aucun candidat avec une probabilité de needs_tools : figure non tracée"]
     columns = ["name", "threshold", "precision", "recall"]
-    fig = mpl.figure.Figure(figsize=(5.6, 4.8))
-    ax = fig.add_subplot()
     needs = {r["name"]: r for r in computed["needs_tools"].to_pylist()}
-    for n, name in enumerate(names):
-        found = [r for r in curve if r["name"] == name]  # by decreasing threshold, as metrics.pr_curve gives them
+    fig = mpl.figure.Figure(figsize=(2.15 * len(names) + 0.9, 3.5))
+    axes = fig.subplots(1, len(names), squeeze=False, sharex=True, sharey=True)[0]
+    first = needs.get(names[0])
+    prevalence = first["n_ids_positive"] / first["n_ids"] if first and first["n_ids"] else None
+    by_name = {name: [r for r in curve if r["name"] == name] for name in names}  # by decreasing threshold
+    for ax, name in zip(axes, names, strict=True):
+        for other in names:  # the other candidates, light, behind: the panel's curve read against them
+            if other != name:
+                found = by_name[other]
+                ax.step(
+                    [r["recall"] for r in found],
+                    [r["precision"] for r in found],
+                    where="post",
+                    color=GRID,
+                    linewidth=1,
+                    zorder=1,
+                )
+        found = by_name[name]
         ax.step(
             [r["recall"] for r in found],
             [r["precision"] for r in found],
             where="post",
-            **_series(name, n),
-            markevery=max(1, len(found) // 10),  # a count, not a fraction: a curve may be all nan
-            markersize=4,
-            linewidth=1.2,
-            label=name,
+            color=colour(name),
+            linewidth=2,
+            zorder=3,
         )
-    title = "needs_tools : précision et rappel selon le seuil de probabilité"
-    first = needs.get(names[0])
-    if first and first["n_ids"]:
-        prevalence = first["n_ids_positive"] / first["n_ids"]
-        ax.axhline(
-            prevalence,
-            color=GREY,
-            linestyle=":",
-            linewidth=1,
-            label=f"part des positifs ({first['n_ids_positive']}/{first['n_ids']} ids)",
+        if prevalence is not None:
+            ax.axhline(prevalence, color=JUDGE_SOFT, linestyle=(0, (1, 1.5)), linewidth=1.2, zorder=2)
+        ax.set_title(name, fontsize=8.5, fontweight="bold")
+        ax.set_xlim(0, 1)
+        ax.set_ylim(0, 1.02)
+        ax.set_aspect("equal")
+        ax.set_xticks([0, 0.5, 1])
+        ax.set_yticks([0, 0.5, 1])
+        ax.set_xlabel("recall")
+        better(ax, "x", higher=True)
+        _axes(ax, grid="both")
+    axes[0].set_ylabel("precision")
+    better(axes[0], "y", higher=True)
+    sub = "precision and recall as the probability threshold moves"
+    handles = family_handles(names, mpl, line=True)
+    if prevalence is not None:
+        sub += f"; {first['n_ids_positive']} positive ids out of {first['n_ids']}: few positives"
+        handles.append(
+            mpl.lines.Line2D(
+                [],
+                [],
+                color=JUDGE_SOFT,
+                linestyle=(0, (1, 1.5)),
+                linewidth=1.2,
+                label=f"share of positives ({first['n_ids_positive']}/{first['n_ids']} ids)",
+            )
         )
-        title += f"\n{first['n_ids_positive']} ids positifs sur {first['n_ids']} : peu de positifs"
-    ax.set_xlim(0, 1)
-    ax.set_ylim(0, 1.02)
-    ax.set_xlabel("rappel (0–1)")
-    ax.set_ylabel("précision (0–1)")
-    ax.set_title(title, fontsize=8)
-    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.12), ncol=2, fontsize=7, frameon=False)
-    _french_axes(ax)
-    fig.tight_layout()
+    if len(names) > 1:
+        handles.append(mpl.lines.Line2D([], [], color=GRID, linewidth=1, label="the other candidates, for comparison"))
+    title(axes[0], "needs_tools: precision against recall", sub)
+    fig.tight_layout(w_pad=0.8)
+    legend_below(fig, handles)
     return fig, columns, curve, []
 
 
@@ -566,12 +852,14 @@ def figures(computed: dict[str, pa.Table], out_dir: Path | str, sigma: float = 0
     import matplotlib
     import matplotlib.colors
     import matplotlib.figure
+    import matplotlib.lines
     import matplotlib.patches
+    import matplotlib.ticker
 
     folder = Path(out_dir) / "figures"
     folder.mkdir(parents=True, exist_ok=True)
     drawn = []
-    with matplotlib.rc_context(RC):
+    with style():
         for name in NAMES:
             svg, csv = folder / f"{name}.svg", folder / f"{name}.csv"
             fig, columns, rows, notes = _DRAW[name](computed, sigma, matplotlib)
@@ -580,9 +868,7 @@ def figures(computed: dict[str, pa.Table], out_dir: Path | str, sigma: float = 0
                 csv.unlink(missing_ok=True)
                 drawn.append(Figure(name, None, None, tuple(notes)))
                 continue
-            fig.savefig(svg, format="svg", metadata={"Date": None}, bbox_inches="tight")
-            cells = CELLS.get(name, {})
-            french_rows = [{HEADERS[c]: cells.get(c, {}).get(row.get(c), row.get(c)) for c in columns} for row in rows]
-            write_csv(csv, [HEADERS[c] for c in columns], french_rows)
+            fig.savefig(svg, format="svg", metadata={"Date": None}, bbox_inches="tight", pad_inches=0.15)
+            write_csv(csv, [HEADERS[c] for c in columns], [{HEADERS[c]: row.get(c) for c in columns} for row in rows])
             drawn.append(Figure(name, svg, csv, tuple(notes)))
     return drawn

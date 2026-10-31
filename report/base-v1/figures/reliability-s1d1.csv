@@ -1,4 +1,4 @@
-candidat,case : borne basse,case : borne haute,ids,score moyen,ancre moyenne
+candidate,bin: lower bound,bin: upper bound,ids,mean score,mean anchor
 s1d1-compact-int8,0.0,0.1,20,0.0513,0.0345
 s1d1-compact-int8,0.1,0.2,40,0.1538,0.10024999999999999
 s1d1-compact-int8,0.2,0.3,100,0.25108,0.2173
