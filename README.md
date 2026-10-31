@@ -27,6 +27,19 @@ Les décisions citées `docs/NN` sont dans [`docs/`](docs/README.md).
   agentiques et multi-tours sont absents, le jeu est fait de premiers prompts.
 - **Non mesuré : les autres langues.** Seules les quatre langues choisies sont couvertes.
 
+### D'où vient ce banc
+
+Avant ce banc, s1d1 a été passé sur l'évaluation publique de RouteLLM (lm-sys,
+[arXiv 2406.18665](https://arxiv.org/abs/2406.18665) : MT-Bench, GSM8K, MMLU ; GPT-4 contre Mixtral 8x7B ; métrique
+APGR), après avoir retrouvé à l'identique les neuf chiffres publiés de leur routeur BERT. Selon le jeu d'évaluation, s1d1 y faisait
+entre 0,40 et 0,59 d'APGR. Un témoin trivial, la longueur du prompt en caractères, faisait de 0,56 à 0,60 : 0,598 sur
+GSM8K et 0,583 sur MMLU, là où le routeur BERT de RouteLLM fait 0,531 et 0,572. Sur MT-Bench (72 questions), tout
+tombait dans le bruit, sauf le BERT entraîné sur la préférence GPT-4 contre Mixtral, qui est exactement ce que cette
+évaluation mesure. Elle répond à la question « sur cette question, GPT-4 bat-il Mixtral ? » : un écart entre deux modèles sur une
+paire anglaise, pas la complexité d'un prompt. Un prompt difficile pour les deux modèles n'y rapporte rien, alors que
+s1d1 prédit l'effort de réponse jugé par un LLM. D'où le présent banc, à soi : des témoins (hasard, longueur, constante), un
+plafond fait des juges eux-mêmes, des intervalles par rééchantillonnage et quatre langues, soit `base-v1`.
+
 ## Résultats (`base-v1`, 2026-10-30)
 
 La phrase de docs/32 § 5, remplie avec les chiffres du rapport de `base-v1` (360 ids, 90 prompts de base) :
@@ -81,7 +94,16 @@ QWK contre `truth_all` (la médiane des trois juges principaux), IC à 95 % sur 
 Les juges sont l'instrument de mesure, pas des concurrents : aucun tableau ne range un candidat face à un juge, sauf le
 plafond. Aucune phrase « meilleur que » sans la règle des 2 σ (l'IC de l'écart apparié exclut zéro et dépasse 2 σ,
 σ = 0,005) : la règle ne sépare pas `s1d1-full-int8` de `s1d1-full-fp16`, de `s1d1-small-int8` ni de
-`s1d1-compact-int8` (seul `tiny` en est séparé). Tout le reste est dans
+`s1d1-compact-int8` (seul `tiny` en est séparé).
+
+L'heuristique de LiteLLM est le classifieur par défaut de l'Auto Router de LiteLLM, et Laya l'autre option que LiteLLM
+documente pour un classifieur auto-hébergé ; le banc les lit toutes deux sans entraînement ni réglage (zéro-shot) sur
+cette grille, les quatre paliers de LiteLLM traduits nom à nom (voir
+[Les treize dossiers de classifieurs](#les-treize-dossiers-de-classifieurs-onze-dans-les-résultats)). Pour `small`, le
+banc ne sépare pas `s1d1-small-int8` de `s1d1-full-int8` : l'écart apparié `s1d1-full-int8` − `s1d1-small-int8` est de
+0,035 [−0,004 ; 0,076] (`report/base-v1/tables/paired.csv`, la règle des 2 σ ne passe pas). `s1d1-small-int8` pèse 56 Mo
+contre 310 Mo pour `s1d1-full-int8` et répond en 5,8 ms par prompt contre 9,1 ms (`report/base-v1/tables/profile.csv`,
+latence médiane, lot de 1, CPU d'un M4 Max). Tout le reste est dans
 [`report/base-v1/index.md`](report/base-v1/index.md) ; pour le régénérer, depuis la racine du dépôt :
 
 ```
@@ -321,6 +343,31 @@ Les fichiers `base-v1-<lang>.jsonl` sont ceux que les juges de vérification ont
 quels (leur SHA-256 est celui que `bench validate` demande aux dossiers `check-*`), et `bench export` refuse de réécrire
 un fichier de prompts qu'un dossier de juge épingle par son SHA-256 si le contenu change. `meta.parquet` porte `translator`
 (`modèle@révision`, vide en anglais) et `corrected`.
+
+## Apporter ses prompts
+
+`base-v1` est le premier jeu d'une série : rien n'oblige les suivants à reprendre ses prompts, ses langues ou ses
+sources. Pour proposer un jeu `<jeu>` :
+
+1. **Un vivier.** `bench pool` (`--exclusions` pour la liste des clés à écarter, `--candidates` et `--per-source` pour les
+   candidats) construit le vivier ; `bench export --select <clés> --name <jeu>` en fait le fichier de prompts
+   `data/prompts/<jeu>.*`, avec `--langs` et `--translations` pour les langues autres que l'anglais.
+2. **Un pré-tri par un juge qui n'est pas du banc.** Un modèle autre que les trois juges principaux étiquette les
+   candidats (`bench judge`), dans un dossier de juge ordinaire, comme `judges/presort-qwen3-off` pour `base-v1`.
+3. **Un tirage publié.** `bench draw --presort … --meta … --out … --seed <graine> --veto <fichier>` ; publiez les clés
+   tirées, la graine, le veto et ses raisons : le tirage se rejoue (voir [Le tirage](#le-tirage-des-prompts-de-base)).
+4. **Une traduction relue.** `bench translate` traduit chaque langue, `bench check` signale ce qu'il faut relire, et un
+   locuteur de la langue relit (voir [La traduction](#la-traduction)).
+5. **Les juges du banc.** `bench judge` fait juger le jeu par les trois juges principaux, puis `bench validate`,
+   `bench agree`, `bench classify`, `bench run` et `bench report` produisent les dossiers et le rapport du jeu.
+
+Une PR ajoute : un dossier de prompts, ses dossiers de juges et de classifieurs, et son rapport (`report/<jeu>/`, avec
+`results/<jeu>.parquet` qui le nourrit). Elle ne touche jamais un fichier existant : ni les juges, ni les classifieurs,
+ni les résultats, ni les prompts d'un jeu déjà publié. Un jeu qui voudrait corriger `base-v1` est un autre jeu.
+
+À lire avant de commencer : les licences des sources (la colonne `licence` de `pool.parquet` et de `<jeu>.meta.parquet`,
+section [Licences](#licences)) et la liste d'exclusion (`data/exclusions/`, qui dit ce que s1d1 a déjà vu : voir
+[Reproduire l'essai](#reproduire-lessai), étape 1).
 
 ## Les vérités
 
