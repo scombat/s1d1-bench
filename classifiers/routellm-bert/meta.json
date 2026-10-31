@@ -1,0 +1,16 @@
+{
+  "judge": "routellm-bert",
+  "model": "routellm/bert_gpt4_augmented",
+  "provider": "system",
+  "revision": "86237e3df400762178ea98379477b8296e66d5e4",
+  "date": "2026-10-31",
+  "temperature": 0,
+  "thinking": "none",
+  "instructions": "none",
+  "prompts_sha256": "e6a6d4c12ef8b95caea942337a3a1e16ec1622cb4e75c8ee0b473ef609a32490",
+  "author": "scombat",
+  "replayable": true,
+  "licence": "CC-BY-4.0",
+  "notes": "Replay: uv run --group routellm bench classify routellm --routellm-router bert --revision 86237e3df400762178ea98379477b8296e66d5e4 (device cpu, float32). The published RouteLLM router routellm/bert_gpt4_augmented, run as BERTRouter.calculate_strong_win_rate of lm-sys/RouteLLM@0b64fdafe049e596a3f5657c219329f24af24198: one prompt per call, tokenizer truncation at 512 tokens, softmax of the three logits, score = 1 - (p1 + p2) = the probability that the strong model (GPT-4) beats the weak one (Mixtral 8x7B) on an English question, as the router gives it (no calibration, rounded to 6 decimals). It does not predict a complexity tier. Tier = five equal bounds fixed in advance: trivial [0 ; 0.2), low [0.2 ; 0.4), medium [0.4 ; 0.6), high [0.6 ; 0.8), expert [0.8 ; 1]. The prompts are given as they are in the four languages (the router is English). task and needs_tools are null: the router does not predict them. decisions.jsonl holds, by id, the tier, the score and the three softmax probabilities. 18 prompts truncated. Run on 2026-10-31 on an Apple M4 Max 128 GB, on the CPU, float32, torch and transformers of the routellm group; 360 prompts in about 14 s, weights already in the Hub cache. Weights: public repo, licence file Apache-2.0 (checkpoint of an XLM-RoBERTa-base fine-tune). Router not a complexity classifier: see the report.",
+  "quantization": "float32"
+}
