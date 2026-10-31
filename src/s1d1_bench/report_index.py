@@ -12,14 +12,17 @@ The two clauses of the sentence of docs/32 § 5 are chosen by rules written here
 § 7.4 come first, a prediction that does not hold first of all, in bold, with its numbers.
 """
 
+import math
 import re
 from collections.abc import Sequence
 from pathlib import Path
 
 import pyarrow as pa
 
+from s1d1_bench.classify import ANCHORS
 from s1d1_bench.report import (
     CALIBRATED,
+    CONSTANT_SCALE,
     FLOOR,
     HEADLINE,
     LITELLM,
@@ -28,6 +31,7 @@ from s1d1_bench.report import (
     RAW,
     REFERENCE,
     V7,
+    constant_scale,
     french,
     markdown_table,
 )
@@ -73,6 +77,10 @@ VALUES = {
              "undecidable": "indécidables", "abstentions": "abstentions", "bootstrap": "bootstrap",
              "random draws": "tirages de random", "sigma": "σ"},
 }  # fmt: skip
+ANCHOR_OF = {constant_scale(ANCHORS[level]): level for level in LEVELS}  # "constant (anchor of low)": "low"
+VALUES["scale"] |= {CONSTANT_SCALE: "constant"} | {
+    scale: f"constant (ancre de {level})" for scale, level in ANCHOR_OF.items()
+}
 VALUES["role_a"] = VALUES["role_b"] = VALUES["role"]
 VALUES["judge"] = {"mean": "moyenne"}
 VALUES["lang"] = {"all": "toutes"}
@@ -259,9 +267,22 @@ def _and(items: Sequence[str]) -> str:
 def _overlap(a: dict, b: dict) -> bool | None:
     """Whether the 95 % intervals of two rows (`qwk_lo`, `qwk_hi`) overlap; None when one is missing."""
     bounds = (a.get("qwk_lo"), a.get("qwk_hi"), b.get("qwk_lo"), b.get("qwk_hi"))
-    if any(french(v) == "—" for v in bounds):
+    if any(v is None or math.isnan(v) for v in bounds):
         return None
     return a["qwk_lo"] <= b["qwk_hi"] and b["qwk_lo"] <= a["qwk_hi"]
+
+
+def _constant_scores(rank: Sequence[dict]) -> str:
+    """The rows of rank_metrics whose score has one value (scale `CONSTANT_SCALE`, with the tier whose anchor it is):
+    no rank and no AUROC tells them apart. One sentence, ending with its full stop."""
+    rows = [r for r in rank if r["scale"] == CONSTANT_SCALE or r["scale"] in ANCHOR_OF]
+    if not rows:
+        return "aucun candidat n'a un score constant."
+    anchors = [f" (l'ancre de {ANCHOR_OF[r['scale']]})" if r["scale"] in ANCHOR_OF else "" for r in rows]
+    if len(rows) == 1:
+        return f"{_code(rows[0]['name'])} a un score constant{anchors[0]} : ni rang ni AUROC ne le départagent."
+    names = _and([_code(r["name"]) + anchor for r, anchor in zip(rows, anchors, strict=True)])
+    return f"{names} ont un score constant : ni rang ni AUROC ne les départagent."
 
 
 def _overlap_words(pairs: Sequence[tuple[str, dict, str, dict]]) -> str:
@@ -484,6 +505,7 @@ def _reading(computed: dict[str, pa.Table], run: dict, sigma: float, classifiers
             else "Aucune ligne needs_tools."
         ),
         "rank_candidates": ", ".join(_code(r["name"]) for r in rank if r["scale"] == RAW) or "aucun",
+        "rank_constant": _constant_scores(rank),
         "calibrated_candidates": ", ".join(calibrated) or f"aucun (pas de candidat `{CALIBRATED}*` avec un score)",
         "reference": _code(REFERENCE),
         "sigma": french(sigma),

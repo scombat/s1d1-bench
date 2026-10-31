@@ -464,6 +464,7 @@ def test_rank_metrics_mark_a_constant_score(tmp_path):
     computed = tables(*wide_set(tmp_path), sigma=0.005)
     flat = one(computed["rank_metrics"], name="flat")
     assert flat["note"] == CONSTANT_SCORE
+    assert flat["scale"] == "constant (anchor of low)"  # its one value, 0.25, is the v7 anchor of low: not a raw score
     assert math.isnan(flat["spearman"])
     assert flat["auroc_high"] == pytest.approx(0.5)  # no discrimination: kept, and marked
 
@@ -821,6 +822,51 @@ def test_report_command_refuses_a_missing_template_before_computing(tmp_path, ca
     monkeypatch.setattr(report, "tables", lambda *a, **k: pytest.fail("the tables were computed"))
     assert main([*args, "--out", str(tmp_path / "out")]) == 1
     assert "nowhere.md: missing (the template of index.md)" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("key", ["main", "judges", "classifiers"])
+def test_report_command_refuses_a_run_record_without_a_key(tmp_path, capsys, key):
+    pytest.importorskip("matplotlib")
+    import json
+
+    from s1d1_bench.cli import main
+
+    args, (_, _, run, _) = fake_report_inputs(tmp_path)
+    del run[key]
+    (tmp_path / "results" / "fake.run.json").write_text(json.dumps(run), encoding="utf-8")
+    assert main([*args, "--out", str(tmp_path / "out")]) == 1
+    assert f"the run record has no key {key!r}" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("column", ["source", "origin"])
+def test_report_command_refuses_a_meta_table_without_a_column(tmp_path, capsys, column):
+    pytest.importorskip("matplotlib")
+    import pyarrow.parquet as pq
+
+    from s1d1_bench.cli import main
+
+    args, (_, meta, _, _) = fake_report_inputs(tmp_path)
+    pq.write_table(meta.drop_columns([column]), tmp_path / "fake.meta.parquet")
+    assert main([*args, "--out", str(tmp_path / "out")]) == 1
+    assert f"the meta table has no column {column!r}" in capsys.readouterr().err
+
+
+def test_constant_scores_are_named_from_the_data_with_their_anchor():
+    from s1d1_bench.report import constant_scale
+    from s1d1_bench.report_index import _constant_scores
+
+    assert constant_scale(0.25) == "constant (anchor of low)"
+    assert constant_scale(0.4) == "constant"  # one value, but no tier's anchor
+    raw = {"name": "length", "scale": RAW}
+    assert _constant_scores([raw]) == "aucun candidat n'a un score constant."
+    low = {"name": "constant-low", "scale": constant_scale(0.25)}
+    assert _constant_scores([raw, low]) == (
+        "`constant-low` a un score constant (l'ancre de low) : ni rang ni AUROC ne le départagent."
+    )
+    odd = {"name": "odd", "scale": constant_scale(0.4)}
+    assert _constant_scores([low, odd]) == (
+        "`constant-low` (l'ancre de low) et `odd` ont un score constant : ni rang ni AUROC ne les départagent."
+    )
 
 
 def test_markdown_numbers_take_the_true_minus_sign_and_the_csv_keeps_the_hyphen(tmp_path):

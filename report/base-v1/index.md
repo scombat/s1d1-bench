@@ -82,7 +82,7 @@ en bande : σ ≈ 0,005 QWK, repris comme nombre, pas remesuré.
   elle compte donc leurs propres votes (4 sur 12 par prompt de base), et la colonne « rôle » dit « juge dans la
   vérité ». Les autres juges (`base-v1-gemma4-off`, `base-v1-qwen3-off`) sont hors de la vérité : leur accord avec `truth_all` mesure l'effet de
   la réflexion, à côté des paires du tableau des juges. Pour `truth_all_nogemma`, `base-v1-gemma4-cap512` sort de la vérité : avec deux
-  juges, la médiane est la moyenne des deux paliers arrondie vers le bas.
+  juges (8 votes par prompt de base), la médiane est la moyenne des deux votes du milieu, arrondie vers le bas.
 - **Unités** : « ids » compte les versions (une par langue, 360 en tout) ; « prompts de base » compte les
   `base_key` (90). Les IC tirent les prompts de base, jamais les ids.
 - **Paliers jamais prédits** : `constant-low` : trivial, medium, high, expert ; `laya-english-tier` : trivial ; `laya-multilingual-tier` : trivial ; `litellm-heuristic` : trivial, expert ; `s1d1-compact-int8` : expert ; `s1d1-full-fp16` : expert ; `s1d1-full-int8` : expert ; `s1d1-small-int8` : expert ; `s1d1-tiny-int8` : expert ([`tables/agreement_all.csv`](tables/agreement_all.csv),
@@ -237,7 +237,8 @@ selon la règle des 2 σ (borne basse > 0,010, ou borne haute < −0,010), « ne
 | base-v1-qwen3-off | juge hors de la vérité | 360 | 0,872 [0,821 ; 0,908] | 0,672 [0,578 ; 0,758] | 1,000 [1,000 ; 1,000] | 0,878 [0,816 ; 0,916] |  |
 
 Les juges principaux sont dans la vérité : leur accord avec elle est gonflé par leurs propres votes ; le chiffre qui
-les compare à la médiane des autres est le plafond. Les juges hors de la vérité mesurent l'effet de la réflexion.
+les compare à la médiane des autres est le plafond. Les juges hors de la vérité ne sont pas dans `truth_all` : leur accord
+avec elle se lit avec les paires « même modèle » du tableau des juges, qui mesurent l'effet de la réflexion.
 
 ### Sans Gemma 4 : `truth_all_nogemma`
 
@@ -688,7 +689,7 @@ précision change ; la ligne pointillée grise est la part des positifs, la pré
 
 | nom | colonne lue | échelle | ids | Spearman | AUROC (high ou expert) | note |
 |---|---|---|---|---|---|---|
-| constant-low | constant-low.score | brut (hors échelle v7 : rangs seulement) | 360 | — | 0,500 [0,500 ; 0,500] | score constant |
+| constant-low | constant-low.score | constant (ancre de low) | 360 | — | 0,500 [0,500 ; 0,500] | score constant |
 | laya-english-tier | laya-english-tier.raw_score | brut (hors échelle v7 : rangs seulement) | 360 | 0,671 [0,575 ; 0,740] | 0,787 [0,700 ; 0,855] | — |
 | laya-multilingual-tier | laya-multilingual-tier.raw_score | brut (hors échelle v7 : rangs seulement) | 360 | 0,351 [0,173 ; 0,517] | 0,672 [0,574 ; 0,761] | — |
 | length | length.score | brut (hors échelle v7 : rangs seulement) | 360 | 0,661 [0,531 ; 0,757] | 0,800 [0,708 ; 0,883] | — |
@@ -700,8 +701,8 @@ précision change ; la ligne pointillée grise est la part des positifs, la pré
 | s1d1-tiny-int8 | s1d1-tiny-int8.score | score v7 | 360 | 0,775 [0,696 ; 0,830] | 0,885 [0,813 ; 0,945] | — |
 
 Corrélation de rang (Spearman) du score avec le palier de la vérité, et AUROC du score pour « la vérité est high ou
-expert ». Les scores bruts (`constant-low`, `laya-english-tier`, `laya-multilingual-tier`, `length`, `litellm-heuristic`) ne sont pas sur l'échelle v7 : seul leur ordre compte, ni MAE ni
-calibration pour eux.
+expert ». Les scores bruts (`laya-english-tier`, `laya-multilingual-tier`, `length`, `litellm-heuristic`) ne sont pas sur l'échelle v7 : seul leur ordre compte, ni MAE ni
+calibration pour eux ; `constant-low` a un score constant (l'ancre de low) : ni rang ni AUROC ne le départagent.
 
 | nom | ids | MAE | Spearman | ECE |
 |---|---|---|---|---|

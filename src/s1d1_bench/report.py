@@ -81,6 +81,17 @@ MACRO_F1_NOTE = (
 )
 CONSTANT_SCORE = "score constant"  # rank_metrics: Spearman nan, AUROC 0,5 (no discrimination)
 V7, RAW = "v7 score", "raw (not on the v7 scale; ranks only)"
+RUN_KEYS = ("classifiers", "judges", "main")  # read from the run record; refused up front when one is missing
+META_COLUMNS = ("id", "source", "origin")  # read from the meta table; idem
+CONSTANT_SCALE = "constant"  # rank_metrics scale of a score with one value; see constant_scale
+
+
+def constant_scale(value: float) -> str:
+    """The scale of a score that has one value: the tier whose v7 anchor it is, when it is one."""
+    level = next((level for level, anchor in ANCHORS.items() if math.isclose(value, anchor)), None)
+    return CONSTANT_SCALE if level is None else f"{CONSTANT_SCALE} (anchor of {level})"
+
+
 PASSES, FAILS = "passe", "ne passe pas"
 RULE_2SIGMA = (
     "un écart apparié passe seulement si son IC 95 % exclut zéro et se tient au-delà de 2 σ : borne basse > 2 σ, ou "
@@ -194,6 +205,12 @@ def two_sigma_rule(lo: float, hi: float, sigma: float) -> str:
 
 class _Report:
     def __init__(self, results: pa.Table, meta: pa.Table, run: dict, classifiers_root: Path, sigma: float):
+        absent_keys = [key for key in RUN_KEYS if key not in run]
+        if absent_keys:
+            raise ValueError(f"the run record has no key {absent_keys[0]!r} (it needs {', '.join(RUN_KEYS)})")
+        absent_columns = [column for column in META_COLUMNS if column not in meta.column_names]
+        if absent_columns:
+            raise ValueError(f"the meta table has no column {absent_columns[0]!r} (it needs {', '.join(META_COLUMNS)})")
         self.sigma = sigma
         self.run = run
         self.candidates = [entry["name"] for entry in run["classifiers"]]
@@ -205,7 +222,7 @@ class _Report:
         self.base_key = data["base_key"]
         self.lang = np.array(data["lang"], dtype=object)
         self.langs = sorted(set(data["lang"]))
-        by_id = {row["id"]: row for row in meta.select(["id", "source", "origin"]).to_pylist()}
+        by_id = {row["id"]: row for row in meta.select(list(META_COLUMNS)).to_pylist()}
         missing = [i for i in self.ids if i not in by_id]
         if missing:
             raise ValueError(f"the meta table has no row for id {missing[0]!r} ({len(missing)} id(s) missing)")
@@ -306,8 +323,8 @@ class _Report:
         out |= _columns("within_one", self.resampler.mean((np.abs(truth - pred) <= 1).astype(float), valid))
         if alpha:
             pairs = np.stack([truth, pred], axis=1)  # one unit per row, the two coders truth and prediction
-            alpha = self.resampler.stat(_on(metrics.krippendorff_alpha_ordinal, pairs, as_lists=True), valid)
-            out |= _columns("alpha", alpha)
+            ordinal = self.resampler.stat(_on(metrics.krippendorff_alpha_ordinal, pairs, as_lists=True), valid)
+            out |= _columns("alpha", ordinal)
         return out
 
     # --- the tables -----------------------------------------------------------------------------------------------
@@ -562,11 +579,14 @@ class _Report:
                 continue
             score = _floats(self.data[column])
             valid = (truth >= 0) & ~np.isnan(score)
-            row = {"name": name, "score_column": column, "scale": V7 if self.calibrated(name) else RAW}
+            values = np.unique(score[valid])
+            constant = len(values) == 1
+            scale = constant_scale(float(values[0])) if constant else V7 if self.calibrated(name) else RAW
+            row = {"name": name, "score_column": column, "scale": scale}
             row["n_ids"] = int(valid.sum())
             row |= _columns("spearman", self.resampler.stat(_on(metrics.spearman, score, truth), valid))
             row |= _columns("auroc_high", self.resampler.stat(_on(metrics.auroc, high, score), valid))
-            row["note"] = CONSTANT_SCORE if len(np.unique(score[valid])) == 1 else None
+            row["note"] = CONSTANT_SCORE if constant else None
             result.append(row)
         return pa.Table.from_pylist(result)
 
@@ -783,8 +803,9 @@ def tables(
     results: pa.Table, meta: pa.Table, run: dict, classifiers_root: Path | str, sigma: float = 0.005
 ) -> dict[str, pa.Table]:
     """Every table of the report (`TABLES`), from the results table of `bench run`, the meta table, its run record and
-    the classifiers root. Refused (ValueError naming the folder or file) when the root has no folder for a classifier
-    of the run record or no `random/draws.jsonl`, or when the tables do not match the run record."""
+    the classifiers root. Refused (ValueError naming the key, column, folder or file) when the run record lacks one of
+    `RUN_KEYS`, the meta table one of `META_COLUMNS`, the root a folder for a classifier of the run record or
+    `random/draws.jsonl`, or when the tables do not match the run record."""
     report = _Report(results, meta, run, Path(classifiers_root), sigma)
     for name in HEADLINE:
         if name not in report.candidates:
@@ -899,7 +920,8 @@ MATPLOTLIB_HINT = (
 def run_report_cmd(args) -> int:
     """`bench report`: `--out/tables/*.csv`, `--out/figures/*.svg` (each with its CSV) and `--out/index.md`, from
     `--results`, its `<stem>.run.json`, `--meta`, the `--classifiers` root and `--template`. Exit 1 with a message on
-    a refusal (a missing input, a classifier folder or `random/draws.jsonl` missing from the root) or when matplotlib
+    a refusal (a missing input, a key missing from the run record or a column from the meta table, a classifier folder
+    or `random/draws.jsonl` missing from the root) or when matplotlib
     is missing; matplotlib and the inputs are checked first, before any computation."""
     try:
         import matplotlib  # noqa: F401  (the figures need it; checked before the tables take their time)

@@ -80,7 +80,7 @@ en bande : σ ≈ 0,005 QWK, repris comme nombre, pas remesuré.
   elle compte donc leurs propres votes (4 sur 12 par prompt de base), et la colonne « rôle » dit « juge dans la
   vérité ». Les autres juges ({other_judges}) sont hors de la vérité : leur accord avec `truth_all` mesure l'effet de
   la réflexion, à côté des paires du tableau des juges. Pour `truth_all_nogemma`, {gemma} sort de la vérité : avec deux
-  juges, la médiane est la moyenne des deux paliers arrondie vers le bas.
+  juges (8 votes par prompt de base), la médiane est la moyenne des deux votes du milieu, arrondie vers le bas.
 - **Unités** : « ids » compte les versions (une par langue, {n_ids} en tout) ; « prompts de base » compte les
   `base_key` ({n_base}). Les IC tirent les prompts de base, jamais les ids.
 - **Paliers jamais prédits** : {tiers_never_predicted} ([`tables/agreement_all.csv`](tables/agreement_all.csv),
@@ -148,7 +148,8 @@ selon la règle des 2 σ (borne basse > {two_sigma}, ou borne haute < −{two_si
 {table_agreement_all_judges}
 
 Les juges principaux sont dans la vérité : leur accord avec elle est gonflé par leurs propres votes ; le chiffre qui
-les compare à la médiane des autres est le plafond. Les juges hors de la vérité mesurent l'effet de la réflexion.
+les compare à la médiane des autres est le plafond. Les juges hors de la vérité ne sont pas dans `truth_all` : leur accord
+avec elle se lit avec les paires « même modèle » du tableau des juges, qui mesurent l'effet de la réflexion.
 
 ### Sans Gemma 4 : `truth_all_nogemma`
 
@@ -260,7 +261,7 @@ précision change ; la ligne pointillée grise est la part des positifs, la pré
 
 Corrélation de rang (Spearman) du score avec le palier de la vérité, et AUROC du score pour « la vérité est high ou
 expert ». Les scores bruts ({rank_candidates}) ne sont pas sur l'échelle v7 : seul leur ordre compte, ni MAE ni
-calibration pour eux.
+calibration pour eux ; {rank_constant}
 
 {table_calibration}
 

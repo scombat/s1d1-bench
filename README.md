@@ -399,7 +399,8 @@ autre nom.
   quatre probabilités telles quelles. Les dossiers **`laya-english` et `laya-multilingual`** de la première PR convertissaient
   le niveau attendu divisé par 3 en palier par l'ancre la plus proche (SIMPLE devenait trivial, MEDIUM low, COMPLEX high) :
   une autre table que celle du scorer de LiteLLM. Ils restent dans le dépôt, parce qu'un dossier de classifieur ne se
-  modifie jamais, mais `bench run` ne les charge plus et ni les résultats ni le rapport n'en parlent.
+  modifie jamais, mais `bench run` ne les charge plus : ils ne sont ni dans les résultats ni dans les chiffres du rapport,
+  qui dit seulement pourquoi.
 - **Le scorer de LiteLLM** (sans modèle, sans groupe, sans réseau) :
 
   ```
@@ -476,9 +477,8 @@ Accord deux à deux (`bench agree judges/base-v1-*`) :
 | base-v1-gptoss-cap512 | base-v1-qwen3-off | 359 | 1 | 46,5 % | 91,4 % | 53,5 % | 90,8 % |
 | base-v1-qwen3-cap512 | base-v1-qwen3-off | 360 | 0 | 77,8 % | 100,0 % | 84,7 % | 95,6 % |
 
-Ces deux tableaux sont des comptes, donnés une fois ici. Le texte de l'interprétation est laissé au rapport (PR B), qui
-ajoutera les intervalles de confiance et les métriques d'accord ; rien n'est dit ici de la valeur d'un juge ou d'un
-classifieur par rapport à un autre.
+Ces deux tableaux sont des comptes, donnés une fois ici, sans intervalle ni métrique d'accord ; les QWK, leurs intervalles
+de confiance et ce qu'ils disent sont dans [Le rapport](#le-rapport).
 
 ## Le rapport
 
@@ -492,7 +492,8 @@ uv run --group report bench report --results results/base-v1.parquet --meta data
 
 `--classifiers` est la racine des dossiers : la bande du témoin aléatoire se lit dans `classifiers/random/draws.jsonl`
 (dix tirages), `results/base-v1.run.json` ne donnant que les noms. Une quinzaine de secondes. La commande refuse de
-tourner (code 1, un message) si un dossier de classifieur nommé par `run.json` manque à la racine, si le gabarit
+tourner (code 1, un message) si un dossier de classifieur nommé par `run.json` manque à la racine, si `run.json` n'a pas
+l'une des clés `classifiers`, `judges`, `main` ou la table méta l'une des colonnes `source`, `origin`, si le gabarit
 `report/TEMPLATE.md` est introuvable, ou si `matplotlib` (groupe `report`) n'est pas installé.
 
 **Ce qu'il contient.** `index.md` (lu de haut en bas : les deux prédictions de docs/34 § 7.4 d'abord, celle qui ne se
@@ -521,13 +522,19 @@ zéro mais sa borne basse n'est pas au-delà de 2 σ = 0,010 (σ = 0,005, docs/1
 Les trois juges principaux sont dans la vérité : leur accord avec elle compte leurs propres votes, et le chiffre qui les
 compare est le plafond. Gemma 4 a produit les étiquettes d'entraînement de s1d1 (docs/32 § 4.4) et est dans `truth_all` :
 le rapport donne l'accord contre la médiane sans Gemma (`truth_all_nogemma`, tableau « Sans Gemma 4 ») ; `s1d1-full-int8`
-y passe de 0,807 à 0,785, `length` de 0,543 à 0,478 et `laya-english-tier` de 0,405 à 0,347 : la baisse de s1d1 n'est pas plus
-forte que celle des candidats qui n'ont pas vu Gemma. Le rapport ne mesure pas la grille, le routage, la distribution
-réelle des prompts, les prompts agentiques ou multi-tours, ni les langues autres que les quatre ; trois analyses de
-docs/32 ne sont pas produites dans ce lot (la part des prompts notés 0,70 à 0,80 que les juges mettent en `high` ou
-au-dessus, les confusions entre tâches voisines, la matrice de confusion normalisée de la tâche), et `expert` n'a que 8
-ids sur 360 : tout ce qui touche ce palier est dit sur très peu de prompts. Les 360 ids ne sont pas 360 prompts
-indépendants : ce sont 90 prompts de base en quatre versions, et les IC en tiennent compte.
+y passe de 0,807 à 0,785 (`fp16` de 0,814 à 0,794) ; parmi les candidats qui n'ont pas vu Gemma, `length` passe de 0,543 à
+0,478 et `laya-english-tier` de 0,405 à 0,347, tandis que `litellm-heuristic` (0,089 → 0,106) et `laya-multilingual-tier`
+(0,119 → 0,115), proches du plancher, ne baissent pas. Ces écarts se lisent sur les valeurs ponctuelles, sans IC (aucun
+écart apparié entre vérités n'est calculé). Sans Gemma, la vérité est la médiane des 8 votes de deux juges, arrondie vers
+le bas : `expert` disparaît (8 ids → 0), `high` passe de 52 à 28 ids, 20 des 90 prompts de base changent de palier (18 vers
+le bas), et un candidat qui ne prédit jamais `expert`, comme s1d1, y perd mécaniquement moins. Les deux juges restants
+s'accordent avec Gemma (QWK 0,879 pour Qwen 3, 0,707 pour gpt-oss, tableau des juges). Ce tableau ne dit donc pas si s1d1
+hérite des biais de Gemma. Le rapport ne mesure pas la grille, le routage, la distribution réelle des prompts, les prompts
+agentiques ou multi-tours, ni les langues autres que les quatre ; trois analyses de docs/32 ne sont pas produites dans ce
+lot (la part des prompts notés 0,70 à 0,80 que les juges mettent en `high` ou au-dessus, les confusions entre tâches
+voisines, la matrice de confusion normalisée de la tâche), et `expert` n'a que 8 ids sur 360 (2 prompts de base) : tout ce
+qui touche ce palier est dit sur très peu de prompts. Les 360 ids ne sont pas 360 prompts indépendants : ce sont 90
+prompts de base en quatre versions, et les IC en tiennent compte.
 
 ## Dépendances
 
