@@ -3,6 +3,7 @@
 Each test is small and self-contained. Shared helpers sit at the top of the module.
 """
 
+import re
 import tomllib
 from pathlib import Path
 
@@ -36,3 +37,20 @@ def test_readme_names_the_mit_copy():
     section = _readme_section("Licences")
     assert "MIT" in section
     assert "src/s1d1_bench/vendor/litellm_heuristic/" in section
+
+
+CITING_FILES = ("README.md", "judges/README.md", "report/TEMPLATE.md", "report/base-v1/index.md", "data/README.md")
+
+
+def test_every_cited_doc_is_present_or_explained():
+    """Each `docs/NN` cited by a public document is a copied `docs/NN-*.md` or is named in `docs/README.md`."""
+    present = {path.name[:2] for path in (REPO_ROOT / "docs").glob("[0-9][0-9]-*.md")}
+    index = REPO_ROOT / "docs" / "README.md"
+    named = set(re.findall(r"docs/(\d{2})", index.read_text(encoding="utf-8"))) if index.is_file() else set()
+    unexplained = {}
+    for name in CITING_FILES:
+        text = (REPO_ROOT / name).read_text(encoding="utf-8")
+        missing = sorted(set(re.findall(r"docs/(\d{2})", text)) - present - named)
+        if missing:
+            unexplained[name] = missing
+    assert unexplained == {}

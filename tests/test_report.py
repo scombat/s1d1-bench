@@ -767,6 +767,9 @@ def test_index_links_its_tables_and_says_what_it_does_not_measure(tmp_path):
     for link in links:
         if link.startswith("#"):
             assert link[1:] in anchors, link
+        elif link.startswith("../../docs/"):
+            # leaves the report folder: resolved from where the committed report lives, not from the temporary one
+            assert (Path(__file__).resolve().parents[1] / "report" / "base-v1" / link).is_file(), link
         else:
             assert (out / link).is_file(), link
     # the numbers of the predictions and of the sentence sit next to the links of their tables
