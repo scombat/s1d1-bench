@@ -225,24 +225,26 @@ moyenne, sans IC (la bande, ce sont eux).
 
 ### Les écarts appariés
 
-| candidat | écart apparié de QWK (s1d1-full-int8 − candidat) | règle des 2 σ | pourquoi |
-|---|---|---|---|
-| constant-low | 0,807 [0,734 ; 0,852] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
-| laya-english-tier | 0,402 [0,309 ; 0,498] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
-| laya-multilingual-tier | 0,687 [0,530 ; 0,836] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
-| length | 0,264 [0,159 ; 0,383] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
-| litellm-heuristic | 0,718 [0,614 ; 0,799] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
-| llm4b-gemma4-e4b-off | 0,018 [−0,067 ; 0,105] | ne passe pas | l'IC contient zéro |
-| nvidia-ptcc-eng | 0,496 [0,371 ; 0,603] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
-| random | 0,835 [0,734 ; 0,924] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
-| routellm-bert | 0,528 [0,388 ; 0,668] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
-| s1d1-compact-int8 | 0,048 [0,009 ; 0,089] | ne passe pas | l'IC exclut zéro, mais sa borne la plus proche de zéro n'est pas au-delà de 2 σ |
-| s1d1-full-fp16 | −0,008 [−0,031 ; 0,020] | ne passe pas | l'IC contient zéro |
-| s1d1-small-int8 | 0,035 [−0,004 ; 0,076] | ne passe pas | l'IC contient zéro |
-| s1d1-tiny-int8 | 0,193 [0,126 ; 0,267] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
+| candidat | ids communs | écart apparié de QWK (s1d1-full-int8 − candidat) | règle des 2 σ | pourquoi |
+|---|---|---|---|---|
+| constant-low | 360 | 0,807 [0,734 ; 0,852] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
+| laya-english-tier | 360 | 0,402 [0,309 ; 0,498] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
+| laya-multilingual-tier | 360 | 0,687 [0,530 ; 0,836] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
+| length | 360 | 0,264 [0,159 ; 0,383] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
+| litellm-heuristic | 360 | 0,718 [0,614 ; 0,799] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
+| llm4b-gemma4-e4b-off | 356 | 0,016 [−0,068 ; 0,103] | ne passe pas | l'IC contient zéro |
+| nvidia-ptcc-eng | 90 | 0,529 [0,404 ; 0,634] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
+| random | 360 | 0,835 [0,734 ; 0,924] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
+| routellm-bert | 360 | 0,528 [0,388 ; 0,668] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
+| s1d1-compact-int8 | 360 | 0,048 [0,009 ; 0,089] | ne passe pas | l'IC exclut zéro, mais sa borne la plus proche de zéro n'est pas au-delà de 2 σ |
+| s1d1-full-fp16 | 360 | −0,008 [−0,031 ; 0,020] | ne passe pas | l'IC contient zéro |
+| s1d1-small-int8 | 360 | 0,035 [−0,004 ; 0,076] | ne passe pas | l'IC contient zéro |
+| s1d1-tiny-int8 | 360 | 0,193 [0,126 ; 0,267] | passe | l'IC exclut zéro et se tient au-delà de 2 σ |
 
-Écart du QWK de `s1d1-full-int8` moins celui de chaque autre candidat, sur les mêmes tirages des prompts de base ; « passe »
-selon la règle des 2 σ (borne basse > 0,010, ou borne haute < −0,010), « ne passe pas » sinon.
+Écart du QWK de `s1d1-full-int8` moins celui de chaque autre candidat, sur les mêmes tirages des prompts de base, calculé sur
+les ids que les deux ont (colonne « ids communs » : un candidat partiel n'est comparé que sur ses propres ids, la
+référence étant elle aussi mesurée sur ceux-là) ; « passe » selon la règle des 2 σ (borne basse > 0,010, ou borne
+haute < −0,010), « ne passe pas » sinon.
 
 ### Les juges contre `truth_all` (l'instrument)
 

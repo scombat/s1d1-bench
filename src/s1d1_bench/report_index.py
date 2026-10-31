@@ -48,7 +48,8 @@ LAYA = "laya-"
 HOLE = re.compile(r"\{([a-z][a-z0-9_]*)\}")
 
 LABELS = {
-    "name": "nom", "role": "rôle", "n_ids": "ids", "qwk": "QWK", "exact": "exact", "within_one": "± 1",
+    "name": "nom", "role": "rôle", "n_ids": "ids", "n_common": "ids communs", "qwk": "QWK", "exact": "exact",
+    "within_one": "± 1",
     "alpha": "alpha ordinal", "tiers_never_predicted": "paliers jamais prédits", "judge": "juge", "note": "note",
     "kind": "type", "draw": "tirage", "share_low_of_ids": "part de low (ids)", "judge_a": "juge A",
     "judge_b": "juge B", "role_a": "rôle A", "role_b": "rôle B", "n_ids_left_out": "ids écartés",
@@ -110,7 +111,7 @@ COLUMNS = {
     "needs_tools": ["name", "role", "n_ids", "n_ids_positive", "f1", "mcc", "accuracy", "auroc"],
     "rank_metrics": ["name", "score_column", "scale", "n_ids", "spearman", "auroc_high", "note"],
     "calibration": ["name", "n_ids", "mae", "spearman", "ece"],
-    "paired": ["candidate", "difference", "rule_2sigma", "why"],
+    "paired": ["candidate", "n_common", "difference", "rule_2sigma", "why"],
     "predictions": ["prediction", "name", "lang", "qwk", "verified"],
     "inputs": ["name", "kind", "role", "model", "revision", "date", "n_ids_abstained", "n_ids_null_vote",
                "null_votes_ids"],

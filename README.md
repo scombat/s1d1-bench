@@ -99,7 +99,7 @@ bounds of 0.2 ([the mapping](#the-routellm-routers-and-the-4-billion-llm)): its 
 0.303 in the other three languages (point values, the CIs overlap), and the paired gap `s1d1-full-int8` −
 `routellm-bert` is 0.528 [0.388, 0.668]. `llm4b-gemma4-e4b-off` is a small LLM that reads the v7 instructions like
 the judges, without reasoning; its QWK, computed on 356 ids (4 abstentions), is close to that of `s1d1-full-int8`, and
-the 2 σ rule does not separate them (paired gap 0.018 [−0.067, 0.105]). This model is of the Gemma 4 family, which is
+the 2 σ rule does not separate them (paired gap 0.016 [−0.068, 0.103], on the 356 ids both have). This model is of the Gemma 4 family, which is
 both one of the three judges and the labeller of the training data of s1d1; against the two other judges only
 (`truth_all_nogemma`), it is at 0.713 [0.628, 0.774] and `s1d1-full-int8` at 0.785 [0.713, 0.834]
 (`report/base-v1/tables/agreement_nogemma.csv`). It answers in 1.1 s per prompt on the GPU and
@@ -111,10 +111,10 @@ sum, not a v7 tier. The model is English only, so only the 90 English ids are cl
 unpredicted (no label, counted nowhere: `n` is 90); the score is kept as it is, in [0 ; 1], and read with the same five
 equal bounds of 0.2 as the RouteLLM routers, `task` and `needs_tools` being `null` (see
 [the mapping](#the-routellm-routers-and-the-4-billion-llm)). On those 90 ids its QWK is 0.311 [0.209, 0.415] and
-`s1d1-full-int8`'s is 0.840 [0.767, 0.890] (`report/base-v1/tables/by_language.csv`, row `eng`): the two are put side by
-side, no paired gap on the English ids is computed, so no comparison is drawn. The `s1d1-full-int8` − `nvidia-ptcc-eng`
-row of `paired.csv` is not that gap, it sets the 360 ids of the first against the 90 of the second, and is not quoted.
-It answers in 107.9 ms per prompt on the CPU and weighs 735.5 MB.
+`s1d1-full-int8`'s is 0.840 [0.767, 0.890] (`report/base-v1/tables/by_language.csv`, row `eng`); the paired gap
+`s1d1-full-int8` − `nvidia-ptcc-eng`, taken on the 90 ids both have (`paired.csv`, `n_common` 90), is 0.529
+[0.404, 0.634], and the table says it passes the 2 σ rule (the interval excludes zero and its lower bound is beyond
+2 σ = 0.010). It answers in 107.9 ms per prompt on the CPU and weighs 735.5 MB.
 
 The judges are the measuring instrument, not competitors: no table ranks a candidate against a judge, except the
 ceiling. No "better than" sentence without the 2 σ rule (the CI of the paired gap excludes zero and exceeds 2 σ,
@@ -749,7 +749,9 @@ latency, against weight on disk, and the distribution of predicted tiers). The t
 `report/TEMPLATE.md` carries the caveats and the sentence with holes; the code fills the holes with the figures as
 they come out, and the two final clauses of the sentence follow rules written in `src/s1d1_bench/report_index.py`
 and quoted in the report. The intervals are at 95%, by resampling the 90 base prompts (1,000 draws,
-seed 0, the four versions follow their base prompt).
+seed 0, the four versions follow their base prompt). A paired gap is computed on the ids where the reference and the
+candidate both have a prediction (the `n_common` column of `paired.csv`: 360 for a complete candidate, 356 for
+`llm4b-gemma4-e4b-off`, 90 for `nvidia-ptcc-eng`), both QWKs being taken on those ids over the same draws.
 
 **What it says.** Over 360 ids (90 base prompts in four languages), `s1d1-full-int8` agrees with the median of the three
 main judges at QWK 0.807 [0.734, 0.852] and `s1d1-full-fp16` at 0.814 [0.738, 0.865]; the ceiling (each main

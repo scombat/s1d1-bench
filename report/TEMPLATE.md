@@ -149,8 +149,10 @@ moyenne, sans IC (la bande, ce sont eux).
 
 {table_paired}
 
-Écart du QWK de {reference} moins celui de chaque autre candidat, sur les mêmes tirages des prompts de base ; « passe »
-selon la règle des 2 σ (borne basse > {two_sigma}, ou borne haute < −{two_sigma}), « ne passe pas » sinon.
+Écart du QWK de {reference} moins celui de chaque autre candidat, sur les mêmes tirages des prompts de base, calculé sur
+les ids que les deux ont (colonne « ids communs » : un candidat partiel n'est comparé que sur ses propres ids, la
+référence étant elle aussi mesurée sur ceux-là) ; « passe » selon la règle des 2 σ (borne basse > {two_sigma}, ou borne
+haute < −{two_sigma}), « ne passe pas » sinon.
 
 ### Les juges contre `truth_all` (l'instrument)
 
