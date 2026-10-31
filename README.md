@@ -40,12 +40,13 @@ La phrase de docs/32 § 5, remplie avec les chiffres du rapport de `base-v1` (36
 
 ![Accord avec les juges contre la latence par prompt](report/base-v1/figures/quality-vs-latency.svg)
 
-À QWK de l'ordre de celui d'un juge (un juge principal y est placé à son QWK contre les deux autres), s1d1 répond en
-1,6 à 9,1 ms par prompt sur le CPU du Mac (int8, latence médiane, lot de 1), là où un juge principal met 1,8 à 42,8 s
-sur le GPU du même Mac (MLX), en lisant une consigne d'environ 1 900 jetons. s1d1 fp16 et Laya tournent sur le GPU
-(MPS), LiteLLM sur le CPU. Les témoins ne sont pas des modèles et ne sont pas dans la figure. Les poids de s1d1 tiennent
-dans 25 à 615 Mo, ceux des juges principaux dans 12,1 à 33,8 Go (figure `quality-vs-footprint` du rapport). Mesures de
-`bench profile` sur un M4 Max, voir [Le profil](#le-profil).
+`s1d1-full-int8`, dont l'IC contient la moyenne du plafond (un juge principal y est placé à son QWK contre les deux
+autres), répond en 9,1 ms par prompt sur le CPU du Mac (latence médiane, lot de 1) ; les quatre variantes int8 de s1d1,
+chacune à son propre QWK, répondent en 1,6 à 9,1 ms. Un juge principal met 1,8 à 42,8 s sur le GPU du même Mac (MLX), en
+lisant une consigne d'environ 1 900 jetons. s1d1 fp16 et Laya tournent sur le GPU (MPS), LiteLLM sur le CPU. Les
+témoins ne sont pas des modèles et ne sont pas dans la figure. Sur disque, `s1d1-full-int8` pèse 310 Mo (les cinq
+variantes de s1d1 : 25 à 615 Mo), un juge principal 12,1 à 33,8 Go (figure `quality-vs-footprint` du rapport). Mesures
+de `bench profile` sur un M4 Max, voir [Le profil](#le-profil).
 
 ![QWK par langue](report/base-v1/figures/qwk-by-language.svg)
 

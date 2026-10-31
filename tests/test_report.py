@@ -728,10 +728,14 @@ def test_report_command_on_the_fake_set(tmp_path, capsys):
     assert "figure `confusion` : `laya-multilingual-tier` absent : pas de panneau de confusion" in text
     assert "plancher, `length` : pas de ligne de plancher" in text
     # the captions under the figures, filled from the tables and the profile (fake: s1d1 1 ms on cpu, judges 1-3 s)
-    assert "s1d1 répond par prompt sur le CPU (int8) en 1,0 ms," in text
-    assert "là où un juge principal met, sur le GPU du même Mac et en lisant la consigne, 1,0 à 3,0 s." in text
-    assert "Les poids de s1d1 tiennent dans 10 Mo ;" in text and "les juges principaux demandent 1,0 à 3,0 Go." in text
-    assert "ne sont pas des modèles : ils n'ont ni latence ni poids, et ne sont ni dans cette figure" in text
+    assert "`s1d1-full-int8` répond par prompt en 1,0 ms sur le CPU." in text  # judge-level QWK: the headline only
+    assert "Les variantes int8 de s1d1, sur le CPU, répondent en 1,0 ms ; leur QWK se lit point par point." in text
+    assert "Un juge principal met, sur le GPU du même Mac et en lisant la consigne, 1,0 à 3,0 s." in text
+    assert "la cause de\ncette queue n'y est pas mesurée" in text  # no causal claim on the p95 tail
+    assert "Les poids de `s1d1-full-int8` font 10 Mo ;" in text
+    assert "ceux des variantes de s1d1 tiennent dans 10 Mo" in text
+    assert "les juges principaux demandent 1,0 à 3,0 Go." in text
+    assert "ne sont pas des modèles : ils n'ont\nni latence ni poids, et ne sont ni dans cette figure" in text
     truth_line = "- `truth_all` : 2 paliers sur 5, jamais `low`, `medium` et `expert`"
     assert f"{truth_line} ; plus grande part : `trivial` 50,0 %" in text
 
@@ -865,7 +869,8 @@ def test_report_command_without_a_profile_skips_the_profile_table_and_figures(tm
     text = (out / "index.md").read_text(encoding="utf-8")
     for name in PROFILE_FIGURES:
         assert f"_Figure `{name}` non tracée : pas de profil" in text, name
-    assert "s1d1 répond par prompt sur le CPU (int8) en non mesuré (pas de profil)," in text
+    assert "`s1d1-full-int8` répond par prompt en non mesuré (pas de profil)." in text
+    assert "répondent en non mesuré (pas de profil) ;" in text
     assert "_(pas de profil : `results/<jeu>.profile.json`" in text  # in place of the profile table
 
 

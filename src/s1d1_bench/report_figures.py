@@ -58,7 +58,8 @@ TIER_SHADES = (0.82, 0.58, 0.32, 0.0, -0.5)  # tier-distribution: trivial to exp
 DEVICES = {"cpu": "CPU", "mps": "GPU (MPS)", "gpu-mlx": "GPU (MLX)"}  # the device of a profile row, as a label says it
 JUDGES_LABEL = "main judges: each against the other two (8 votes)"
 # A point label sits right of its point, vertically centred; where it would overlap another label or point on the
-# figure of base-v1, it moves by this offset in points (dx, dy; dx < 0: right-aligned, left of the point). Looked at
+# figure of base-v1, it moves by this offset in points (dx, dy; dx < 0: right-aligned, left of the point; dx == 0:
+# centred above or below it). Looked at
 # on the rendered figures; a name absent here keeps the default.
 LABEL_OFFSETS: dict[tuple[str, str], tuple[float, float]] = {
     # s1d1 full fp16, full int8, compact and small sit within 0.06 QWK and half a decade of each other; gemma4 and qwen3
@@ -68,7 +69,7 @@ LABEL_OFFSETS: dict[tuple[str, str], tuple[float, float]] = {
     ("quality-vs-latency", "s1d1-small-int8"): (-8, 0),
     ("quality-vs-latency", "base-v1-gemma4-cap512"): (-8, 10),
     ("quality-vs-latency", "base-v1-qwen3-cap512"): (-8, 0),
-    ("quality-vs-footprint", "s1d1-full-int8"): (-8, 10),
+    ("quality-vs-footprint", "s1d1-full-int8"): (0, 26),  # centred above its whisker: left of it, it named compact
     ("quality-vs-footprint", "s1d1-full-fp16"): (6, -16),  # below qwen3's label, which reaches back to 5 GB
     ("quality-vs-footprint", "s1d1-compact-int8"): (6, -14),
     ("quality-vs-footprint", "s1d1-small-int8"): (-8, 0),
@@ -306,14 +307,15 @@ def _point_handle(mpl, hue: str, text: str):
 
 
 def label(ax, x: float, y: float, text: str, dx: float = 4, dy: float = 0, color: str = INK, **kw):
-    """A value or point label beside (x, y) in data coordinates, `dx`, `dy` points away (left-aligned when dx >= 0),
-    on a patch of paper so that a reference line behind it does not cross the text."""
+    """A value or point label beside (x, y) in data coordinates, `dx`, `dy` points away (left-aligned when dx > 0,
+    right-aligned when dx < 0, centred above or below the point when dx == 0), on a patch of paper so that a reference
+    line behind it does not cross the text."""
     return ax.annotate(
         text,
         (x, y),
         xytext=(dx, dy),
         textcoords="offset points",
-        ha="left" if dx >= 0 else "right",
+        ha="left" if dx > 0 else "right" if dx < 0 else "center",
         va="center",
         fontsize=7.5,
         color=color,

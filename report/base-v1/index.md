@@ -152,10 +152,11 @@ _QWK contre truth_all (360 ids), IC 95 % sur 1 000 tirages des 90 prompts de bas
 
 Barres : QWK de chaque candidat contre `truth_all` et son IC à 95 % ; ligne noire : le plafond, moyenne des juges
 principaux ; lignes gris foncé : chaque juge principal contre les deux autres ; lignes grises en tirets et bande grise :
-le plancher (`length`, `constant-low`, les tirages de `random`) ; bande bleue : ± 2 σ autour de `s1d1-full-int8`, étroite
-par nature (σ = 0,005). Le chiffre principal est à hauteur du plafond inter-juges quand son IC contient la moyenne du
-plafond ; ici, l'IC de `s1d1-full-int8` contient la moyenne du plafond.
-Les témoins font le plancher ; sous la longueur du prompt, en valeurs ponctuelles : `laya-english-tier`, `laya-multilingual-tier` et `litellm-heuristic`.
+le plancher (`length`, `constant-low`, les tirages de `random`) ; bande bleue : ± 2 σ autour de `s1d1-full-int8`,
+étroite par nature (σ = 0,005). Le chiffre principal est à hauteur du plafond inter-juges quand son IC contient la
+moyenne du plafond ; ici, l'IC de `s1d1-full-int8` contient la moyenne du plafond.
+Les témoins font le plancher ; sous la longueur du prompt, en valeurs ponctuelles :
+`laya-english-tier`, `laya-multilingual-tier` et `litellm-heuristic`.
 Une position sur la figure n'est pas une phrase de supériorité : seule la règle des 2 σ en permet une (l'IC de l'écart
 apparié exclut zéro et dépasse 2 σ = 0,010), voir [Les écarts appariés](#les-écarts-appariés).
 
@@ -304,19 +305,21 @@ Laya sur le GPU (MPS), les juges sur le GPU (MLX) ; la latence d'un juge compren
 1 900 jetons) et sa réponse, raisonnement compris. En ordonnée, le QWK contre `truth_all` ; pour un juge principal, son
 QWK contre la médiane des deux autres (le plafond, 8 votes), le chiffre des lignes du plafond des barres. L'IC de
 `s1d1-full-int8` contient la moyenne du plafond ;
-s1d1 répond par prompt sur le CPU (int8) en 1,6 à 9,1 ms,
-là où un juge principal met, sur le GPU du même Mac et en lisant la consigne, 1,8 à 42,8 s.
-Au 95e centile, la latence de s1d1 int8 sur le CPU (« p95 » du tableau ci-dessous) : 12,8 à 78,7 ms ;
-cette queue est tirée par les prompts longs, et la médiane est la valeur portée. Les témoins (`random`, `length`,
-`constant-low`) ne sont pas des modèles : ils n'ont ni latence ni poids, et ne sont ni dans cette figure ni dans la
-suivante.
+`s1d1-full-int8` répond par prompt en 9,1 ms sur le CPU.
+Les variantes int8 de s1d1, sur le CPU, répondent en 1,6 à 9,1 ms ; leur QWK se lit point par point.
+Un juge principal met, sur le GPU du même Mac et en lisant la consigne, 1,8 à 42,8 s.
+Au 95e centile, la latence des variantes int8 de s1d1 sur le CPU (« p95 » du tableau ci-dessous) :
+12,8 à 78,7 ms ; la médiane est la valeur portée (le profil ne garde pas la latence de chaque prompt : la cause de
+cette queue n'y est pas mesurée). Les témoins (`random`, `length`, `constant-low`) ne sont pas des modèles : ils n'ont
+ni latence ni poids, et ne sont ni dans cette figure ni dans la suivante.
 
 ![QWK contre truth_all (360 ids) contre le poids des fichiers de poids sur disque (échelle logarithmique) ; juges principaux : QWK contre les deux autres](figures/quality-vs-footprint.svg)
 
 _QWK contre truth_all (360 ids) contre le poids des fichiers de poids sur disque (échelle logarithmique) ; juges principaux : QWK contre les deux autres._ Données : [`figures/quality-vs-footprint.csv`](figures/quality-vs-footprint.csv). Absent de la figure : `litellm-heuristic` : pas de fichier de poids (0 Mo), hors de l'axe logarithmique : pas de point.
 
 Poids des fichiers de poids sur disque (Mo de 10⁶ octets), la seule mesure de mémoire que tous les modèles ont.
-Les poids de s1d1 tiennent dans 25 à 615 Mo ;
+Les poids de `s1d1-full-int8` font 310 Mo ;
+ceux des variantes de s1d1 tiennent dans 25 à 615 Mo, leur QWK se lisant point par point ;
 ceux de Laya font, selon la tête, 644 à 843 Mo ;
 les juges principaux demandent 12,1 à 33,8 Go.
 Ordonnée et juges comme dans la figure de la latence. Un modèle sans fichier de poids (des règles, 0 Mo) ne se place

@@ -165,6 +165,13 @@ def test_readme_results_latency_and_weights_match_the_profile():
     assert _span([float(r["latency_p50_ms"]) for r in judges], _ms) in results
     assert _span([float(r["weights_mb"]) for r in s1d1], _mb) in results
     assert _span([float(r["weights_mb"]) for r in judges], _mb) in results
+    # the judge-level quality is said of s1d1-full-int8 alone, with its own latency and weight
+    full = next(r for r in profile if r["name"] == "s1d1-full-int8")
+    assert "`s1d1-full-int8`, dont l'IC contient la moyenne du plafond" in results
+    assert full["device"] == "cpu"
+    assert f"répond en {_ms(float(full['latency_p50_ms']))} par prompt sur le CPU" in results
+    assert f"`s1d1-full-int8` pèse {_mb(float(full['weights_mb']))}" in results
+    assert "À QWK de l'ordre de celui d'un juge" not in results
 
 
 def test_readme_results_by_language_match_the_report():

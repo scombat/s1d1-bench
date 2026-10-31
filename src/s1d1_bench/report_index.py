@@ -534,6 +534,9 @@ def _reading(computed: dict[str, pa.Table], run: dict, sigma: float, classifiers
     }
 
 
+ON_DEVICE = {"cpu": "le CPU", "mps": "le GPU (MPS)", "gpu-mlx": "le GPU (MLX)"}  # a profile device, in a caption
+
+
 def _latency(value: float) -> str:
     """A latency in ms as the captions write it: ms under a second, s above, one decimal ("9,1 ms", "42,8 s")."""
     return f"{french(value, 1)} ms" if value < 1000 else f"{french(value / 1000, 1)} s"
@@ -575,7 +578,8 @@ def _tiers_used(computed: dict[str, pa.Table]) -> str:
 
 def _captions(computed: dict[str, pa.Table]) -> dict[str, str]:
     """The numbers of the captions under the figures: who is below `length`, the latencies and weights of the profile
-    (s1d1, Laya, the main judges), the tiers each bar uses, the QWK by language of the headline and of LiteLLM."""
+    (the headline alone, then the s1d1 variants, Laya, the main judges: a judge-level QWK is said of the headline only,
+    never of a span of variants), the tiers each bar uses, the QWK by language of the headline and of LiteLLM."""
     agreement = {r["name"]: r for r in computed["agreement_all"].to_pylist() if r["role"] == "candidate"}
     length = agreement.get(FLOOR)
     if length is None or french(length["qwk"]) == "—":
@@ -590,6 +594,8 @@ def _captions(computed: dict[str, pa.Table]) -> dict[str, str]:
     rows = computed["profile"].to_pylist() if "profile" in computed else []
     none = "non mesuré (pas de profil)" if not rows else "—"
     s1d1 = [r for r in rows if r["name"].startswith(CALIBRATED) and r["role"] == "candidate"]
+    headline = next((r for r in rows if r["name"] == HEADLINE[0]), None)
+    absent = none if not rows else f"non mesuré ({_code(HEADLINE[0])} absent du profil)"
     cpu = [r for r in s1d1 if r["device"] == "cpu"]
     judges = [r for r in rows if r["role"] == IN_TRUTH]
     laya = [r for r in rows if r["name"].startswith(LAYA) and r["role"] == "candidate"]
@@ -600,6 +606,12 @@ def _captions(computed: dict[str, pa.Table]) -> dict[str, str]:
 
     return {
         "below_length": below,
+        "latency_headline": (
+            f"{_latency(headline['latency_p50_ms'])} sur {ON_DEVICE.get(headline['device'], headline['device'])}"
+            if headline
+            else absent
+        ),
+        "weights_headline": _weight(headline["weights_mb"]) if headline else absent,
         "latency_s1d1_cpu": _span([r["latency_p50_ms"] for r in cpu], _latency, none),
         "p95_s1d1_cpu": _span([r["latency_p95_ms"] for r in cpu], _latency, none),
         "latency_judges": _span([r["latency_p50_ms"] for r in judges], _latency, none),

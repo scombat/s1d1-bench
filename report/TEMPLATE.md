@@ -116,10 +116,11 @@ des classifieurs que ce run n'a pas chargés : {folders_not_in_report}.
 
 Barres : QWK de chaque candidat contre `truth_all` et son IC à 95 % ; ligne noire : le plafond, moyenne des juges
 principaux ; lignes gris foncé : chaque juge principal contre les deux autres ; lignes grises en tirets et bande grise :
-le plancher (`length`, `constant-low`, les tirages de `random`) ; bande bleue : ± 2 σ autour de {reference}, étroite
-par nature (σ = {sigma}). Le chiffre principal est à hauteur du plafond inter-juges quand son IC contient la moyenne du
-plafond ; ici, l'IC de {headline_name} {position_vs_ceiling}.
-Les témoins font le plancher ; sous la longueur du prompt, en valeurs ponctuelles : {below_length}.
+le plancher (`length`, `constant-low`, les tirages de `random`) ; bande bleue : ± 2 σ autour de {reference},
+étroite par nature (σ = {sigma}). Le chiffre principal est à hauteur du plafond inter-juges quand son IC contient la
+moyenne du plafond ; ici, l'IC de {headline_name} {position_vs_ceiling}.
+Les témoins font le plancher ; sous la longueur du prompt, en valeurs ponctuelles :
+{below_length}.
 Une position sur la figure n'est pas une phrase de supériorité : seule la règle des 2 σ en permet une (l'IC de l'écart
 apparié exclut zéro et dépasse 2 σ = {two_sigma}), voir [Les écarts appariés](#les-écarts-appariés).
 
@@ -184,17 +185,19 @@ Laya sur le GPU (MPS), les juges sur le GPU (MLX) ; la latence d'un juge compren
 1 900 jetons) et sa réponse, raisonnement compris. En ordonnée, le QWK contre `truth_all` ; pour un juge principal, son
 QWK contre la médiane des deux autres (le plafond, 8 votes), le chiffre des lignes du plafond des barres. L'IC de
 {headline_name} {position_vs_ceiling} ;
-s1d1 répond par prompt sur le CPU (int8) en {latency_s1d1_cpu},
-là où un juge principal met, sur le GPU du même Mac et en lisant la consigne, {latency_judges}.
-Au 95e centile, la latence de s1d1 int8 sur le CPU (« p95 » du tableau ci-dessous) : {p95_s1d1_cpu} ;
-cette queue est tirée par les prompts longs, et la médiane est la valeur portée. Les témoins (`random`, `length`,
-`constant-low`) ne sont pas des modèles : ils n'ont ni latence ni poids, et ne sont ni dans cette figure ni dans la
-suivante.
+{headline_name} répond par prompt en {latency_headline}.
+Les variantes int8 de s1d1, sur le CPU, répondent en {latency_s1d1_cpu} ; leur QWK se lit point par point.
+Un juge principal met, sur le GPU du même Mac et en lisant la consigne, {latency_judges}.
+Au 95e centile, la latence des variantes int8 de s1d1 sur le CPU (« p95 » du tableau ci-dessous) :
+{p95_s1d1_cpu} ; la médiane est la valeur portée (le profil ne garde pas la latence de chaque prompt : la cause de
+cette queue n'y est pas mesurée). Les témoins (`random`, `length`, `constant-low`) ne sont pas des modèles : ils n'ont
+ni latence ni poids, et ne sont ni dans cette figure ni dans la suivante.
 
 {figure_quality_vs_footprint}
 
 Poids des fichiers de poids sur disque (Mo de 10⁶ octets), la seule mesure de mémoire que tous les modèles ont.
-Les poids de s1d1 tiennent dans {weights_s1d1} ;
+Les poids de {headline_name} font {weights_headline} ;
+ceux des variantes de s1d1 tiennent dans {weights_s1d1}, leur QWK se lisant point par point ;
 ceux de Laya font, selon la tête, {weights_laya} ;
 les juges principaux demandent {weights_judges}.
 Ordonnée et juges comme dans la figure de la latence. Un modèle sans fichier de poids (des règles, 0 Mo) ne se place
